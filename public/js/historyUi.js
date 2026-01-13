@@ -1,6 +1,7 @@
-// js/historyUi.js
+// public/js/historyUi.js
 import { setView } from "./state.js";
 import { applyWheelSnapshot } from "./actions.js";
+import { apiGetHistory, apiGetHistoryById } from "./api.js";
 
 function fmtDate(iso) {
   try {
@@ -17,52 +18,57 @@ function fmtDate(iso) {
   }
 }
 
-// временное хранилище (потом — fetch из БД)
-const LS_HISTORY = "won:history";
-
-function loadHistory() {
-  try {
-    const x = JSON.parse(localStorage.getItem(LS_HISTORY) || "[]");
-    return Array.isArray(x) ? x : [];
-  } catch {
-    return [];
-  }
+function getWinner(r) {
+  // на всякий: если winner хранится как объект JSONB
+  return r?.winner || null;
 }
 
-export function renderHistoryList() {
+function getWheelItems(r) {
+  // если wheel_items jsonb -> должен прийти как массив
+  return Array.isArray(r?.wheel_items) ? r.wheel_items : [];
+}
+
+export async function renderHistoryList() {
   const ul = document.getElementById("history-list");
   if (!ul) return;
 
-  const rows = loadHistory();
+  ul.innerHTML = `<li class="muted">Загрузка…</li>`;
+
+  let rows = [];
+  try {
+    rows = await apiGetHistory(50);
+  } catch (e) {
+    console.error(e);
+    ul.innerHTML = `<li class="muted">Не удалось загрузить историю</li>`;
+    return;
+  }
 
   ul.innerHTML = "";
 
   if (!rows.length) {
-    const li = document.createElement("li");
-    li.className = "muted";
-    li.textContent = "История пуста";
-    ul.appendChild(li);
+    ul.innerHTML = `<li class="muted">История пуста</li>`;
     return;
   }
 
   for (const r of rows) {
+    const winner = getWinner(r);
+
     const li = document.createElement("li");
     li.className = "history-item";
 
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "history-btn";
-    btn.dataset.historyId = r.id;
+    btn.dataset.historyId = String(r.id);
 
     // мини-постер победителя
     const img = document.createElement("img");
     img.className = "history-poster";
-    img.alt = r?.winner?.title ? `Poster: ${r.winner.title}` : "Poster";
+    img.alt = winner?.title ? `Poster: ${winner.title}` : "Poster";
     img.loading = "lazy";
     img.decoding = "async";
 
-    // если постера нет — покажем серую заглушку (пустой src не ставим)
-    const poster = String(r?.winner?.poster || "").trim();
+    const poster = String(winner?.poster || "").trim();
     if (poster) img.src = poster;
 
     const text = document.createElement("div");
@@ -70,7 +76,7 @@ export function renderHistoryList() {
 
     const title = document.createElement("div");
     title.className = "history-title";
-    title.textContent = r?.winner?.title || "Без названия";
+    title.textContent = winner?.title || "Без названия";
 
     const meta = document.createElement("div");
     meta.className = "history-meta";
@@ -93,22 +99,31 @@ export function initHistoryClicks() {
   const ul = document.getElementById("history-list");
   if (!ul) return;
 
-  ul.addEventListener("click", (e) => {
+  ul.addEventListener("click", async (e) => {
     const btn = e.target.closest(".history-btn");
     if (!btn) return;
 
-    const id = btn.dataset.historyId;
-    const rows = loadHistory();
-    const r = rows.find((x) => String(x.id) === String(id));
-    if (!r) return;
+    const id = String(btn.dataset.historyId || "");
+    if (!id) return;
 
-    // Открываем и результат, и снимок колеса
-    applyWheelSnapshot({
-      wheelItems: r.wheel_items || [],
-      winnerId: r.winner?.id ?? null,
-      winnerItem: r.winner || null,
-    });
-    setView("wheel");
+    try {
+      // берём полную запись (с wheel_items)
+      const row = await apiGetHistoryById(id);
+      if (!row) return;
+
+      const winner = getWinner(row);
+
+      applyWheelSnapshot({
+        wheelItems: getWheelItems(row),
+        winnerId: winner?.id ?? row.winner_id ?? null,
+        winnerItem: winner || null,
+      });
+
+      setView("wheel");
+    } catch (e2) {
+      console.error(e2);
+      alert(e2.message || e2);
+    }
   });
 }
 
@@ -116,3 +131,6 @@ export function initHistoryUI() {
   renderHistoryList();
   initHistoryClicks();
 }
+
+// чтобы main.js мог обновлять историю после ROLL без циклических импортов
+window.refreshHistory = renderHistoryList;

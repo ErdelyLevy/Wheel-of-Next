@@ -1,257 +1,280 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Wheel of Next</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wheel of Next</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- Верхние вкладки: Колесо / Настройки -->
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">Wheel of Next</div>
 
-<!-- Верхние вкладки: Колесо / Настройки -->
-<header class="topbar">
-  <div class="topbar-inner">
-    <div class="brand">Wheel of Next</div>
-
-    <nav class="top-tabs" id="top-tabs">
-      <button class="tab active" data-view="wheel">Колесо</button>
-      <button class="tab" data-view="settings">Настройки</button>
-    </nav>
-  </div>
-</header>
-
-<!-- VIEW: Колесо -->
-<div class="view" id="view-wheel">
-
-  <div class="app">
-
-    <!-- Левая колонка: результат -->
-    <aside class="left">
-      <h2>Результат</h2>
-
-      <div class="result-card">
-        <h1 class="result-title" id="result-title">—</h1>
-
-        <div class="result-cover">
-          <img id="result-cover" src="" alt="cover">
-          <span class="badge" id="result-badge">—</span>
-        </div>
-
-        <div class="result-info" id="result-info"></div>
-
-        <div class="result-actions" id="result-actions"></div>
+        <nav class="top-tabs" id="top-tabs">
+          <button class="tab active" data-view="wheel">Колесо</button>
+          <button class="tab" data-view="settings">Настройки</button>
+        </nav>
       </div>
-    </aside>
+    </header>
 
-    <!-- Центр: пресеты (режимы) + колесо -->
-    <main class="center">
-      <div class="controls">
-        <!-- Пресеты (одна линия, переносится на новую при необходимости) -->
-        <div class="tabs tabs-wrap" id="preset-tabs">
-          <!-- заполним JS-ом, пока можно оставить заглушку -->
-          <button class="tab active" data-preset="default">Default</button>
-        </div>
-      </div>
+    <!-- VIEW: Колесо -->
+    <div class="view" id="view-wheel">
+      <div class="app">
+        <!-- Левая колонка: результат -->
+        <aside class="left">
+          <h2>Результат</h2>
 
-      <div class="wheel-area">
-        <div class="wheel-wrap">
-          <canvas id="wheel"></canvas>
+          <div class="result-card">
+            <h1 class="result-title" id="result-title">—</h1>
 
-          <button class="spin spin-center" id="spin-btn">
-            ROLL
-          </button>
-        </div>
-      </div>
-    </main>
-
-    <!-- Правая колонка: вкладки Список / История -->
-    <aside class="right">
-      <div class="right-head">
-        <h2 id="right-title">Список</h2>
-        <div class="right-tabs" id="right-tabs">
-          <button class="tab active" data-panel="list">Список</button>
-          <button class="tab" data-panel="history">История</button>
-        </div>
-      </div>
-
-      <!-- Панель списка -->
-      <div id="panel-list">
-        <div class="search">
-          <input id="search-input" type="search" placeholder="Поиск по названию…" autocomplete="off">
-          <button class="tab" id="search-clear" title="Очистить">×</button>
-        </div>
-        <ul class="list" id="full-list"></ul>
-      </div>
-
-      <!-- Панель истории -->
-      <div id="panel-history" class="panel is-hidden">
-        <ul class="list history-list" id="history-list">
-          <li class="muted">История пуста</li>
-        </ul>
-      </div>
-    </aside>
-
-  </div>
-</div>
-
-<!-- VIEW: Настройки -->
-<div class="view is-hidden" id="view-settings">
-  <div class="settings-wrap">
-
-    <div class="settings-grid">
-
-      <!-- Блок 1: вращение -->
-      <section class="settings-card">
-        <h2>Вращение</h2>
-
-      <div class="form-row">
-        <label for="spin-duration">Длительность (сек)</label>
-
-        <div class="range-wrap">
-          <input
-            id="spin-duration"
-            type="range"
-            min="10"
-            max="30"
-            step="1"
-            value="20"
-          >
-          <span class="range-value" id="spin-duration-val">20</span>
-        </div>
-      </div>
-
-      <div class="form-row">
-        <label for="spin-speed">Скорость (множитель)</label>
-
-        <div class="range-wrap">
-          <input
-            id="spin-speed"
-            type="range"
-            min="0.2"
-            max="2"
-            step="0.1"
-            value="1.0"
-          >
-          <span class="range-value" id="spin-speed-val">1.0</span>
-        </div>
-      </div>
-
-
-      <div class="settings-actions">
-        <span class="save-hint preset-hint" id="preset-hint" aria-live="polite"></span>
-        <button class="tab" id="preset-add" type="button">Создать / Обновить</button>
-        <button class="tab" id="preset-delete" type="button">Удалить</button>
-      </div>
-
-      </section>
-
-      <!-- Блок 2: пресеты (2 окна) -->
-      <section class="settings-card settings-span-2">
-        <h2>Пресеты</h2>
-
-        <div class="settings-presets-grid">
-
-          <!-- Окно 1: редактор -->
-          <div class="preset-pane" id="preset-editor">
-            <h3 class="subhead">Создание / редактирование</h3>
-
-            <div class="muted">
-              Пресет = (media_type, category_name) + веса категорий.
+            <div class="result-cover">
+              <img id="result-cover" src="" alt="cover" />
+              <span class="badge" id="result-badge">—</span>
             </div>
 
-            <div class="form-row">
-              <label for="preset-name">Название пресета</label>
-              <input id="preset-name" type="text" placeholder="Напр. Movies — Single TV">
+            <div class="result-info" id="result-info"></div>
+
+            <div class="result-actions" id="result-actions"></div>
+          </div>
+        </aside>
+
+        <!-- Центр: пресеты (режимы) + колесо -->
+        <main class="center">
+          <div class="controls">
+            <!-- Пресеты (одна линия, переносится на новую при необходимости) -->
+            <div class="tabs tabs-wrap" id="preset-tabs"></div>
+          </div>
+
+          <div class="wheel-area">
+            <div class="wheel-wrap">
+              <canvas id="wheel"></canvas>
+
+              <button class="spin spin-center" id="spin-btn">ROLL</button>
             </div>
+          </div>
+        </main>
+
+        <!-- Правая колонка: вкладки Список / История -->
+        <aside class="right">
+          <div class="right-head">
+            <h2 id="right-title">Список</h2>
+            <div class="right-tabs" id="right-tabs">
+              <button class="tab active" data-panel="list">Список</button>
+              <button class="tab" data-panel="history">История</button>
+            </div>
+          </div>
+
+          <!-- Панель списка -->
+          <div id="panel-list">
+            <div class="search">
+              <input
+                id="search-input"
+                type="search"
+                placeholder="Поиск по названию…"
+                autocomplete="off" />
+              <button class="tab" id="search-clear" title="Очистить">×</button>
+            </div>
+            <ul class="list" id="full-list"></ul>
+          </div>
+
+          <!-- Панель истории -->
+          <div id="panel-history" class="panel is-hidden">
+            <ul class="list history-list" id="history-list">
+              <li class="muted">История пуста</li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- VIEW: Настройки -->
+    <div class="view is-hidden" id="view-settings">
+      <div class="settings-wrap">
+        <div class="settings-grid">
+          <!-- Блок 1: вращение -->
+          <!-- Блок 1: вращение -->
+          <section class="settings-card">
+            <h2>Вращение</h2>
 
             <div class="form-row">
-              <label>Вид медиа</label>
+              <label for="spin-duration">Длительность (сек)</label>
 
-              <div class="ms" id="ms-media">
-                <button class="ms-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
-                  <span class="ms-text" data-placeholder="Выбрать…">Выбрать…</span>
-                  <span class="ms-caret">▾</span>
-                </button>
-
-                <div class="ms-pop is-hidden">
-                  <div class="ms-search">
-                    <input type="search" class="ms-search-input" placeholder="Поиск…">
-                    <button class="tab ms-clear" type="button" title="Очистить">×</button>
-                  </div>
-
-                  <div class="ms-list" role="listbox"></div>
-                </div>
-
-                <!-- скрытое поле: сюда пишем JSON массива -->
-                <input type="hidden" id="preset-media" value="[]">
+              <div class="range-wrap">
+                <input
+                  id="spin-duration"
+                  type="range"
+                  min="10"
+                  max="30"
+                  step="1"
+                  value="20" />
+                <span class="range-value" id="spin-duration-val">20</span>
               </div>
             </div>
 
-
             <div class="form-row">
-              <label>Название коллекции Ryot</label>
+              <label for="spin-speed">Скорость (множитель)</label>
 
-              <div class="ms" id="ms-collection">
-                <button class="ms-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
-                  <span class="ms-text" data-placeholder="Выбрать…">Выбрать…</span>
-                  <span class="ms-caret">▾</span>
-                </button>
-
-                <div class="ms-pop is-hidden">
-                  <div class="ms-search">
-                    <input type="search" class="ms-search-input" placeholder="Поиск…">
-                    <button class="tab ms-clear" type="button" title="Очистить">×</button>
-                  </div>
-
-                  <div class="ms-list" role="listbox"></div>
-                </div>
-
-                <input type="hidden" id="preset-category" value="[]">
+              <div class="range-wrap">
+                <input
+                  id="spin-speed"
+                  type="range"
+                  min="0.2"
+                  max="2"
+                  step="0.1"
+                  value="1.0" />
+                <span class="range-value" id="spin-speed-val">1.0</span>
               </div>
-            </div>
-
-
-            <hr class="sep">
-
-            <h3 class="subhead">Веса категорий</h3>
-            <div id="preset-weights" class="weights-form">
-              <div class="muted">Пока пусто — подключим после того, как определим API/таблицу весов.</div>
             </div>
 
             <div class="settings-actions">
-              <button class="tab" id="preset-add">Сохранить</button>
-              <button class="tab" id="preset-delete">Удалить</button>
+              <button class="tab" id="save-spin-settings" type="button">
+                Сохранить
+              </button>
+              <span class="toast is-hidden" id="spin-saved">Сохранено</span>
             </div>
-          </div>
+          </section>
 
-          <!-- Окно 2: каталог -->
-          <div class="preset-pane" id="preset-catalog">
-            <h3 class="subhead">Каталог пресетов</h3>
+          <!-- Блок 2: пресеты (2 окна) -->
+          <section class="settings-card settings-span-2">
+            <h2>Пресеты</h2>
 
-            <div class="search">
-              <input id="preset-search" type="search" placeholder="Поиск пресета…" autocomplete="off">
-              <button class="tab" id="preset-search-clear" title="Очистить">×</button>
+            <div class="settings-presets-grid">
+              <!-- Окно 1: редактор -->
+              <div class="preset-pane" id="preset-editor">
+                <h3 class="subhead">Создание / редактирование</h3>
+
+                <div class="muted">
+                  Пресет = (media_type, category_name) + веса категорий.
+                </div>
+
+                <div class="form-row">
+                  <label for="preset-name">Название пресета</label>
+                  <input
+                    id="preset-name"
+                    type="text"
+                    placeholder="Напр. Movies — Single TV" />
+                </div>
+
+                <div class="form-row">
+                  <label>Вид медиа</label>
+
+                  <div class="ms" id="ms-media">
+                    <button
+                      class="ms-btn"
+                      type="button"
+                      aria-haspopup="listbox"
+                      aria-expanded="false">
+                      <span class="ms-text" data-placeholder="Выбрать…"
+                        >Выбрать…</span
+                      >
+                      <span class="ms-caret">▾</span>
+                    </button>
+
+                    <div class="ms-pop is-hidden">
+                      <div class="ms-search">
+                        <input
+                          type="search"
+                          class="ms-search-input"
+                          placeholder="Поиск…" />
+                        <button
+                          class="tab ms-clear"
+                          type="button"
+                          title="Очистить">
+                          ×
+                        </button>
+                      </div>
+
+                      <div class="ms-list" role="listbox"></div>
+                    </div>
+
+                    <!-- скрытое поле: сюда пишем JSON массива -->
+                    <input type="hidden" id="preset-media" value="[]" />
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <label>Название коллекции Ryot</label>
+
+                  <div class="ms" id="ms-collection">
+                    <button
+                      class="ms-btn"
+                      type="button"
+                      aria-haspopup="listbox"
+                      aria-expanded="false">
+                      <span class="ms-text" data-placeholder="Выбрать…"
+                        >Выбрать…</span
+                      >
+                      <span class="ms-caret">▾</span>
+                    </button>
+
+                    <div class="ms-pop is-hidden">
+                      <div class="ms-search">
+                        <input
+                          type="search"
+                          class="ms-search-input"
+                          placeholder="Поиск…" />
+                        <button
+                          class="tab ms-clear"
+                          type="button"
+                          title="Очистить">
+                          ×
+                        </button>
+                      </div>
+
+                      <div class="ms-list" role="listbox"></div>
+                    </div>
+
+                    <input type="hidden" id="preset-category" value="[]" />
+                  </div>
+                </div>
+
+                <hr class="sep" />
+
+                <h3 class="subhead">Веса категорий</h3>
+                <div id="preset-weights" class="weights-form">
+                  <div class="muted">
+                    Пока пусто — подключим после того, как определим API/таблицу
+                    весов.
+                  </div>
+                </div>
+
+                <div class="settings-actions">
+                  <button class="tab" id="preset-add">Сохранить</button>
+                  <button class="tab" id="preset-delete">Удалить</button>
+                </div>
+              </div>
+
+              <!-- Окно 2: каталог -->
+              <div class="preset-pane" id="preset-catalog">
+                <h3 class="subhead">Каталог пресетов</h3>
+
+                <div class="search">
+                  <input
+                    id="preset-search"
+                    type="search"
+                    placeholder="Поиск пресета…"
+                    autocomplete="off" />
+                  <button class="tab" id="preset-search-clear" title="Очистить">
+                    ×
+                  </button>
+                </div>
+
+                <ul class="list preset-list" id="preset-list">
+                  <li class="preset-item">
+                    <button class="preset-btn" data-preset-id="" type="button">
+                      Нет данных
+                    </button>
+                  </li>
+                </ul>
+              </div>
             </div>
-
-            <ul class="list preset-list" id="preset-list">
-              <li class="preset-item">
-                <button class="preset-btn" data-preset-id="" type="button">Нет данных</button>
-              </li>
-            </ul>
-
-          </div>
-
+          </section>
         </div>
-      </section>
-
-      </section>
-
+      </div>
     </div>
 
-  </div>
-</div>
-
-<script type="module" src="js/main.js"></script>
-
-</body>
+    <script type="module" src="js/main.js"></script>
+  </body>
 </html>

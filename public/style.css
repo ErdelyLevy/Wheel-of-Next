@@ -506,21 +506,6 @@ button:hover,
   opacity: 0.9;
 }
 
-.save-hint {
-  margin-right: auto;
-  font-size: 12px;
-  font-weight: 900;
-  opacity: 0;
-  transform: translateY(2px);
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.save-hint.is-on {
-  opacity: 1;
-  transform: translateY(0);
-}
-
 .preset-list {
   margin-top: 10px;
 }
@@ -733,16 +718,13 @@ button:hover,
   outline: none;
 }
 
-/* Preset validation */
-.preset-hint {
-  opacity: 1;
-  /* в отличие от save toast — всегда видимая строка */
-  transform: none;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.preset-hint.is-bad {
-  color: rgba(255, 120, 120, 0.95);
+.toast {
+  font-size: 12px;
+  opacity: 0.85;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--r-ui);
+  background: rgba(0, 0, 0, 0.25);
 }
 
 .is-invalid {
@@ -821,3 +803,125 @@ button:hover,
   flex-direction: column;
   gap: 4px;
 }
+
+.list-btn:hover {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+/* === Кнопки элементов списка и истории === */
+.history-btn {
+  justify-content: flex-start; /* ← главное */
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+}
+
+/* чтобы текст не центрировался внутри */
+.history-text {
+  text-align: left;
+}
+
+/* постер фиксированного размера */
+.history-poster {
+  width: 36px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+#panel-list {
+  position: relative;
+}
+#panel-list .search {
+  position: relative;
+  z-index: 5;
+}
+#full-list {
+  position: relative;
+  z-index: 1;
+}
+#full-list .history-btn {
+  width: 100%;
+  text-align: left;
+}
+
+#panel-list,
+#full-list,
+#full-list * {
+  outline: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.right-head,
+.search {
+  position: relative;
+  z-index: 1;
+}
+
+#panel-list,
+#panel-history,
+.list {
+  position: relative;
+  z-index: 2;
+}
+
+.right::before,
+.right::after,
+.search::before {
+  pointer-events: none;
+}
+
+.history-btn {
+  position: relative;
+  z-index: 3;
+}
+
+/* кнопки в списках точно кликабельны */
+.history-btn { pointer-events: auto; }
+
+/* вложенные элементы не перехватывают событие */
+.history-btn * { pointer-events: none; }
+
+/* список справа — такой же вид как история */
+.list-item { list-style: none; }
+
+.list-btn,
+.history-btn {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  text-align: left;
+  padding: 10px;
+  border-radius: var(--r-hard);
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.25);
+  color: var(--text);
+}
+
+.list-btn:hover,
+.history-btn:hover {
+  border-color: rgba(255,255,255,0.18);
+}
+
+.list-poster,
+.history-poster {
+  width: 42px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.06);
+  flex: 0 0 auto;
+}
+
+.list-text,
+.history-text { display: flex; flex-direction: column; gap: 2px; }
+
+.list-title,
+.history-title { font-weight: 900; line-height: 1.15; }
+
+.list-meta,
+.history-meta { font-size: 12px; opacity: 0.75; }

@@ -1,8 +1,8 @@
 // js/presetsCatalog.js
-import { getState, setState, setPresetDraft } from "./state.js";
+import { subscribe, getState, setState, setPresetDraft } from "./state.js";
 import { syncPresetEditorFromState } from "./presetsUi.js";
-
-const LS_PRESETS = "won:presets";
+import { apiSavePreset, apiDeletePreset } from "./api.js";
+import { refreshPresetTabsFromDB } from "./main.js"; // если в одном модуле — адаптируй импорт
 
 function validateDraft(d) {
   const errors = [];
@@ -81,25 +81,20 @@ function safeParse(v, fb) {
   }
 }
 
-function loadPresets() {
-  const arr = safeParse(localStorage.getItem(LS_PRESETS), []);
-  return Array.isArray(arr) ? arr : [];
-}
-
-function savePresets(presets) {
-  localStorage.setItem(LS_PRESETS, JSON.stringify(presets));
-}
-
-function uid() {
-  return "p_" + Math.random().toString(16).slice(2) + Date.now().toString(16);
-}
-
-function renderCatalog() {
+function renderCatalog(presetsArg) {
   const ul = document.getElementById("preset-list");
   if (!ul) return;
 
   const s = getState();
-  const presets = loadPresets();
+
+  // Источник истины:
+  // 1) явный аргумент
+  // 2) state.presets
+  const presets = Array.isArray(presetsArg)
+    ? presetsArg
+    : Array.isArray(s.presets)
+    ? s.presets
+    : [];
 
   ul.innerHTML = "";
 
@@ -120,11 +115,13 @@ function renderCatalog() {
     const li = document.createElement("li");
     li.className = "preset-item";
 
+    const id = String(p.id);
+
     const btn = document.createElement("button");
     btn.className =
-      "preset-btn" + (p.id === s.activePresetId ? " is-active" : "");
+      "preset-btn" + (String(s.activePresetId) === id ? " is-active" : "");
     btn.type = "button";
-    btn.dataset.presetId = p.id;
+    btn.dataset.presetId = id;
     btn.textContent = p.name || "(без названия)";
 
     li.appendChild(btn);
@@ -153,60 +150,153 @@ function initCatalogClick() {
     const btn = e.target.closest(".preset-btn");
     if (!btn || btn.disabled) return;
 
-    const id = btn.dataset.presetId;
-    const presets = loadPresets();
-    const preset = presets.find((x) => x.id === id);
+    const id = String(btn.dataset.presetId || "");
+    if (!id) return;
+
+    const s = getState();
+    const presets = Array.isArray(s.presets) ? s.presets : [];
+    const preset = presets.find((x) => String(x.id) === id);
     if (!preset) return;
 
-    applyPresetToEditor(preset);
+    // нормализуем форму под редактор (у тебя редактор ожидает media/categories)
+    applyPresetToEditor({
+      id: String(preset.id),
+      name: preset.name,
+      media: preset.media_types ?? preset.media ?? [],
+      categories: preset.collections ?? preset.categories ?? [],
+      weights: preset.weights ?? {},
+    });
   });
+}
+
+async function fetchPresets() {
+  const r = await fetch("/api/presets", { cache: "no-store" });
+  const j = await r.json();
+  if (!r.ok || j?.ok === false)
+    throw new Error(j?.error || "presets fetch failed");
+  return j.presets || [];
+}
+
+async function upsertPreset(payload) {
+  const r = await fetch("/api/presets", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const j = await r.json();
+  if (!r.ok || j?.ok === false)
+    throw new Error(j?.error || "preset save failed");
+  return j.preset || j; // на случай разного формата
+}
+
+async function deletePreset(id) {
+  const r = await fetch(`/api/presets/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+  const j = await r.json().catch(() => ({ ok: true }));
+  if (!r.ok || j?.ok === false)
+    throw new Error(j?.error || "preset delete failed");
+  return true;
 }
 
 function initUpsertDelete() {
   const addBtn = document.getElementById("preset-add");
   const delBtn = document.getElementById("preset-delete");
 
-  addBtn?.addEventListener("click", () => {
+  addBtn?.addEventListener("click", async () => {
     const verdict = applyPresetValidationUI();
     if (!verdict.ok) return;
+
     const s = getState();
     const d = s.presetDraft;
 
-    // минимальная защита от пустого названия (без UI-валидации пока)
-    const name = (d.name || "").trim() || "Новый пресет";
-
-    const presets = loadPresets();
-    const id = s.activePresetId || uid();
-
-    const preset = {
-      id,
+    const name = (d.name || "").trim();
+    const payload = {
+      // если редактируем существующий — шлём id, иначе null
+      id: s.activePresetId || null,
       name,
-      media: d.media || [],
-      categories: d.categories || [],
+      media_types: d.media || [],
+      collections: d.categories || [],
       weights: d.weights || {},
     };
 
-    const idx = presets.findIndex((x) => x.id === id);
-    if (idx >= 0) presets[idx] = preset;
-    else presets.unshift(preset);
+    try {
+      addBtn.disabled = true;
 
-    savePresets(presets);
-    applyPresetToEditor(preset);
+      const saved = await upsertPreset(payload);
+
+      // обновляем activePresetId в state
+      setState({ activePresetId: saved.id });
+
+      // перерисуем каталог из БД
+      const presets = await fetchPresets();
+
+      // проще: добавь renderCatalogFrom(presets) или сохрани presets в state.
+      // Я делаю минимально: сохраняю в state и вызываю renderCatalog()
+      setState({ presets }); // ✅ добавим presets в wonState (если ещё нет — просто появится)
+      renderCatalog(presets);
+
+      // применяем сохранённый пресет в редактор (чтобы поля стали консистентны)
+      applyPresetToEditor({
+        id: String(saved.id),
+        name: saved.name,
+        media: saved.media_types ?? saved.media ?? [],
+        categories: saved.collections ?? saved.categories ?? [],
+        weights: saved.weights ?? {},
+      });
+
+      // обновить вкладки режимов на странице колеса
+      // если у тебя есть функция refreshPresetTabsFromDB — вызывай её
+      if (typeof window.refreshPresetTabsFromDB === "function") {
+        await window.refreshPresetTabsFromDB({ selectId: saved.id });
+      }
+    } catch (e) {
+      console.error(e);
+      alert(`Ошибка сохранения пресета: ${e.message || e}`);
+    } finally {
+      addBtn.disabled = false;
+    }
   });
 
-  delBtn?.addEventListener("click", () => {
+  delBtn?.addEventListener("click", async () => {
     const s = getState();
     if (!s.activePresetId) return;
 
-    const presets = loadPresets().filter((x) => x.id !== s.activePresetId);
-    savePresets(presets);
+    try {
+      delBtn.disabled = true;
 
-    // сброс active + каталог
-    setState({ activePresetId: null });
-    renderCatalog();
+      await deletePreset(s.activePresetId);
 
-    // если остались пресеты — выберем первый
-    if (presets[0]) applyPresetToEditor(presets[0]);
+      setState({ activePresetId: null });
+
+      const presets = await fetchPresets();
+      setState({ presets });
+      renderCatalog(presets);
+
+      if (presets[0]) {
+        // выберем первый оставшийся
+        const p = presets[0];
+        applyPresetToEditor({
+          id: String(p.id),
+          name: p.name,
+          media: p.media_types ?? p.media ?? [],
+          categories: p.collections ?? p.categories ?? [],
+          weights: p.weights ?? {},
+        });
+        setState({ activePresetId: String(p.id) });
+      }
+
+      if (typeof window.refreshPresetTabsFromDB === "function") {
+        await window.refreshPresetTabsFromDB({
+          selectId: getState().activePresetId,
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      alert(`Ошибка удаления пресета: ${e.message || e}`);
+    } finally {
+      delBtn.disabled = false;
+    }
   });
 }
 
@@ -222,34 +312,37 @@ function initNameBinding() {
   applyPresetValidationUI();
 }
 
-export function initPresetCatalog() {
-  // если пусто — можно оставить пустым, но удобнее добавить дефолт:
-  const presets = loadPresets();
-  if (!presets.length) {
-    const s = getState();
-    const seed = {
-      id: uid(),
-      name: "Default",
-      media: s.presetDraft.media || [],
-      categories: s.presetDraft.categories || [],
-      weights: s.presetDraft.weights || {},
-    };
-    savePresets([seed]);
+export async function initPresetCatalog() {
+  // 1) загрузить пресеты из БД и положить в state
+  try {
+    const presets = await fetchPresets(); // это твой helper из предыдущего шага (GET /api/presets)
+    setState({ presets });
+  } catch (e) {
+    console.error("[presets] fetch failed:", e);
+    setState({ presets: [] });
   }
 
-  renderCatalog();
+  // 2) первый рендер каталога + валидации
+  renderCatalog(getState().presets);
   applyPresetValidationUI();
   initCatalogClick();
   initUpsertDelete();
   initNameBinding();
 
-  // авто-выбор первого пресета при старте, если activePresetId ещё нет
+  // 3) авто-выбор первого пресета при старте
   const s = getState();
-  const list = loadPresets();
+  const list = Array.isArray(s.presets) ? s.presets : [];
   if (!s.activePresetId && list[0]) {
-    applyPresetToEditor(list[0]);
+    applyPresetToEditor({
+      id: String(list[0].id),
+      name: list[0].name,
+      media: list[0].media_types ?? list[0].media ?? [],
+      categories: list[0].collections ?? list[0].categories ?? [],
+      weights: list[0].weights ?? {},
+    });
+    setState({ activePresetId: String(list[0].id) });
   }
 
-  // подписка: при любом изменении state — обновляем валидацию
+  // 4) подписка на state: только UI валидации (каталог не перерисовываем на каждое изменение)
   subscribe(() => applyPresetValidationUI());
 }

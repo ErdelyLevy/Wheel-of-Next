@@ -59,17 +59,61 @@ function isObject(x) {
   return x && typeof x === "object" && !Array.isArray(x);
 }
 
-function mergeDeep(target, patch) {
-  for (const k of Object.keys(patch)) {
-    const pv = patch[k];
-    const tv = target[k];
+function isPlainObject(x) {
+  return !!x && typeof x === "object" && !Array.isArray(x);
+}
 
-    if (isObject(tv) && isObject(pv)) mergeDeep(tv, pv);
-    else target[k] = pv;
+/**
+ * Глубокий merge БЕЗ мутаций вложенных "entity" объектов.
+ * - массивы всегда заменяем целиком
+ * - result.item всегда заменяем целиком
+ */
+function mergeDeep(target, patch, path = "") {
+  if (!isPlainObject(patch)) return target;
+
+  for (const [key, val] of Object.entries(patch)) {
+    const nextPath = path ? `${path}.${key}` : key;
+
+    // 1) массивы — replace
+    if (Array.isArray(val)) {
+      target[key] = val;
+      continue;
+    }
+
+    // 2) result.item — replace (критично)
+    if (nextPath === "result.item") {
+      target[key] = val;
+      continue;
+    }
+
+    // 3) простые объекты — рекурсивно
+    if (isPlainObject(val)) {
+      if (!isPlainObject(target[key])) target[key] = {};
+      mergeDeep(target[key], val, nextPath);
+      continue;
+    }
+
+    // 4) примитивы / null / функции — replace
+    target[key] = val;
   }
+
+  return target;
 }
 
 export function setState(patch) {
+  // --- DEBUG: кто меняет result ---
+  try {
+    if (patch && Object.prototype.hasOwnProperty.call(patch, "result")) {
+      const it = patch?.result?.item;
+      console.log("[setState:result]", {
+        id: it?.id,
+        title: it?.title,
+        t: performance.now().toFixed(0),
+        stack: new Error().stack,
+      });
+    }
+  } catch {}
+
   mergeDeep(wonState, patch);
   emit();
 }
