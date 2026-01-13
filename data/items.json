@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "meta_id": 1,
+    "title": "Пример фильма",
+    "poster": "https://image.tmdb.org/t/p/w500/example.jpg",
+    "year": 2024,
+    "media_type": "movie",
+    "category": "single_tv",
+    "genres": ["драма"],
+    "tags": ["рекомендация"],
+    "description": "Описание фильма"
+  }
+]

@@ -1,0 +1,479 @@
+/* =========================
+   Wheel of Next — style.css (CLEAN)
+   ========================= */
+
+:root{
+  --bg1:#0b0b12;
+  --bg2:#0f1020;
+  --panel:rgba(0,0,0,.45);
+  --panel2:rgba(0,0,0,.35);
+  --stroke:rgba(255,255,255,.10);
+  --stroke2:rgba(255,255,255,.14);
+  --text:rgba(255,255,255,.92);
+  --muted:rgba(255,255,255,.70);
+  --accent:#ff3cac;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  color:var(--text);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica,Arial,sans-serif;
+  background:
+    radial-gradient(1200px 800px at 50% 40%, rgba(255,60,172,.10), transparent 60%),
+    radial-gradient(900px 600px at 30% 70%, rgba(0,180,255,.06), transparent 60%),
+    linear-gradient(180deg, var(--bg2), var(--bg1));
+  overflow:hidden;
+}
+
+/* =========================
+   Layout
+   ========================= */
+
+.app{
+  display:grid;
+  grid-template-columns: 320px 1fr 320px;
+  height:100vh;
+  min-height:0;
+}
+
+/* !!! ВАЖНО: точка перед right !!! */
+.left,.right{
+  padding:16px;
+  background:rgba(0,0,0,.25);
+  border-right:1px solid rgba(255,255,255,.06);
+  min-height:0;
+}
+.right{
+  border-right:none;
+  border-left:1px solid rgba(255,255,255,.06);
+}
+
+/* =========================
+   Section headers
+   ========================= */
+
+.left > h2,
+.right-head > h2{
+  display:flex;
+  align-items:center;
+  gap:12px;
+
+  margin:0 0 16px;
+  padding:8px 0;
+
+  font-size:14px;
+  font-weight:900;
+  letter-spacing:1.3px;
+  text-transform:uppercase;
+
+  color:rgba(255,255,255,.92);
+  border-bottom:1px solid rgba(255,255,255,.10);
+}
+
+.left > h2::before,
+.right-head > h2::before{
+  content:"";
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:var(--accent);
+  box-shadow:0 0 0 4px rgba(255,60,172,.18);
+}
+
+/* =========================
+   Center (controls + wheel)
+   ========================= */
+
+.center{
+  display:flex;
+  flex-direction:column;
+  min-height:0;              /* критично для флекса */
+  align-items:center;
+  gap:10px;
+  padding:20px;
+}
+
+/* табы сверху */
+.controls{
+  flex:0 0 auto;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+}
+
+/* зона под колесо занимает остаток */
+.wheel-area{
+  flex:1 1 auto;
+  min-height:0;
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+}
+
+/* Вписывание: квадрат по меньшей стороне */
+.wheel-wrap{
+  position:relative;
+
+  /* ключ: размер = минимум из ширины колонки и доступной высоты */
+  width: min(100%, calc(100vh - 220px));
+  aspect-ratio: 1 / 1;
+
+  display:grid;
+  place-items:center;
+}
+
+/* canvas НЕ должен растягиваться отдельно от wrap */
+#wheel{
+  width:100%;
+  height:100%;
+  display:block;
+}
+
+/* кнопка */
+.spin{
+  border:none;
+  cursor:pointer;
+  font-weight:900;
+  letter-spacing:.4px;
+}
+
+.spin-center{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  width:78px;
+  height:78px;
+  border-radius:50%;
+  background:var(--accent);
+  color:#000;
+  font-size:11px;
+  line-height:1.1;
+  text-align:center;
+  box-shadow:
+    0 0 0 6px rgba(0,0,0,.35),
+    0 0 0 8px rgba(255,255,255,.15);
+  z-index:2;
+}
+.spin-center:hover{filter:brightness(1.08)}
+
+/* =========================
+   Tabs
+   ========================= */
+
+.tabs{
+  display:inline-flex;
+  gap:8px;
+  padding:8px;
+  border-radius:999px;
+  background:rgba(0,0,0,.35);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.tabs.subtabs{
+  padding:6px;
+  opacity:.95;
+}
+
+.tab{
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(0,0,0,.35);
+  color:rgba(255,255,255,.92);
+  padding:8px 12px;
+  border-radius:999px;
+  cursor:pointer;
+  font-weight:800;
+  font-size:12px;
+  user-select:none;
+}
+.tab:hover{ background:rgba(255,255,255,.06); }
+.tab.active{
+  background:rgba(255,60,172,.18);
+  border-color:rgba(255,60,172,.35);
+}
+
+/* =========================
+   Left result card
+   ========================= */
+
+.result-card{
+  background:var(--panel);
+  border:1px solid var(--stroke);
+  border-radius:14px;
+  padding:14px;
+  box-shadow:0 12px 30px rgba(0,0,0,.35);
+}
+
+.result-title{
+  margin:0 0 10px 0;
+  font-size:28px;
+  font-weight:900;
+  letter-spacing:.5px;
+  text-transform:uppercase;
+  line-height:1.0;
+}
+
+/* обложка результата (у тебя уже настроено “не резать”) */
+.result-cover{
+  position:relative;
+  width:100%;
+  border-radius:10px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  margin-bottom:10px;
+  overflow:hidden;
+}
+.result-cover img{
+  width:100%;
+  height:auto;
+  display:block;
+}
+
+.badge{
+  position:absolute;
+  right:10px;
+  top:10px;
+  padding:4px 8px;
+  border-radius:8px;
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.16);
+  font-weight:700;
+  font-size:11px;
+}
+
+.result-info{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-top:4px;
+}
+
+.row{
+  display:grid;
+  grid-template-columns: 98px 1fr;
+  gap:10px;
+  align-items:center;
+  padding:8px 0;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.row:last-child{border-bottom:none}
+
+.tag{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:22px;
+  padding:0 10px;
+  border-radius:8px;
+  background:rgba(0,0,0,.35);
+  border:1px solid rgba(255,255,255,.10);
+  font-size:11px;
+  font-weight:800;
+  line-height:1;
+  text-align:center;
+  white-space:nowrap;
+}
+.val{
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.25;
+}
+
+.result-actions{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:10px;
+  margin-top:12px;
+}
+
+.action-btn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px 8px;
+  border-radius:10px;
+  text-decoration:none;
+  color:var(--text);
+  font-weight:800;
+  font-size:12px;
+  background:rgba(0,0,0,.45);
+  border:1px solid rgba(255,255,255,.10);
+}
+.action-btn:hover{
+  background:rgba(255,255,255,.06);
+  border-color:rgba(255,255,255,.16);
+}
+
+/* =========================
+   Right column panels
+   ========================= */
+
+.right{
+  display:flex;
+  flex-direction:column;
+  height:100%;
+  min-height:0;
+  overflow:hidden;
+}
+
+.right-head{ flex:0 0 auto; }
+
+.search{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  margin-bottom:10px;
+}
+
+#search-input{
+  flex:1 1 auto;
+  height:34px;
+  padding:0 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(0,0,0,.35);
+  color:rgba(255,255,255,.92);
+  outline:none;
+}
+#search-input:focus{
+  border-color:rgba(255,60,172,.55);
+  box-shadow:0 0 0 3px rgba(255,60,172,.18);
+}
+#search-clear{
+  width:34px;
+  height:34px;
+  padding:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:16px;
+  line-height:1;
+}
+
+#panel-list,
+#panel-weights,
+#panel-history{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  padding-right:4px;
+}
+
+.is-hidden{ display:none !important; }
+
+.list{
+  list-style:none;
+  padding:0;
+  margin:0;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.list-item{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  padding:8px;
+  border-radius:12px;
+  background:rgba(0,0,0,.35);
+  border:1px solid rgba(255,255,255,.08);
+  cursor:pointer;
+}
+.list-item:hover{
+  background:rgba(255,255,255,.05);
+  border-color:rgba(255,255,255,.14);
+}
+.list-item.active{
+  border-color:rgba(255,60,172,.40);
+  background:rgba(255,60,172,.10);
+}
+.list-item img{
+  width:42px;
+  height:28px;
+  border-radius:8px;
+  object-fit:cover;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.04);
+}
+.list-item span{
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.2px;
+}
+
+/* weights */
+#weights-form{ margin-top:8px; }
+
+.weights-row{
+  display:grid;
+  grid-template-columns: 1fr 80px;
+  gap:10px;
+  align-items:center;
+  padding:8px 4px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  color:#fff;
+}
+.weights-row:last-child{border-bottom:none}
+
+.weights-row input{
+  width:80px;
+  padding:6px 8px;
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,.22);
+  background:rgba(255,255,255,.08);
+  color:#fff;
+  outline:none;
+}
+.weights-row input:focus{
+  border-color:rgba(255,60,172,.55);
+  box-shadow:0 0 0 3px rgba(255,60,172,.18);
+}
+
+/* убираем стрелки у number */
+.weights-row input[type="number"]::-webkit-outer-spin-button,
+.weights-row input[type="number"]::-webkit-inner-spin-button{
+  -webkit-appearance:none;
+  margin:0;
+}
+.weights-row input[type="number"]{
+  -moz-appearance:textfield;
+  appearance:textfield;
+}
+
+.weights-actions{
+  flex:0 0 auto;
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  padding-top:10px;
+  margin-top:10px;
+  border-top:1px solid rgba(255,255,255,.06);
+}
+
+/* =========================
+   Responsive
+   ========================= */
+
+@media (max-width: 1200px){
+  .app{grid-template-columns: 300px 1fr 300px;}
+  .wheel-wrap{ width: min(100%, calc(100vh - 220px)); }
+}
+
+@media (max-width: 1040px){
+  body{overflow:auto}
+  .app{
+    grid-template-columns: 1fr;
+    height:auto;
+  }
+  .left,.right{
+    border:none;
+    border-bottom:1px solid rgba(255,255,255,.06);
+  }
+  .center{ min-height:520px; }
+}

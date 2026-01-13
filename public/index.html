@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wheel of Next</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Основной контейнер приложения -->
+<div class="app">
+
+  <!-- Левая колонка: отображение результата выбора -->
+  <aside class="left">
+    <h2>Результат</h2>
+
+    <!-- Карточка с результатом -->
+    <div class="result-card">
+      <h1 class="result-title" id="result-title">—</h1>
+
+      <!-- Обложка результата -->
+      <div class="result-cover">
+        <img id="result-cover" src="" alt="cover">
+        <span class="badge" id="result-badge">—</span>
+      </div>
+
+      <!-- Информация о результате (рендерится через JS) -->
+      <div class="result-info" id="result-info">
+        <!-- строки рендерятся через JS -->
+      </div>
+
+      <!-- Действия с результатом (кнопки-ссылки рендерятся через JS) -->
+      <div class="result-actions" id="result-actions">
+        <!-- кнопки-ссылки рендерятся через JS -->
+      </div>
+    </div>
+  </aside>
+
+  <!-- Центральная колонка: колесо и контролы -->
+    <main class="center">
+    <!-- Контролы: табы для медиа и платформ -->
+    <div class="controls">
+      <div class="tabs" id="media-tabs">
+          <button class="tab active" data-media="games">Games</button>
+          <button class="tab" data-media="video">Video</button>
+          <button class="tab" data-media="books">Books</button>
+      </div>
+      <div class="tabs subtabs" id="platform-tabs" style="display:none;">
+          <button class="tab active" data-platform="all">All</button>
+          <button class="tab" data-platform="pc">PC</button>
+          <button class="tab" data-platform="deck">Deck</button>
+          <button class="tab" data-platform="quest">Quest</button>
+          <button class="tab" data-platform="mobile">Mobile</button>
+      </div>
+    </div>
+
+    <!-- Контейнер для колеса -->
+    <div class="wheel-area">
+      <div class="wheel-wrap">
+        <canvas id="wheel"></canvas>
+
+        <!-- Кнопка запуска вращения -->
+        <button class="spin spin-center" id="spin-btn">
+          START<br>ROLL
+        </button>
+      </div>
+    </div>
+    </main>
+
+  <!-- Правая колонка: список, веса, история -->
+  <aside class="right">
+    <!-- Заголовок и табы панелей -->
+    <div class="right-head">
+      <h2 id="right-title">Полный список</h2>
+      <div class="right-tabs" id="right-tabs">
+        <button class="tab active" data-panel="list">Список</button>
+        <button class="tab" data-panel="weights">Веса</button>
+        <button class="tab" data-panel="history">История</button>
+      </div>
+    </div>
+
+    <!-- Панель списка -->
+    <div id="panel-list">
+      <!-- Поле поиска -->
+      <div class="search">
+        <input id="search-input" type="search" placeholder="Поиск по названию…" autocomplete="off">
+        <button class="tab" id="search-clear" title="Очистить">×</button>
+      </div>
+      <ul class="list" id="full-list"></ul>
+    </div>
+
+    <!-- Панель весов -->
+    <div id="panel-weights" class="is-hidden">
+      <div id="weights-form"></div>
+
+      <!-- Действия с весами -->
+      <div class="weights-actions">
+        <button class="tab" id="save-weights">Save</button>
+        <button class="tab" id="reset-weights">Reset</button>
+      </div>
+    </div>
+
+    <!-- Панель истории -->
+    <div id="panel-history" class="is-hidden">
+      <ul class="list" id="roll-history"></ul>
+    </div>
+
+  </aside>
+
+</div>
+
+<!-- Подключение JavaScript модулей ПОСЛЕ загрузки HTML -->
+<script type="module" src="js/main.js"></script>
+
+</body>
+</html>
