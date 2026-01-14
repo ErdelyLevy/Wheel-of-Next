@@ -1,5 +1,6 @@
 // js/resultUi.js
 import { subscribe, getState } from "./state.js";
+import { getPosterImageForItem } from "./posterPreload.js";
 
 function $(id) {
   return document.getElementById(id);
@@ -116,6 +117,16 @@ function addActionLink(box, label, href) {
   box.appendChild(a);
 }
 
+let resultRaf = 0;
+function scheduleResultRender() {
+  if (resultRaf) return;
+  resultRaf = requestAnimationFrame(() => {
+    resultRaf = 0;
+    const it = getState()?.result?.item;
+    render(it);
+  });
+}
+
 function render(item) {
   const titleEl = $("result-title");
   const imgEl = $("result-cover");
@@ -132,10 +143,16 @@ function render(item) {
     return;
   }
 
-  // title + poster
+  // title
   const title = item.title || item.name || "—";
   setText(titleEl, title);
-  setImg(imgEl, item.poster || item.image || "", title);
+
+  // poster (real OR fallback)
+  const img = getPosterImageForItem(item, () => {
+    scheduleResultRender();
+  });
+
+  setImg(imgEl, img?.src || "", title);
 
   // badge: media_type приоритетнее
   const badge = item.media_type
@@ -155,37 +172,42 @@ function render(item) {
   );
 
   // добавим новый
-  const mt = String(item.media_type || "").toLowerCase();
+  const mt = String(item.media_type || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, ""); // оставляем только то, что ожидаем
   if (mt) badgeEl.classList.add(`badge--${mt}`);
 
   clear(infoEl);
 
   function formatRating(v) {
     const n = Number(v);
-    if (!Number.isFinite(n)) return "";
+    if (!Number.isFinite(n) || n <= 0) return "";
     return n.toFixed(1);
   }
 
+  function normalizeValue(v) {
+    if (v == null) return "";
+    if (Array.isArray(v)) {
+      const arr = v.map((x) => String(x ?? "").trim()).filter(Boolean);
+      return arr.length ? arr.join(", ") : "";
+    }
+    const s = String(v).trim();
+    return s;
+  }
+
   // базовые
-  addInfoRow(infoEl, "Коллекция", item.category_name);
-  addInfoRow(infoEl, "Год", item.publish_year);
-  const rating = formatRating(item.provider_rating);
-  addInfoRow(infoEl, "Рейтинг", rating ? `${rating}` : "");
-
-  addInfoRow(infoEl, "Статус", item.production_status);
-
-  // платформы (video_game)
-  addInfoRow(infoEl, "Платформы", item.platforms);
-
-  // сериалы / аниме
-  addInfoRow(infoEl, "Сезонов", item.total_seasons);
-  addInfoRow(infoEl, "Эпизодов", item.total_episodes || item.anime_episodes);
-
-  // книги
-  addInfoRow(infoEl, "Страницы", item.pages);
-
-  // описание — всегда в конце
-  addInfoRow(infoEl, "Описание", item.description);
+  addInfoRow(infoEl, "Коллекция", normalizeValue(item.category_name));
+  addInfoRow(infoEl, "Год", normalizeValue(item.publish_year));
+  addInfoRow(infoEl, "Статус", normalizeValue(item.production_status));
+  addInfoRow(infoEl, "Платформы", normalizeValue(item.platforms));
+  addInfoRow(infoEl, "Сезонов", normalizeValue(item.total_seasons));
+  addInfoRow(
+    infoEl,
+    "Эпизодов",
+    normalizeValue(item.total_episodes || item.anime_episodes)
+  );
+  addInfoRow(infoEl, "Страницы", normalizeValue(item.pages));
+  addInfoRow(infoEl, "Описание", normalizeValue(item.description));
 
   // actions
   clear(actionsEl);

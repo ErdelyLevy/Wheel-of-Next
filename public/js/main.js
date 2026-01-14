@@ -9,8 +9,13 @@ import { openResult, applyWheelSnapshot } from "./actions.js";
 import { drawWheel } from "./wheelRender.js";
 import { getState, subscribe } from "./state.js";
 import { spinToWinner } from "./wheelSpin.js";
-import { ensureSpinAudio, ensureDingAudio } from "./spinSound.js";
-import { stopSpinSound, playDing } from "./spinSound.js";
+import {
+  stopSpinSound,
+  playDing,
+  ensureSpinAudio,
+  ensureDingAudio,
+} from "./spinSound.js";
+import { bindLazyPoster } from "./lazyPoster.js"; // добавь импорт сверху
 
 const LS_ACTIVE_PRESET = "won:activePresetId";
 
@@ -111,8 +116,6 @@ function renderRightList(items) {
   if (!ul) return;
 
   const arr = Array.isArray(items) ? items : [];
-
-  // ✅ источник истины: id -> item (в модуле, не на ul)
   rightListById = new Map(arr.map((x) => [String(x.id), x]));
 
   ul.innerHTML = "";
@@ -125,72 +128,137 @@ function renderRightList(items) {
     return;
   }
 
-  for (const it of arr) {
-    const li = document.createElement("li");
-    li.className = "history-item"; // можешь оставить стиль истории
+  const CHUNK = 40; // 30–60 обычно ок
+  let i = 0;
 
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "history-btn"; // можешь оставить стиль истории
-    btn.dataset.id = String(it.id || ""); // ✅ ТОЛЬКО ID
+  function step() {
+    const frag = document.createDocumentFragment();
+    const end = Math.min(arr.length, i + CHUNK);
 
-    const img = document.createElement("img");
-    img.className = "history-poster";
-    img.alt = it?.title ? `Poster: ${it.title}` : "Poster";
-    img.loading = "lazy";
-    img.decoding = "async";
+    for (; i < end; i++) {
+      frag.appendChild(makeRightListRow(arr[i]));
+    }
 
-    const poster = String(it?.poster || "").trim();
-    if (poster) img.src = poster;
+    ul.appendChild(frag);
 
-    const text = document.createElement("div");
-    text.className = "history-text";
-
-    const title = document.createElement("div");
-    title.className = "history-title";
-    title.textContent = it?.title || "(без названия)";
-
-    const meta = document.createElement("div");
-    meta.className = "history-meta";
-    meta.textContent = [it?.media_type, it?.category_name]
-      .filter(Boolean)
-      .join(" • ");
-
-    text.appendChild(title);
-    text.appendChild(meta);
-
-    btn.appendChild(img);
-    btn.appendChild(text);
-
-    li.appendChild(btn);
-    ul.appendChild(li);
+    if (i < arr.length) {
+      requestAnimationFrame(step);
+    }
   }
+
+  requestAnimationFrame(step);
+}
+
+function makeRightListRow(it) {
+  const li = document.createElement("li");
+  li.className = "history-item";
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "history-btn";
+  btn.dataset.id = String(it.id || "");
+
+  const img = document.createElement("img");
+  img.className = "history-poster";
+  img.alt = it?.title ? `Poster: ${it.title}` : "Poster";
+  img.decoding = "async";
+  img.loading = "lazy"; // можно оставить, но IO важнее
+
+  // ✅ ВАЖНО: bindLazyPoster должен ставить src ТОЛЬКО когда элемент видим
+  bindLazyPoster(img, it);
+
+  const text = document.createElement("div");
+  text.className = "history-text";
+
+  const title = document.createElement("div");
+  title.className = "history-title";
+  title.textContent = it?.title || "(без названия)";
+
+  const meta = document.createElement("div");
+  meta.className = "history-meta";
+  meta.textContent = [it?.media_type, it?.category_name]
+    .filter(Boolean)
+    .join(" • ");
+
+  text.appendChild(title);
+  text.appendChild(meta);
+
+  btn.appendChild(img);
+  btn.appendChild(text);
+
+  li.appendChild(btn);
+  return li;
 }
 
 /** --- применить пресет к странице колеса --- */
 async function applyPresetToWheelPage(presetId) {
   if (!presetId) return;
 
-  // 1) список справа — ИММУТАБЕЛЬНАЯ КОПИЯ
-  const items = await apiGetItemsByPreset(presetId);
-  const listItems = structuredClone(items); // ⬅️ КЛЮЧ
-  rightListAllItems = listItems;
-
-  // сброс поиска при смене пресета
+  // сброс поиска при смене пресета (дешево — можно сразу)
   const searchInput = document.getElementById("search-input");
   if (searchInput) searchInput.value = "";
 
-  renderRightList(listItems);
+  // 1) Стартуем запросы ПАРАЛЛЕЛЬНО
+  console.log("[before items+random]", performance.now());
 
-  if (listItems[0]) openResult(listItems[0]);
+  const pItems = apiGetItemsByPreset(presetId);
+  const pRoll = apiRoll(presetId, { save: false });
 
-  // 2) колесо — СВОЯ копия
-  const snap = await apiRoll(presetId, { save: false });
+  // 2) Ждем ROLL раньше или одновременно — чтобы быстро показать wheel/result
+  let snap;
+  try {
+    console.log("[before random await]", performance.now());
+    snap = await pRoll;
+    console.log("[after random await]", performance.now());
+  } catch (e) {
+    console.error("roll failed", e);
+    snap = null;
+  }
 
-  applyWheelSnapshot({
-    wheelItems: structuredClone(snap.wheel_items), // ⬅️ КЛЮЧ
-    winnerId: null,
-    winnerItem: null,
+  if (snap?.wheel_items?.length) {
+    // ⚡ колесо/результат — ПЕРВЫМИ
+    applyWheelSnapshot({
+      wheelItems: structuredClone(snap.wheel_items),
+      winnerId: snap.winner_id ?? null,
+      winnerItem: snap.winner_item ?? null,
+    });
+
+    // важно: первый кадр колеса — сразу
+    window.requestWheelRedraw?.();
+  }
+
+  // 3) Теперь items (если еще грузятся — дождемся)
+  let items = [];
+  try {
+    console.log("[before items await]", performance.now());
+    items = await pItems;
+    console.log("[after items await]", performance.now());
+  } catch (e) {
+    console.error("items failed", e);
+    items = [];
+  }
+
+  // иммутабельная копия для правого списка
+  const listItems = structuredClone(items);
+  rightListAllItems = listItems;
+
+  // 4) Правый список + openResult — ЛЕНИВО (после первого кадра)
+  const defer = (fn) => {
+    if (window.requestIdleCallback) {
+      requestIdleCallback(fn, { timeout: 1500 });
+    } else {
+      setTimeout(fn, 0);
+    }
+  };
+
+  defer(() => {
+    renderRightList(listItems);
+
+    // если roll не дал winner_item — показываем первый элемент
+    // (но не раньше, чем нарисовали колесо/результат)
+    if (!snap?.winner_item && listItems[0]) {
+      openResult(listItems[0]);
+    }
   });
 }
 

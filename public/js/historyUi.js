@@ -2,6 +2,7 @@
 import { setView } from "./state.js";
 import { applyWheelSnapshot } from "./actions.js";
 import { apiGetHistory, apiGetHistoryById } from "./api.js";
+import { bindLazyPoster } from "./lazyPoster.js"; // добавь импорт сверху
 
 function fmtDate(iso) {
   try {
@@ -65,11 +66,9 @@ export async function renderHistoryList() {
     const img = document.createElement("img");
     img.className = "history-poster";
     img.alt = winner?.title ? `Poster: ${winner.title}` : "Poster";
-    img.loading = "lazy";
     img.decoding = "async";
 
-    const poster = String(winner?.poster || "").trim();
-    if (poster) img.src = poster;
+    bindLazyPoster(img, winner);
 
     const text = document.createElement("div");
     text.className = "history-text";

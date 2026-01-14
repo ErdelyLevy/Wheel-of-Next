@@ -22,4 +22,5 @@ Thumbs.db
 data/
 postcss.config.js
 .stylelintrc.json
-node_modules/.package-lock.json
+
+Wheel of Next.rar

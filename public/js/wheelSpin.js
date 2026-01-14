@@ -81,23 +81,21 @@ export function spinToWinner({
       speed,
     });
 
+    canvas.__spinning = true;
+
     function tick(now) {
       const t = Math.min(1, (now - t0) / durMs);
       const k = easeOutCubic(t);
       const rot = from + (to - from) * k;
 
       canvas.__rotation = rot;
-      drawWheel(canvas, arr, {
-        rotation: rot,
-        onUpdate: () => {
-          // когда догрузятся постеры — перерисуем на текущем rot
-          drawWheel(canvas, arr, { rotation: canvas.__rotation || rot });
-        },
-      });
+      drawWheel(canvas, arr, { rotation: rot, animate: true }); // ✅ важно
 
       if (t < 1) {
         requestAnimationFrame(tick);
       } else {
+        // ✅ после спина — один нормальный redraw, чтобы дорисовать догрузившиеся
+        if (window.requestWheelRedraw) window.requestWheelRedraw();
         resolve();
       }
     }

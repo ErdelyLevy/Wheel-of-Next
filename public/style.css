@@ -812,6 +812,8 @@ button:hover,
 #full-list {
   position: relative;
   z-index: 1;
+  content-visibility: auto;
+  contain-intrinsic-size: 800px; /* чтобы скроллбар не прыгал */
 }
 
 #full-list .history-btn {

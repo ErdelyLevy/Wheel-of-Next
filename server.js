@@ -5,6 +5,13 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { pool } from "./db.js";
 import { clampInt } from "./utils.js";
+import fs from "fs";
+import fsp from "fs/promises";
+import crypto from "crypto";
+import sharp from "sharp";
+import dns from "node:dns";
+
+dns.setDefaultResultOrder("ipv4first");
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,6 +21,12 @@ app.disable("x-powered-by");
 app.use(express.json({ limit: "2mb" }));
 
 // ---- helpers ----
+function proxifyPoster(posterUrl, { w = 512, fmt = "webp" } = {}) {
+  const u = String(posterUrl || "").trim();
+  if (!u) return "";
+  return `/api/poster?u=${encodeURIComponent(u)}&w=${w}&fmt=${fmt}`;
+}
+
 function asTextArray(x) {
   if (Array.isArray(x)) return x.map((v) => String(v).trim()).filter(Boolean);
   if (typeof x === "string")
@@ -52,6 +65,42 @@ function weightedPickIndex(items, weightFn) {
     if (r <= 0) return i;
   }
   return items.length - 1;
+}
+
+// ---- poster cache ----
+const POSTER_CACHE_DIR = path.join(__dirname, ".cache", "posters");
+const POSTER_MAX_BYTES = 15 * 1024 * 1024; // 15MB safety per file
+
+await fsp.mkdir(POSTER_CACHE_DIR, { recursive: true });
+
+function sha1(s) {
+  return crypto.createHash("sha1").update(String(s)).digest("hex");
+}
+
+// SSRF guard: разрешаем только https/http и только внешние хосты (без localhost/lan)
+function isPrivateHost(hostname) {
+  const h = String(hostname || "").toLowerCase();
+  if (!h) return true;
+  if (h === "localhost") return true;
+  if (h.endsWith(".local")) return true;
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(h)) {
+    // ipv4
+    const parts = h.split(".").map((x) => Number(x));
+    const [a, b] = parts;
+    if (a === 10) return true;
+    if (a === 127) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 169 && b === 254) return true;
+  }
+  return false;
+}
+
+function normalizePosterParams(q) {
+  const w = clampInt(q.w, 64, 1024, 512); // ширина по умолчанию 512
+  const fmt = String(q.fmt || "webp").toLowerCase();
+  const outFmt = ["webp", "jpeg", "png", "avif"].includes(fmt) ? fmt : "webp";
+  return { w, fmt: outFmt };
 }
 
 // ---- dynamic DB names (wheel_* or won_*) ----
@@ -282,8 +331,6 @@ app.get("/api/history/:id", async (req, res) => {
   }
 });
 
-// RANDOM: winner + fillers + (optional) save snapshot
-// POST /api/random { preset_id, size, save }
 app.post("/api/random", async (req, res) => {
   try {
     const body = req.body || {};
@@ -431,6 +478,22 @@ app.post("/api/random", async (req, res) => {
       (k) => !(k in poolCountsByCategory)
     );
 
+    const winnerOut = winnerWithW
+      ? {
+          ...winnerWithW,
+          poster: winnerWithW.poster
+            ? proxifyPoster(winnerWithW.poster, { w: 512, fmt: "webp" })
+            : winnerWithW.poster,
+        }
+      : null;
+
+    const wheelItemsOut = wheelItemsWithW.map((it) => ({
+      ...it,
+      poster: it?.poster
+        ? proxifyPoster(it.poster, { w: 512, fmt: "webp" })
+        : it?.poster,
+    }));
+
     res.json({
       ok: true,
       preset_id: presetId,
@@ -439,8 +502,8 @@ app.post("/api/random", async (req, res) => {
       winner_id: winnerId,
       winner_index: winnerIndex,
 
-      winner: winnerWithW,
-      wheel_items: wheelItemsWithW,
+      winner: winnerOut,
+      wheel_items: wheelItemsOut,
 
       history_id: historyId,
       pool_total: poolRows.length,
@@ -485,10 +548,109 @@ app.get("/api/items", async (req, res) => {
     );
 
     res.set("Cache-Control", "no-store");
+
+    const out = rows.map((it) => ({
+      ...it,
+      poster: it?.poster
+        ? proxifyPoster(it.poster, { w: 256, fmt: "webp" })
+        : it.poster,
+    }));
+    return res.json({ ok: true, rows: out });
+
     return res.json({ ok: true, rows });
   } catch (e) {
     console.error("[API] /api/items failed:", e);
     return res.status(500).json({ ok: false, error: String(e.message || e) });
+  }
+});
+
+app.get("/api/poster", async (req, res) => {
+  try {
+    const raw = String(req.query.u || "").trim();
+    if (!raw) return res.status(400).send("u is required");
+
+    let url;
+    try {
+      url = new URL(raw);
+    } catch {
+      return res.status(400).send("bad url");
+    }
+
+    if (!(url.protocol === "http:" || url.protocol === "https:")) {
+      return res.status(400).send("bad protocol");
+    }
+    if (isPrivateHost(url.hostname)) {
+      return res.status(403).send("forbidden host");
+    }
+
+    const { w, fmt } = normalizePosterParams(req.query);
+
+    // ключ кэша: url + params
+    const key = sha1(`${fmt}|w=${w}|${url.toString()}`);
+    const filePath = path.join(POSTER_CACHE_DIR, `${key}.${fmt}`);
+    const etag = `"${key}"`;
+
+    // если клиент уже имеет
+    if (req.headers["if-none-match"] === etag) {
+      res.status(304).end();
+      return;
+    }
+
+    // hit дискового кэша
+    if (fs.existsSync(filePath)) {
+      res.setHeader("Content-Type", `image/${fmt === "jpg" ? "jpeg" : fmt}`);
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      res.setHeader("ETag", etag);
+      fs.createReadStream(filePath).pipe(res);
+      return;
+    }
+
+    // --- miss: скачиваем ---
+    const r = await fetch(url, {
+      // чуть помогаем CDN
+      headers: {
+        "User-Agent": "WheelOfNext/1.0",
+        Accept: "image/avif,image/webp,image/*,*/*;q=0.8",
+      },
+    });
+
+    if (!r.ok) {
+      return res.status(502).send(`upstream ${r.status}`);
+    }
+
+    const ab = await r.arrayBuffer();
+    if (ab.byteLength <= 0) return res.status(502).send("empty image");
+    if (ab.byteLength > POSTER_MAX_BYTES) {
+      return res.status(413).send("image too large");
+    }
+
+    const buf = Buffer.from(ab);
+
+    // ресайз + конверт
+    let out;
+    const img = sharp(buf, { failOn: "none" }).resize({
+      width: w,
+      withoutEnlargement: true,
+    });
+
+    if (fmt === "webp") out = await img.webp({ quality: 78 }).toBuffer();
+    else if (fmt === "avif") out = await img.avif({ quality: 50 }).toBuffer();
+    else if (fmt === "png")
+      out = await img.png({ compressionLevel: 8 }).toBuffer();
+    else out = await img.jpeg({ quality: 82 }).toBuffer();
+
+    // сохранить на диск (атомарно)
+    const tmp = filePath + "." + process.pid + ".tmp";
+    await fsp.writeFile(tmp, out);
+    await fsp.rename(tmp, filePath);
+
+    res.setHeader("Content-Type", `image/${fmt === "jpg" ? "jpeg" : fmt}`);
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.setHeader("ETag", etag);
+    res.end(out);
+  } catch (e) {
+    console.error("[API] /api/poster failed:", e);
+    res.status(500).send("poster proxy failed");
   }
 });
 

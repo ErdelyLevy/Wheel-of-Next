@@ -1,6 +1,6 @@
 // public/js/actions.js
 import { getState, setState } from "./state.js";
-import { preloadPosters, getPosterAspect } from "./posterPreload.js";
+import { preloadPosters } from "./posterPreload.js";
 import { clampInt } from "./uiUtils.js";
 
 /**
@@ -183,17 +183,10 @@ export function applyWheelSnapshot({ wheelItems, winnerId, winnerItem } = {}) {
     ? structuredClone(wheelItems)
     : [];
 
-  // прелоадим постеры; когда что-то загрузится — расширим при необходимости
-  preloadPosters(baseItems, () => {
-    // 1) если у тебя есть логика "дозаполнения" — пусть остаётся
-    tryAutoExpandWheel(computedWinnerId);
-
-    // 2) ✅ главное: перерисовать колесо, чтобы постеры проявились
-    window.requestWheelRedraw?.();
-  });
-
+  // ✅ 1) расширяем сразу (это и есть то, что реально будет на колесе)
   const expanded = autoExpandWheelItems(baseItems, computedWinnerId);
 
+  // ✅ 2) сначала обновляем state — колесо/результат должны появиться мгновенно (fallback’ами)
   setState({
     result: winnerItem ? { item: winnerItem } : s.result,
     wheel: {

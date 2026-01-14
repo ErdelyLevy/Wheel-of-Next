@@ -1,6 +1,6 @@
 // js/wheelRender.js
 
-import { getPosterImg } from "./posterPreload.js"; // сверху файла
+import { getPosterImageForItem } from "./posterPreload.js"; // сверху файла
 
 const IMG_CACHE = new Map();
 
@@ -75,15 +75,15 @@ export function drawWheel(canvas, items, opts = {}) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  const rotation = Number(opts.rotation || 0); // радианы
-  const onUpdate = opts.onUpdate;
+  const rotation = Number(opts.rotation || 0);
+  const animate = !!opts.animate; // ✅ NEW
+  const onUpdate = animate ? null : opts.onUpdate; // ✅ NEW (важно)
 
   resizeCanvasToDisplaySize(canvas);
 
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
 
-  // рисуем в CSS координатах
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, rect.width, rect.height);
 
@@ -93,82 +93,59 @@ export function drawWheel(canvas, items, opts = {}) {
   const cx = rect.width / 2;
   const cy = rect.height / 2;
 
-  // ✅ FIX: один раз объявляем R и сразу гарантируем валидность
   const R = Math.min(rect.width, rect.height) / 2 - 10;
   if (R <= 0) return;
 
-  // рисуем в CSS координатах
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, rect.width, rect.height);
 
-  // чуть “вверх”, чтобы указатель был сверху
   const ROT0 = -Math.PI / 2 + rotation;
 
-  // фон колеса
   ctx.beginPath();
   ctx.arc(cx, cy, R, 0, Math.PI * 2);
   ctx.fillStyle = "rgba(255,255,255,0.04)";
   ctx.fill();
 
-  // сектора
   for (let i = 0; i < segs.length; i++) {
     const s = segs[i];
     const a0 = s.start + ROT0;
     const a1 = s.end + ROT0;
 
-    // сектор
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.arc(cx, cy, R, a0, a1);
     ctx.closePath();
 
-    // легкая “полосатость”
     ctx.fillStyle = i % 2 ? "rgba(0,0,0,0.18)" : "rgba(255,255,255,0.06)";
     ctx.fill();
 
-    // граница сектора
     ctx.strokeStyle = "rgba(255,255,255,0.10)";
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // клип и отрисовка постера — ВНУТРИ сектора, но в локальных координатах
     ctx.save();
-
-    // локальная система: центр колеса = (0,0)
     ctx.translate(cx, cy);
 
-    // поворачиваем так, чтобы центр сектора смотрел ВВЕРХ (к стрелке)
     const amid = (a0 + a1) / 2;
     ctx.rotate(amid + Math.PI / 2);
 
-    // ширина сектора (угол)
     const delta = (a1 - a0) / 2;
 
-    // ✅ клип сектора в локальной системе
-    // в локальной системе "наружу" = вверх, а в canvas "вверх" это -Y,
-    // поэтому сектор центрируем на угле -PI/2
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.arc(0, 0, R, -Math.PI / 2 - delta, -Math.PI / 2 + delta);
     ctx.closePath();
     ctx.clip();
 
-    // === рисуем постер: низ ровно в центре, верх ровно на внешнем радиусе ===
-    const poster = String(s.item?.poster || "").trim();
-    const img = poster
-      ? getPosterImg(poster, onUpdate, { priority: "high" })
-      : null;
+    // ✅ вот это главное: onUpdate только когда НЕ animate
+    const img = getPosterImageForItem(s.item, onUpdate);
 
-    // маленький овер-дро (чуть больше радиуса), чтобы не ловить микро-зазоры от антиалиасинга
     const over = 6;
-    const zoneH = R + over; // высота от центра до внешнего радиуса
-    const zoneW = zoneH * 0.62; // как у тебя было
+    const zoneH = R + over;
+    const zoneW = zoneH * 0.62;
 
-    // drawPosterCover: (x,y) — центр зоны
-    // зона от y=0..zoneH => центр y = zoneH/2
     drawPosterCover(ctx, img, 0, -zoneH / 2, zoneW, zoneH);
 
-    // fallback текст
     if (!img || !img.complete) {
       const t = String(s.item?.title || "");
       if (t) {
