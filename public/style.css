@@ -234,14 +234,6 @@ button:hover,
    Result card (LEFT)
    ========================================================= */
 
-.result-card {
-  background: var(--panel);
-  border: 1px solid var(--stroke);
-  border-radius: var(--r-soft);
-  padding: 14px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
-}
-
 .result-title {
   margin: 0 0 10px;
   font-size: 26px;
@@ -1257,4 +1249,604 @@ button:hover,
 #views > .view {
   position: absolute;
   inset: 0;
+}
+
+.result-card {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06),
+    rgba(0, 0, 0, 0.35)
+  );
+  border-radius: 14px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.result-poster {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+}
+
+.result-poster::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.15),
+    rgba(0, 0, 0, 0.55)
+  );
+  pointer-events: none;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  border-radius: 999px;
+
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(6px);
+
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 10px rgba(0, 0, 0, 0.4);
+
+  user-select: none;
+  pointer-events: none;
+}
+
+.badge[data-type="movie"] {
+  background: linear-gradient(135deg, #ff4fd8, #b84cff);
+  box-shadow: 0 0 14px rgba(255, 79, 216, 0.55);
+}
+
+.badge[data-type="anime"] {
+  background: linear-gradient(135deg, #00f0ff, #7b5cff);
+  box-shadow: 0 0 14px rgba(0, 240, 255, 0.45);
+}
+
+.badge[data-type="game"] {
+  background: linear-gradient(135deg, #00ff9c, #1aff5c);
+  box-shadow: 0 0 14px rgba(0, 255, 156, 0.45);
+}
+
+.result-poster {
+  position: relative;
+}
+
+.result-poster .badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+}
+
+.result-card.is-win .badge {
+  animation: badgeGlow 1.6s ease-out;
+}
+
+@keyframes badgeGlow {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  40% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 999px;
+
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(6px);
+
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 10px rgba(0, 0, 0, 0.4);
+
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Типы */
+.badge[data-type="movie"] {
+  background: linear-gradient(135deg, #ff4fd8, #b84cff);
+  box-shadow: 0 0 14px rgba(255, 79, 216, 0.55);
+}
+
+.badge[data-type="anime"] {
+  background: linear-gradient(135deg, #00f0ff, #7b5cff);
+  box-shadow: 0 0 14px rgba(0, 240, 255, 0.45);
+}
+
+.badge[data-type="game"],
+.badge[data-type="video_game"],
+.badge[data-type="videogame"] {
+  background: linear-gradient(135deg, #00ff9c, #1aff5c);
+  box-shadow: 0 0 14px rgba(0, 255, 156, 0.45);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  border-radius: 999px;
+
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+
+  backdrop-filter: blur(6px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 10px rgba(0, 0, 0, 0.45);
+
+  user-select: none;
+  pointer-events: none;
+}
+
+/* 🎬 MOVIE */
+.badge[data-type="movie"] {
+  background: linear-gradient(135deg, #ff4fd8, #b84cff);
+  box-shadow: 0 0 14px rgba(255, 79, 216, 0.55);
+}
+
+/* 📺 SHOW / TV */
+.badge[data-type="show"] {
+  background: linear-gradient(135deg, #ffb347, #ff6a00);
+  box-shadow: 0 0 14px rgba(255, 179, 71, 0.5);
+}
+
+/* 🎌 ANIME */
+.badge[data-type="anime"] {
+  background: linear-gradient(135deg, #00f0ff, #7b5cff);
+  box-shadow: 0 0 14px rgba(0, 240, 255, 0.45);
+}
+
+/* 🎮 GAME */
+.badge[data-type="game"] {
+  background: linear-gradient(135deg, #00ff9c, #1aff5c);
+  box-shadow: 0 0 14px rgba(0, 255, 156, 0.45);
+}
+
+/* 📚 BOOK */
+.badge[data-type="book"] {
+  background: linear-gradient(135deg, #8bc6ec, #9599e2);
+  box-shadow: 0 0 14px rgba(139, 198, 236, 0.45);
+}
+
+.badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+
+  border-radius: 999px;
+
+  color: #fff;
+
+  /* ⬇️ ключевая часть */
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+
+  backdrop-filter: blur(6px);
+
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75), 0 0 4px rgba(0, 0, 0, 0.6);
+
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 10px rgba(0, 0, 0, 0.45);
+
+  user-select: none;
+  pointer-events: none;
+}
+
+.badge[data-type="movie"] {
+  background: linear-gradient(135deg, #ff3fae, #a63cff);
+  box-shadow: 0 0 14px rgba(255, 63, 174, 0.55);
+}
+
+.badge[data-type="show"] {
+  background: linear-gradient(135deg, #ff9f2e, #e65c00);
+  box-shadow: 0 0 14px rgba(255, 159, 46, 0.5);
+}
+
+.badge[data-type="anime"] {
+  background: linear-gradient(135deg, #00c4d6, #5a3cff);
+  box-shadow: 0 0 14px rgba(0, 196, 214, 0.45);
+}
+
+.badge[data-type="game"] {
+  background: linear-gradient(135deg, #00d17a, #0fb84a);
+  box-shadow: 0 0 14px rgba(0, 209, 122, 0.45);
+}
+
+.badge[data-type="book"] {
+  background: linear-gradient(135deg, #5a8dee, #6b6fdc);
+  box-shadow: 0 0 14px rgba(90, 141, 238, 0.45);
+}
+
+.result-cover {
+  position: relative; /* якорь для бейджа */
+}
+
+.result-cover .badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+
+  width: auto;
+  display: inline-block;
+
+  /* ⛔ ничего не трогаем во внешнем виде */
+}
+
+.result-cover {
+  position: relative;
+}
+
+.result-cover .badge {
+  position: absolute;
+  top: 10px; /* сохраняем вертикаль */
+  right: 10px; /* 👉 переносим в правый угол */
+  left: auto;
+
+  width: auto; /* ⛔ убираем растяжение */
+  max-width: 70%; /* защита от длинных текстов */
+
+  padding: 4px 10px; /* компактнее по горизонтали */
+  white-space: nowrap;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.result-cover .badge {
+  display: inline-flex;
+  align-items: center; /* ✅ вертикальное центрирование */
+  justify-content: center; /* горизонтальное (на всякий случай) */
+}
+
+.result-cover .badge {
+  line-height: 1.2; /* ⛔ убираем влияние line-height */
+}
+.result-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* строка */
+.info-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 12px;
+  align-items: start;
+}
+
+/* тег (ключ) */
+.info-k {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+
+  color: #ff4fa3;
+  background: rgba(255, 79, 163, 0.14);
+
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* значение */
+.info-v {
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.info-row:has(.info-v) {
+  align-items: start;
+}
+
+/* общий контейнер инфы */
+.result-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px; /* чтобы до кнопок был воздух */
+}
+
+/* линия перед блоком действий */
+.result-actions {
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.info-row {
+  display: grid;
+  grid-template-columns: 92px 1fr; /* ← подбери ширину под твою верстку */
+  column-gap: 12px;
+  align-items: start;
+}
+
+.info-k {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+
+  min-height: 22px;
+  box-sizing: border-box;
+}
+
+.info-k {
+  display: inline-flex;
+  align-items: center; /* вертикальный центр */
+  justify-content: center; /* горизонтальный центр */
+
+  min-height: 22px;
+  padding: 2px 8px;
+
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+
+  background: rgba(255, 60, 172, 0.18);
+  color: #ff5bbd;
+  box-sizing: border-box;
+}
+
+.info-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.info-row.is-desc {
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+}
+
+.info-row.is-desc .info-k {
+  grid-column: 1 / 2;
+  grid-row: 1;
+}
+
+.info-row.is-desc .info-v {
+  grid-column: 1 / -1; /* ✅ значение под всем рядом */
+  grid-row: 2;
+  margin-top: 6px;
+}
+
+.desc-text.is-clamped {
+  position: relative;
+}
+
+/* небольшой fade вниз, чтобы было понятно что там ещё */
+.desc-text.is-clamped:not(.is-open)::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2.2em;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0),
+    rgba(10, 10, 14, 0.85)
+  );
+  pointer-events: none;
+}
+
+.desc-more {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.82);
+
+  cursor: pointer;
+}
+
+.desc-more:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* общий ряд */
+.info-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 10px;
+  row-gap: 0; /* ✅ убираем лишние вертикальные зазоры */
+  align-items: start;
+}
+
+/* описание: value идёт со 2-й строки и на всю ширину */
+.info-row.is-desc .info-v {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  margin-top: 2px; /* ✅ было 6px — делаем аккуратно */
+}
+
+.desc-more {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 10px;
+
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+
+  cursor: pointer;
+}
+
+.desc-more:hover {
+  border-color: rgba(255, 60, 172, 0.55);
+  box-shadow: 0 0 0 2px rgba(255, 60, 172, 0.15);
+}
+
+.desc-more:active {
+  transform: translateY(1px);
+}
+
+.desc-text {
+  padding-bottom: 2px;
+}
+
+/* контейнер описания */
+.desc-wrap {
+  position: relative;
+}
+
+/* текст описания */
+.desc-text {
+  position: relative;
+  padding-right: 42px; /* ✅ место под кнопку */
+}
+
+/* когда свернуто — небольшой fade снизу/справа */
+.desc-wrap::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 72px;
+  height: 36px;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0), rgba(12, 12, 18, 0.95));
+  opacity: 1;
+}
+
+.desc-wrap.is-open::after {
+  opacity: 0;
+}
+
+/* когда open — fade не нужен */
+.desc-text.is-open + .desc-more {
+  position: static; /* кнопка становится обычной */
+  margin-top: 8px;
+}
+
+/* сама кнопка "…" */
+.desc-more {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  height: 26px;
+  min-width: 34px;
+  padding: 0 10px;
+  border-radius: 10px;
+
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.desc-more:hover {
+  border-color: rgba(255, 60, 172, 0.55);
+  box-shadow: 0 0 0 2px rgba(255, 60, 172, 0.15);
+}
+
+.desc-more.is-hidden {
+  display: none;
+}
+
+/* Больше воздуха между бейджем "ОПИСАНИЕ" и самим текстом */
+.info-row.is-desc .info-v {
+  margin-top: 10px; /* было 0/мало — увеличиваем */
+}
+
+/* если надо ещё сильнее — это внутренний отступ у текста */
+.info-row.is-desc .desc-text {
+  padding-top: 2px; /* лёгкий сдвиг вниз */
+}
+
+/* карточка = колонка, контент может скроллиться */
+.result-card{
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 140px); /* подбери под свою шапку/отступы */
+  overflow: hidden;               /* важно: скролл отдаём внутреннему блоку */
+}
+
+/* именно блок с инфой и описанием пусть скроллится */
+.result-info{
+  overflow: auto;
+  padding-right: 6px; /* чтобы скроллбар не наезжал на текст */
+  flex: 1 1 auto;     /* занимает всё доступное место */
+  min-height: 0;      /* критично для flex+overflow (иначе не скроллится) */
+}
+
+/* кнопки всегда снизу и не уплывают */
+.result-actions{
+  flex: 0 0 auto;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.08);
 }

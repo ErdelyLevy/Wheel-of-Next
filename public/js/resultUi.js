@@ -28,6 +28,47 @@ function clear(el) {
   el.innerHTML = "";
 }
 
+function applyDescClamp(wrapEl, textEl, btnEl, maxLines = 10) {
+  if (!wrapEl || !textEl || !btnEl) return;
+
+  wrapEl.classList.remove("is-open");
+  textEl.classList.remove("is-open");
+  btnEl.classList.add("is-hidden");
+
+  requestAnimationFrame(() => {
+    const cs = getComputedStyle(textEl);
+    const lineH = parseFloat(cs.lineHeight) || 16;
+    const maxH = Math.round(lineH * maxLines);
+
+    if (textEl.scrollHeight <= maxH + 2) {
+      btnEl.classList.add("is-hidden");
+      textEl.style.maxHeight = "none";
+      textEl.style.overflow = "visible";
+      return;
+    }
+
+    btnEl.classList.remove("is-hidden");
+    textEl.style.maxHeight = `${maxH}px`;
+    textEl.style.overflow = "hidden";
+
+    btnEl.onclick = () => {
+      const open = !textEl.classList.contains("is-open");
+      textEl.classList.toggle("is-open", open);
+      wrapEl.classList.toggle("is-open", open);
+
+      if (open) {
+        textEl.style.maxHeight = "none";
+        textEl.style.overflow = "visible";
+        btnEl.textContent = "СВЕРНУТЬ";
+      } else {
+        textEl.style.maxHeight = `${maxH}px`;
+        textEl.style.overflow = "hidden";
+        btnEl.textContent = "…";
+      }
+    };
+  });
+}
+
 function addInfoRow(box, label, value) {
   if (!box) return;
   if (value == null || value === "") return;
@@ -41,7 +82,33 @@ function addInfoRow(box, label, value) {
 
   const v = document.createElement("span");
   v.className = "info-v";
-  v.textContent = String(value);
+
+  // ✅ ТУТ: special-case для описания
+  if (String(label).toLowerCase() === "описание") {
+    row.classList.add("is-desc");
+
+    const wrap = document.createElement("div");
+    wrap.className = "desc-wrap";
+
+    const text = document.createElement("div");
+    text.className = "desc-text";
+    text.textContent = String(value);
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "desc-more";
+    btn.textContent = "…";
+
+    wrap.appendChild(text);
+    wrap.appendChild(btn);
+    v.appendChild(wrap);
+
+    // ✅ ВОТ СЮДА добавляется вызов
+    applyDescClamp(wrap, text, btn, 10);
+  } else {
+    // обычные строки
+    v.textContent = String(value);
+  }
 
   row.appendChild(k);
   row.appendChild(v);
@@ -76,6 +143,7 @@ function render(item) {
     setText(badgeEl, "—");
     clear(infoEl);
     clear(actionsEl);
+    if (badgeEl) badgeEl.removeAttribute("data-type");
     return;
   }
 
@@ -83,13 +151,25 @@ function render(item) {
   setText(titleEl, item.title || item.name || "—");
   setImg(imgEl, item.poster || item.image || "", item.title || "");
 
-  // badge: можно поменять формат как хочешь
-  const badge = item.media_type
-    ? String(item.media_type)
-    : item.category_name
-    ? String(item.category_name)
-    : "—";
-  setText(badgeEl, badge);
+  // badge (media type)
+  const rawType = item?.media_type ? String(item.media_type).toLowerCase() : "";
+
+  const TYPE_MAP = {
+    movie: "movie",
+    show: "show",
+    anime: "anime",
+    video_game: "game",
+    book: "book",
+  };
+
+  const type = TYPE_MAP[rawType] || "";
+
+  setText(badgeEl, type || "—");
+
+  if (badgeEl) {
+    if (type) badgeEl.dataset.type = type;
+    else badgeEl.removeAttribute("data-type");
+  }
 
   // info
   clear(infoEl);
@@ -99,6 +179,10 @@ function render(item) {
   addInfoRow(infoEl, "Рейтинг", item.provider_rating || "");
   addInfoRow(infoEl, "Статус", item.production_status || "");
   addInfoRow(infoEl, "Описание", item.description || "");
+
+  // ✅ clamp описания (если оно есть)
+  const descEl = infoEl.querySelector(".desc-text");
+  applyDescClamp(descEl, 10);
 
   // actions
   clear(actionsEl);
@@ -112,7 +196,11 @@ function render(item) {
 
   // 2) SOURCE кнопка -> source_url (заголовок в upper case)
   if (item.source && item.source_url) {
-    addActionLink(actionsEl, String(item.source).toUpperCase(), item.source_url);
+    addActionLink(
+      actionsEl,
+      String(item.source).toUpperCase(),
+      item.source_url
+    );
   } else if (item.source_url) {
     addActionLink(actionsEl, "SOURCE", item.source_url);
   }
