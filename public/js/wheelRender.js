@@ -1,6 +1,6 @@
 // js/wheelRender.js
 
-import { getPosterImageForItem } from "./posterPreload.js"; // сверху файла
+import { getCanvasPosterImage } from "./canvasPoster.js";
 
 const IMG_CACHE = new Map();
 
@@ -138,7 +138,7 @@ export function drawWheel(canvas, items, opts = {}) {
     ctx.clip();
 
     // ✅ вот это главное: onUpdate только когда НЕ animate
-    const img = getPosterImageForItem(s.item, onUpdate);
+    const img = getCanvasPosterImage(s.item, onUpdate);
 
     const over = 6;
     const zoneH = R + over;

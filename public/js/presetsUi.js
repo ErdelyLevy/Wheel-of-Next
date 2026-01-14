@@ -1,5 +1,5 @@
 // js/presetsUi.js
-import { getState, setState, setPresetDraft, subscribe } from "./state.js";
+import { getState, setState, setPresetDraft } from "./state.js";
 
 function resetPresetEditorForm() {
   // очисти поля формы (name, collections, media_types, weights и т.д.)

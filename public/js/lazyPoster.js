@@ -1,55 +1,7 @@
 // public/js/lazyPoster.js
-import {
-  getPosterImageForItem,
-  getPosterSrcForItem,
-  getFallbackPosterSrc,
-} from "./posterPreload.js";
+import { getPosterSrc, getFallbackPosterSrc } from "./posterSrc.js";
 
-// io должен быть один на модуль
-// (root можно настроить на скролл-контейнер списка, если он есть)
-const io = new IntersectionObserver(
-  (entries) => {
-    for (const e of entries) {
-      if (!e.isIntersecting) continue;
-
-      const imgEl = e.target;
-      io.unobserve(imgEl);
-
-      const item = imgEl.__lazyItem;
-      if (!item) continue;
-
-      // при входе в viewport — запускаем загрузку реального постера
-      const update = imgEl.__lazyOnUpdate;
-      const res = getPosterImageForItem(item, update);
-
-      // res может быть Image. Если вдруг вернули что-то иное — не ломаем src
-      if (res && res.src) imgEl.src = res.src;
-    }
-  },
-  { rootMargin: "300px" }
-);
-
-export function bindLazyPoster(imgEl, item) {
-  if (!imgEl) return;
-
-  imgEl.__lazyItem = item;
-
-  // 1) СРАЗУ фолбэк (и главное — без сетевой загрузки)
-  imgEl.src = getFallbackPosterSrc(item);
-
-  // 2) update — когда реальный постер догрузился или упал
-  imgEl.__lazyOnUpdate = () => {
-    // элемент мог быть удалён
-    if (!imgEl.isConnected) return;
-
-    const res = getPosterImageForItem(item, null);
-    if (res && res.src) imgEl.src = res.src;
-    else imgEl.src = getFallbackPosterSrc(item);
-  };
-
-  // 3) реальный постер начнём грузить только когда попал в viewport
-  io.observe(imgEl);
-}
+let io;
 
 function ensureIO() {
   if (io) return io;
@@ -62,48 +14,35 @@ function ensureIO() {
         const img = e.target;
         io.unobserve(img);
 
-        const item = img.__wonItem;
+        const item = img.__lazyItem;
         if (!item) continue;
 
-        // ВАЖНО: получаем Image (real OR fallback)
-        // и подписываемся так, чтобы обновился ТОЛЬКО этот img
-        const resolved = getPosterImageForItem(item, () => {
-          const next = getPosterImageForItem(item);
-          if (next?.src && img.src !== next.src) img.src = next.src;
-        });
-
-        if (resolved?.src) img.src = resolved.src;
+        // ставим реальный постер через серверный прокси-кэш
+        img.src = getPosterSrc(item, { w: 256, fmt: "webp" });
       }
     },
-    { root: null, rootMargin: "400px 0px", threshold: 0.01 }
+    { root: null, rootMargin: "300px 0px", threshold: 0.01 }
   );
 
   return io;
 }
 
-/** singleton IntersectionObserver */
-function getIO() {
-  if (io) return io;
+export function bindLazyPoster(imgEl, item) {
+  if (!imgEl) return;
 
-  io = new IntersectionObserver(
-    (entries) => {
-      for (const e of entries) {
-        if (!e.isIntersecting) continue;
+  imgEl.__lazyItem = item;
 
-        const img = e.target;
-        io.unobserve(img);
+  // 1) мгновенный fallback
+  imgEl.src = getFallbackPosterSrc(item);
 
-        const item = img.__posterItem;
-        if (!item) return;
+  // 2) если реальный постер не загрузился — назад на fallback
+  // и больше не дёргаем сеть для этого img
+  imgEl.onerror = () => {
+    imgEl.onerror = null;
+    imgEl.__lazyItem = null;
+    imgEl.src = getFallbackPosterSrc(item);
+  };
 
-        img.src = getPosterSrcForItem(item);
-      }
-    },
-    {
-      rootMargin: "200px", // начинаем грузить заранее
-      threshold: 0.01,
-    }
-  );
-
-  return io;
+  // 3) загрузку реального постера начинаем только при появлении в viewport
+  ensureIO().observe(imgEl);
 }

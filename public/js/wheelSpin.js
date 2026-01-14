@@ -48,38 +48,44 @@ export function spinToWinner({
 
     const id = String(winnerId || "");
     const segs = buildWeightedSegments(arr);
-    const seg = segs.find((s) => String(s.item?.id) === id);
+
+    // ✅ winner может быть "порезан": ищем все сегменты победителя
+    const winnerSegs = id
+      ? segs.filter((s) => {
+          const it = s?.item;
+          const sid = String(it?.id ?? "");
+          const sliceOf = it?.__sliceOf != null ? String(it.__sliceOf) : "";
+          return sid === id || sliceOf === id;
+        })
+      : [];
+
+    // ✅ выбираем ОДИН сегмент победителя (любой)
+    const seg =
+      winnerSegs.length > 0
+        ? winnerSegs[Math.floor(Math.random() * winnerSegs.length)]
+        : null;
 
     // если победителя нет — fallback
     const targetAngle = seg
       ? pickRandomInsideSegment(seg.start, seg.end, 0.12)
       : 0;
 
-    // rotation, который ставит targetAngle под стрелку (стрелка сверху)
     const targetBase = normRad(-targetAngle);
-
     const from = Number(canvas.__rotation || 0);
 
-    // сколько оборотов сделать перед остановкой
-    const baseTurns = 4; // минимум
+    const baseTurns = 4;
     const extraTurns = Math.max(0, Math.round(Number(speed || 1) * 2));
     const turns = baseTurns + extraTurns;
 
-    // финальный rotation: targetBase + N*2PI, но > from
     const two = Math.PI * 2;
     let to = targetBase + turns * two;
 
-    // гарантируем, что "to" впереди "from"
     while (to <= from + two) to += two;
 
     const t0 = performance.now();
     const durMs = Math.max(300, Number(durationSec || 10) * 1000);
 
-    // 🔊 START SPIN SOUND
-    startSpinSound({
-      durationSec: durMs / 1000,
-      speed,
-    });
+    startSpinSound({ durationSec: durMs / 1000, speed });
 
     canvas.__spinning = true;
 
@@ -89,12 +95,11 @@ export function spinToWinner({
       const rot = from + (to - from) * k;
 
       canvas.__rotation = rot;
-      drawWheel(canvas, arr, { rotation: rot, animate: true }); // ✅ важно
+      drawWheel(canvas, arr, { rotation: rot, animate: true });
 
       if (t < 1) {
         requestAnimationFrame(tick);
       } else {
-        // ✅ после спина — один нормальный redraw, чтобы дорисовать догрузившиеся
         if (window.requestWheelRedraw) window.requestWheelRedraw();
         resolve();
       }

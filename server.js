@@ -9,9 +9,69 @@ import fs from "fs";
 import fsp from "fs/promises";
 import crypto from "crypto";
 import sharp from "sharp";
+import { Resolver } from "node:dns/promises";
 import dns from "node:dns";
+import net from "node:net";
+import { Agent, setGlobalDispatcher } from "undici";
 
-dns.setDefaultResultOrder("ipv4first");
+const BAD_IP = new Set(["127.0.0.1", "0.0.0.0", "::1"]);
+
+// если хочешь сторонний DNS — можно явно:
+dns.setServers(["1.1.1.1", "8.8.8.8"]);
+
+async function resolveHost(hostname) {
+  // 1) если hostname уже IP — просто вернём
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname))
+    return [{ address: hostname, family: 4 }];
+  if (hostname.includes(":")) return [{ address: hostname, family: 6 }];
+
+  // 2) сначала IPv4
+  try {
+    const v4 = await dns.promises.resolve4(hostname);
+    const addrs4 = v4
+      .filter((ip) => ip && !BAD_IP.has(ip))
+      .map((ip) => ({ address: ip, family: 4 }));
+    if (addrs4.length) return addrs4;
+  } catch {}
+
+  // 3) потом IPv6
+  try {
+    const v6 = await dns.promises.resolve6(hostname);
+    const addrs6 = v6
+      .filter((ip) => ip && !BAD_IP.has(ip))
+      .map((ip) => ({ address: ip, family: 6 }));
+    if (addrs6.length) return addrs6;
+  } catch {}
+
+  return [];
+}
+
+function lookup(hostname, options, cb) {
+  resolveHost(hostname)
+    .then((addrs) => {
+      if (!addrs.length)
+        return cb(new Error(`DNS resolve failed for ${hostname}`));
+
+      // ⚠️ ВАЖНО: если options.all=true — возвращаем массив адресов
+      if (options && options.all) return cb(null, addrs);
+
+      // иначе — один адрес
+      const first = addrs[0];
+      return cb(null, first.address, first.family);
+    })
+    .catch((err) => cb(err));
+}
+
+setGlobalDispatcher(
+  new Agent({
+    connect: {
+      timeout: 30_000,
+      lookup, // ✅ вот сюда
+    },
+    headersTimeout: 30_000,
+    bodyTimeout: 60_000,
+  })
+);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,6 +96,7 @@ function asTextArray(x) {
       .filter(Boolean);
   return [];
 }
+
 function normalizeWeightsObject(obj) {
   const out = {};
   if (!obj || typeof obj !== "object") return out;
@@ -46,6 +107,7 @@ function normalizeWeightsObject(obj) {
   }
   return out;
 }
+
 function shuffleInPlace(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -53,6 +115,7 @@ function shuffleInPlace(arr) {
   }
   return arr;
 }
+
 function weightedPickIndex(items, weightFn) {
   if (!items.length) return -1;
   const ws = items.map(weightFn);
@@ -67,10 +130,138 @@ function weightedPickIndex(items, weightFn) {
   return items.length - 1;
 }
 
-// ---- poster cache ----
-const POSTER_CACHE_DIR = path.join(__dirname, ".cache", "posters");
-const POSTER_MAX_BYTES = 15 * 1024 * 1024; // 15MB safety per file
+const POSTER_CACHE_MAX_BYTES = 4 * 1024 * 1024 * 1024; // 4GB
+let posterCacheCleanupRunning = false;
 
+async function enforcePosterCacheLimit(maxBytes = POSTER_CACHE_MAX_BYTES) {
+  if (posterCacheCleanupRunning) return;
+  posterCacheCleanupRunning = true;
+
+  try {
+    const entries = await fsp.readdir(POSTER_CACHE_DIR, {
+      withFileTypes: true,
+    });
+    const files = [];
+
+    for (const ent of entries) {
+      if (!ent.isFile()) continue;
+      const full = path.join(POSTER_CACHE_DIR, ent.name);
+      try {
+        const st = await fsp.stat(full);
+        files.push({
+          full,
+          size: st.size || 0,
+          mtimeMs: st.mtimeMs || 0,
+        });
+      } catch {}
+    }
+
+    let total = files.reduce((a, f) => a + f.size, 0);
+    if (total <= maxBytes) return;
+
+    // удаляем самые старые
+    files.sort((a, b) => a.mtimeMs - b.mtimeMs);
+
+    for (const f of files) {
+      if (total <= maxBytes) break;
+      try {
+        await fsp.unlink(f.full);
+        total -= f.size;
+      } catch {}
+    }
+  } finally {
+    posterCacheCleanupRunning = false;
+  }
+}
+
+// --- poster fetch: dedupe + concurrency limit ---
+const POSTER_FETCH_CONCURRENCY = Number(
+  process.env.POSTER_FETCH_CONCURRENCY || 4
+);
+
+// key(sha1(url)) -> Promise<{ filePath, ct }>
+const posterInFlight = new Map();
+
+let posterActive = 0;
+const posterWaitQ = [];
+
+async function posterAcquire() {
+  if (posterActive < POSTER_FETCH_CONCURRENCY) {
+    posterActive++;
+    return;
+  }
+  await new Promise((resolve) => posterWaitQ.push(resolve));
+  posterActive++;
+}
+
+function posterRelease() {
+  posterActive = Math.max(0, posterActive - 1);
+  const next = posterWaitQ.shift();
+  if (next) next();
+}
+
+async function fetchPosterToCache({ url, key, filePath }) {
+  await posterAcquire();
+  try {
+    async function logPosterTarget(u) {
+      try {
+        const U = new URL(u);
+        const host = U.hostname;
+
+        console.log("[poster] url =", u);
+        console.log("[poster] host =", host);
+
+        // ✅ логируем ИМЕННО то, что пойдёт в undici lookup
+        const addrs = await resolveHost(host);
+        console.log("[poster] resolved =", addrs);
+      } catch (e) {
+        console.log("[poster] bad url =", u, "err =", String(e?.message || e));
+      }
+    }
+
+    // ...
+    await logPosterTarget(url);
+
+    const r = await fetch(url, {
+      redirect: "follow",
+      signal: AbortSignal.timeout(12_000),
+      headers: {
+        "User-Agent": "WheelOfNext/1.0",
+        Accept: "image/*,*/*;q=0.8",
+      },
+    });
+
+    if (!r.ok) {
+      throw Object.assign(new Error(`poster fetch failed: ${r.status}`), {
+        status: 502,
+      });
+    }
+
+    const ct = r.headers.get("content-type") || "";
+    if (!ct.startsWith("image/")) {
+      throw Object.assign(new Error("not an image"), { status: 415 });
+    }
+
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (!buf || buf.length < 200) {
+      throw Object.assign(new Error("empty image"), { status: 502 });
+    }
+
+    // атомарно: пишем во временный и потом rename
+    const tmp = filePath + ".tmp-" + process.pid + "-" + Date.now();
+    await fsp.writeFile(tmp, buf);
+    await fsp.rename(tmp, filePath);
+
+    // чистку можно пускать "в фоне"
+    enforcePosterCacheLimit().catch(() => {});
+
+    return { filePath, ct };
+  } finally {
+    posterRelease();
+  }
+}
+
+const POSTER_CACHE_DIR = path.join(__dirname, ".cache", "posters");
 await fsp.mkdir(POSTER_CACHE_DIR, { recursive: true });
 
 function sha1(s) {
@@ -155,6 +346,90 @@ async function resolveSchema() {
 }
 
 // ---- API ----
+
+app.get("/api/poster", async (req, res) => {
+  try {
+    let url = String(req.query.u || req.query.url || "").trim();
+
+    // ✅ если прилетел уже проксированный url вида "/api/poster?u=..."
+    if (url.startsWith("/api/poster")) {
+      const inner = new URL(url, "http://localhost"); // базовый домен любой, нужен только для парсинга
+      const u2 =
+        inner.searchParams.get("u") || inner.searchParams.get("url") || "";
+      url = decodeURIComponent(String(u2).trim());
+    }
+
+    // ✅ сначала валидация, потом new URL(...)
+    if (!url) return res.status(400).json({ ok: false, error: "url required" });
+    if (!/^https?:\/\//i.test(url)) {
+      return res.status(400).json({ ok: false, error: "invalid url" });
+    }
+
+    // логи — только когда url уже валиден
+    try {
+      console.log("[poster] url =", url);
+      console.log("[poster] host =", new URL(url).hostname);
+    } catch {}
+
+    const key = sha1(url);
+    const filePath = path.join(POSTER_CACHE_DIR, key);
+
+    // 1) если уже есть на диске — отдаем сразу
+    if (fs.existsSync(filePath)) {
+      res.set("Cache-Control", "public, max-age=31536000, immutable");
+      return res.sendFile(key, { root: POSTER_CACHE_DIR });
+    }
+
+    // 2) DEDUPE: если уже качаем этот url — ждём тот же promise
+    let p = posterInFlight.get(key);
+    if (!p) {
+      p = (async () => fetchPosterToCache({ url, key, filePath }))();
+      posterInFlight.set(key, p);
+
+      // ✅ чистим inFlight всегда (даже при ошибке)
+      p.finally(() => posterInFlight.delete(key)).catch(() => {});
+    }
+
+    // 3) ждём результат (скачалось/закэшировалось) — но ошибки превращаем в нормальные ответы
+    let ct = "application/octet-stream";
+    try {
+      const out = await p;
+      ct = out?.ct || ct;
+    } catch (e) {
+      const msg = String(e?.message || e);
+      const st = Number(e?.status) || 502;
+
+      // ✅ если источник вернул 404/410 — это не "ошибка прокси", а "нет постера"
+      const isNotFound =
+        st === 404 ||
+        st === 410 ||
+        /\bfetch failed:\s*404\b/i.test(msg) ||
+        /\bfetch failed:\s*410\b/i.test(msg) ||
+        /\b404\b/.test(msg);
+
+      if (isNotFound) {
+        // можно 404 json, можно 204 без контента — оставляю 404 как ты логически ожидал
+        return res.status(404).json({ ok: false, error: "poster not found" });
+      }
+
+      // остальные — логируем и возвращаем статус
+      console.error("[API] /api/poster fetch failed:", e);
+      return res.status(st).json({ ok: false, error: msg });
+    }
+
+    // 4) отдаем с диска (а не buf) — чтобы не держать память
+    res.set("Content-Type", ct || "application/octet-stream");
+    res.set("Cache-Control", "public, max-age=31536000, immutable");
+    return res.sendFile(key, { root: POSTER_CACHE_DIR });
+  } catch (e) {
+    const status = Number(e?.status) || 500;
+    if (status >= 500) console.error("[API] /api/poster failed:", e);
+    return res
+      .status(status)
+      .json({ ok: false, error: String(e.message || e) });
+  }
+});
+
 app.get("/api/health", async (req, res) => {
   try {
     await pool.query("select 1 as ok");
@@ -564,104 +839,19 @@ app.get("/api/items", async (req, res) => {
   }
 });
 
-app.get("/api/poster", async (req, res) => {
-  try {
-    const raw = String(req.query.u || "").trim();
-    if (!raw) return res.status(400).send("u is required");
-
-    let url;
-    try {
-      url = new URL(raw);
-    } catch {
-      return res.status(400).send("bad url");
-    }
-
-    if (!(url.protocol === "http:" || url.protocol === "https:")) {
-      return res.status(400).send("bad protocol");
-    }
-    if (isPrivateHost(url.hostname)) {
-      return res.status(403).send("forbidden host");
-    }
-
-    const { w, fmt } = normalizePosterParams(req.query);
-
-    // ключ кэша: url + params
-    const key = sha1(`${fmt}|w=${w}|${url.toString()}`);
-    const filePath = path.join(POSTER_CACHE_DIR, `${key}.${fmt}`);
-    const etag = `"${key}"`;
-
-    // если клиент уже имеет
-    if (req.headers["if-none-match"] === etag) {
-      res.status(304).end();
-      return;
-    }
-
-    // hit дискового кэша
-    if (fs.existsSync(filePath)) {
-      res.setHeader("Content-Type", `image/${fmt === "jpg" ? "jpeg" : fmt}`);
-      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-      res.setHeader("ETag", etag);
-      fs.createReadStream(filePath).pipe(res);
-      return;
-    }
-
-    // --- miss: скачиваем ---
-    const r = await fetch(url, {
-      // чуть помогаем CDN
-      headers: {
-        "User-Agent": "WheelOfNext/1.0",
-        Accept: "image/avif,image/webp,image/*,*/*;q=0.8",
-      },
-    });
-
-    if (!r.ok) {
-      return res.status(502).send(`upstream ${r.status}`);
-    }
-
-    const ab = await r.arrayBuffer();
-    if (ab.byteLength <= 0) return res.status(502).send("empty image");
-    if (ab.byteLength > POSTER_MAX_BYTES) {
-      return res.status(413).send("image too large");
-    }
-
-    const buf = Buffer.from(ab);
-
-    // ресайз + конверт
-    let out;
-    const img = sharp(buf, { failOn: "none" }).resize({
-      width: w,
-      withoutEnlargement: true,
-    });
-
-    if (fmt === "webp") out = await img.webp({ quality: 78 }).toBuffer();
-    else if (fmt === "avif") out = await img.avif({ quality: 50 }).toBuffer();
-    else if (fmt === "png")
-      out = await img.png({ compressionLevel: 8 }).toBuffer();
-    else out = await img.jpeg({ quality: 82 }).toBuffer();
-
-    // сохранить на диск (атомарно)
-    const tmp = filePath + "." + process.pid + ".tmp";
-    await fsp.writeFile(tmp, out);
-    await fsp.rename(tmp, filePath);
-
-    res.setHeader("Content-Type", `image/${fmt === "jpg" ? "jpeg" : fmt}`);
-    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-    res.setHeader("ETag", etag);
-    res.end(out);
-  } catch (e) {
-    console.error("[API] /api/poster failed:", e);
-    res.status(500).send("poster proxy failed");
-  }
-});
-
 // ---- static frontend ----
 // public/ — фронтенд
 const PUBLIC_DIR = path.join(__dirname, "public");
 app.use(express.static(PUBLIC_DIR));
 
-// SPA fallback: всегда public/index.html (кроме /api/*)
+// SPA fallback: всегда index.html из PUBLIC_DIR (кроме /api/*)
 app.get(/^(?!\/api\/).*/, (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, "index.html"));
+  res.sendFile("index.html", { root: PUBLIC_DIR }, (err) => {
+    if (err) {
+      console.error("[SPA] sendFile failed:", err);
+      res.status(err.statusCode || 500).end();
+    }
+  });
 });
 
 // ---- start ----

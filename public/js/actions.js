@@ -1,6 +1,5 @@
 // public/js/actions.js
 import { getState, setState } from "./state.js";
-import { preloadPosters } from "./posterPreload.js";
 import { clampInt } from "./uiUtils.js";
 
 /**
@@ -55,11 +54,11 @@ function splitWideSegments(items, winnerId, outerR) {
 
   const wid = winnerId != null ? String(winnerId) : null;
 
+  // totalW по "текущим" весам (если они уже были изменены — ок)
   const totalW = arr.reduce((sum, it) => sum + getItemW(it), 0) || 1;
 
   // ширина постера, которой мы пытаемся "закрыть" внешний край сектора
   const posterW = (outerR + POSTER_OVER) * POSTER_W_K;
-
   const twoPi = Math.PI * 2;
 
   // 1) режем каждый item в "свою пачку"
@@ -76,14 +75,13 @@ function splitWideSegments(items, winnerId, outerR) {
 
     // сколько частей нужно, чтобы chord <= posterW * OVERSCAN
     let parts = Math.ceil(chord / (posterW * OVERSCAN));
-
-    // победителя не режем
-    if (wid && id && id === wid) parts = 1;
-
     parts = clampInt(parts, 1, 12);
 
+    const isWinner = wid && id && id === wid;
+
     if (parts === 1) {
-      groups.push([it]);
+      // ✅ даже если parts=1, пометим winner (полезно для spinToWinner)
+      groups.push([{ ...it, __winner: !!isWinner }]);
       continue;
     }
 
@@ -96,6 +94,7 @@ function splitWideSegments(items, winnerId, outerR) {
         __slice: k,
         __sliceN: parts,
         __sliceOf: it?.id ?? null,
+        __winner: !!isWinner,
       });
     }
     groups.push(pack);
@@ -120,7 +119,6 @@ function splitWideSegments(items, winnerId, outerR) {
     idx++;
     if (!took) break;
 
-    // защита от бесконечных циклов на случай странных данных
     safety++;
     if (safety > MAX_N * 3) break;
   }

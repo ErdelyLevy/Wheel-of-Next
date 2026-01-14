@@ -434,8 +434,6 @@ function initWheelCanvas() {
   const canvas = document.getElementById("wheel");
   if (!canvas) return;
 
-  let rotation = 0;
-
   let __raf = 0;
 
   const scheduleRedraw = () => {
@@ -474,15 +472,6 @@ function initWheelCanvas() {
 
   // 3) первый рендер (на случай если state уже заполнен)
   scheduleRedraw();
-
-  // можно вернуть доступ к rotation для будущей анимации
-  return {
-    setRotation(rad) {
-      rotation = Number(rad) || 0;
-      scheduleRedraw();
-    },
-    scheduleRedraw,
-  };
 }
 
 /** --- boot --- */
@@ -505,23 +494,6 @@ async function boot() {
 
   // ✅ колесо: подписки + resize
   initWheelCanvas();
-
-  const canvas = document.getElementById("wheel");
-  if (!canvas) return;
-
-  // initWheelRenderer возвращает scheduleRedraw
-  const scheduleRedraw = initWheelRenderer(canvas);
-
-  // ✅ делаем доступным глобально (для posterPreload / actions)
-  window.requestWheelRedraw = scheduleRedraw;
-
-  // ✅ первый рендер сразу (независимо от вкладки)
-  scheduleRedraw();
-
-  // ✅ любые изменения wheel/state — тоже вызывают redraw
-  subscribe((s) => {
-    if (s?.wheel?.updatedAt) scheduleRedraw();
-  });
 
   // табы пресетов сверху + сразу применить активный
   await refreshPresetTabsFromDB();

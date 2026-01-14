@@ -1,6 +1,6 @@
 // js/resultUi.js
 import { subscribe, getState } from "./state.js";
-import { getPosterImageForItem } from "./posterPreload.js";
+import { getPosterSrc, getFallbackPosterSrc } from "./posterSrc.js"; // добавь вверху файла
 
 function $(id) {
   return document.getElementById(id);
@@ -147,12 +147,19 @@ function render(item) {
   const title = item.title || item.name || "—";
   setText(titleEl, title);
 
-  // poster (real OR fallback)
-  const img = getPosterImageForItem(item, () => {
-    scheduleResultRender();
-  });
+  const fallback = getFallbackPosterSrc(item);
+  const src = getPosterSrc(item, { w: 768, fmt: "webp" });
 
-  setImg(imgEl, img?.src || "", title);
+  // сначала ставим fallback — сразу красиво
+  setImg(imgEl, fallback, title);
+
+  // потом пробуем реальный через /api/poster
+  imgEl.onerror = () => {
+    // если /api/poster отдал ошибку или битую картинку — возвращаем fallback
+    setImg(imgEl, fallback, title);
+  };
+  imgEl.src = src;
+  imgEl.style.opacity = "1";
 
   // badge: media_type приоритетнее
   const badge = item.media_type
