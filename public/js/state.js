@@ -105,12 +105,6 @@ export function setState(patch) {
   try {
     if (patch && Object.prototype.hasOwnProperty.call(patch, "result")) {
       const it = patch?.result?.item;
-      console.log("[setState:result]", {
-        id: it?.id,
-        title: it?.title,
-        t: performance.now().toFixed(0),
-        stack: new Error().stack,
-      });
     }
   } catch {}
 

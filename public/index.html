@@ -40,6 +40,8 @@
           </div>
         </aside>
 
+        <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
         <!-- Центр: пресеты (режимы) + колесо -->
         <main class="center">
           <div class="controls">
@@ -50,8 +52,7 @@
           <div class="wheel-area">
             <div class="wheel-wrap">
               <canvas id="wheel"></canvas>
-
-              <button class="spin spin-center" id="spin-btn">ROLL</button>
+              <button id="spin-btn" class="spin-center">ROLL</button>
             </div>
           </div>
         </main>
@@ -144,10 +145,6 @@
               <!-- Окно 1: редактор -->
               <div class="preset-pane" id="preset-editor">
                 <h3 class="subhead">Создание / редактирование</h3>
-
-                <div class="muted">
-                  Пресет = (media_type, category_name) + веса категорий.
-                </div>
 
                 <div class="form-row">
                   <label for="preset-name">Название пресета</label>

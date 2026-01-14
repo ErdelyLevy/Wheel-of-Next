@@ -6,7 +6,11 @@ import { initHistoryUI } from "./historyUi.js";
 import { initResultUI } from "./resultUi.js";
 import { apiGetItemsByPreset, apiRoll, apiGetPresets } from "./api.js";
 import { openResult, applyWheelSnapshot } from "./actions.js";
-import { getState } from "./state.js";
+import { drawWheel } from "./wheelRender.js";
+import { getState, subscribe } from "./state.js";
+import { spinToWinner } from "./wheelSpin.js";
+import { ensureSpinAudio, ensureDingAudio } from "./spinSound.js";
+import { stopSpinSound, playDing } from "./spinSound.js";
 
 const LS_ACTIVE_PRESET = "won:activePresetId";
 
@@ -24,6 +28,21 @@ let rightListItems = [];
 
 // main.js (или отдельный rightListUi.js)
 let rightListById = new Map();
+
+let __toastTimer = 0;
+
+function showToast(text, ms = 1600) {
+  const el = document.getElementById("toast");
+  if (!el) return;
+
+  el.textContent = text || "";
+  el.classList.add("is-on");
+
+  clearTimeout(__toastTimer);
+  __toastTimer = window.setTimeout(() => {
+    el.classList.remove("is-on");
+  }, ms);
+}
 
 function renderRightList(items) {
   const ul = document.getElementById("full-list");
@@ -168,30 +187,63 @@ export function initPresetTabsClicksFromDB(onPresetChange) {
 /** --- ROLL кнопка --- */
 function initRollButton() {
   const btn = document.getElementById("spin-btn");
-  if (!btn) return;
+  const canvas = document.getElementById("wheel");
+  if (!btn || !canvas) return;
 
   btn.addEventListener("click", async () => {
+    ensureSpinAudio("/sounds/spin.mp3");
+    ensureDingAudio("/sounds/ding.mp3");
     const presetId = getActivePresetId();
-    if (!presetId) {
-      alert("Выбери пресет");
-      return;
-    }
+    if (!presetId) return alert("Выбери пресет");
 
     try {
       btn.disabled = true;
 
-      // save:true → это будет записывать историю на бэке (когда подключишь)
       const snap = await apiRoll(presetId, { save: true });
 
+      const winnerId = String(snap.winner_id ?? snap.winner?.id ?? "");
+      const winnerItem = snap.winner || null;
+
+      // 1) обновляем wheel, но result НЕ трогаем
       applyWheelSnapshot({
-        wheelItems: snap.wheel_items || [],
-        winnerId: snap.winner_id ?? snap.winner?.id ?? null,
-        winnerItem: snap.winner || null,
+        wheelItems: structuredClone(snap.wheel_items || []),
+        winnerId,
+        winnerItem: null, // ✅ важно
       });
 
-      window.refreshHistory?.();
+      // 2) берём актуальные items из state (после autoExpand)
+      const s = getState();
+      const items = s.wheel?.items || [];
 
-      // TODO: тут позже будет анимация вращения
+      const durationSec = Number(s.spin?.duration || 20);
+      const speed = Number(s.spin?.speed || 1);
+
+      // 3) крутим
+      await spinToWinner({
+        canvas,
+        items,
+        winnerId,
+        durationSec,
+        speed,
+      });
+
+      await stopSpinSound({ fadeMs: 250 });
+
+      showToast(`Победитель: ${winnerItem.title}`);
+
+      await playDing({ src: "/sounds/ding.mp3", volume: 0.9 });
+
+      // 4) теперь показываем победителя слева
+      if (winnerItem) openResult(winnerItem);
+
+      if (winnerItem?.title) {
+        showToast(`Победитель: ${winnerItem.title}`);
+      } else if (winnerId) {
+        showToast(`Победитель определён`);
+      }
+
+      // 5) обновим историю
+      window.refreshHistory?.();
     } catch (e) {
       console.error(e);
       alert(e.message || e);
@@ -217,6 +269,43 @@ function initRightListClicks() {
   });
 }
 
+function initWheelCanvas() {
+  const canvas = document.getElementById("wheel");
+  if (!canvas) return;
+
+  let rotation = 0;
+
+  const redraw = () => {
+    const items = getState()?.wheel?.items || [];
+    drawWheel(canvas, items, { rotation, onUpdate: redraw });
+  };
+
+  // 1) перерисовка при любом обновлении wheel (snapshot / expand / preload)
+  let last = null;
+  subscribe(() => {
+    const u = getState()?.wheel?.updatedAt || null;
+    if (u && u !== last) {
+      last = u;
+      redraw();
+    }
+  });
+
+  // 2) перерисовка на ресайз
+  window.addEventListener("resize", redraw);
+
+  // 3) первый рендер (на случай если state уже заполнен)
+  redraw();
+
+  // можно вернуть доступ к rotation для будущей анимации
+  return {
+    setRotation(rad) {
+      rotation = Number(rad) || 0;
+      redraw();
+    },
+    redraw,
+  };
+}
+
 /** --- boot --- */
 async function boot() {
   // dropdowns (зависят от /api/meta)
@@ -233,6 +322,9 @@ async function boot() {
 
   // кнопка ROLL
   initRollButton();
+
+  // ✅ колесо: подписки + resize
+  initWheelCanvas();
 
   // табы пресетов сверху + сразу применить активный
   await refreshPresetTabsFromDB();

@@ -203,27 +203,6 @@ button:hover,
   justify-content: center;
 }
 
-.wheel-area {
-  flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.wheel-wrap {
-  position: relative;
-  width: min(100%, calc(100vh - 220px));
-  aspect-ratio: 1/1;
-  display: grid;
-  place-items: center;
-}
-
-#wheel {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
 /* =========================================================
    Spin button (VISUAL ELEMENT — EXCEPTION)
    ========================================================= */
@@ -346,10 +325,6 @@ button:hover,
   .right {
     border: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  }
-
-  .wheel-wrap {
-    width: min(100%, 520px);
   }
 }
 
@@ -718,15 +693,6 @@ button:hover,
   outline: none;
 }
 
-.toast {
-  font-size: 12px;
-  opacity: 0.85;
-  padding: 6px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--r-ui);
-  background: rgba(0, 0, 0, 0.25);
-}
-
 .is-invalid {
   border-color: rgba(255, 120, 120, 0.55) !important;
   box-shadow: 0 0 0 3px rgba(255, 120, 120, 0.14) !important;
@@ -847,12 +813,6 @@ button:hover,
   text-align: left;
 }
 
-#panel-list,
-#full-list,
-#full-list * {
-  outline: 1px solid rgba(255, 255, 255, 0.06);
-}
-
 .right-head,
 .search {
   position: relative;
@@ -878,13 +838,19 @@ button:hover,
 }
 
 /* кнопки в списках точно кликабельны */
-.history-btn { pointer-events: auto; }
+.history-btn {
+  pointer-events: auto;
+}
 
 /* вложенные элементы не перехватывают событие */
-.history-btn * { pointer-events: none; }
+.history-btn * {
+  pointer-events: none;
+}
 
 /* список справа — такой же вид как история */
-.list-item { list-style: none; }
+.list-item {
+  list-style: none;
+}
 
 .list-btn,
 .history-btn {
@@ -897,14 +863,14 @@ button:hover,
   text-align: left;
   padding: 10px;
   border-radius: var(--r-hard);
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.25);
   color: var(--text);
 }
 
 .list-btn:hover,
 .history-btn:hover {
-  border-color: rgba(255,255,255,0.18);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .list-poster,
@@ -913,15 +879,281 @@ button:hover,
   height: 56px;
   object-fit: cover;
   border-radius: 6px;
-  background: rgba(255,255,255,0.06);
+  background: rgba(255, 255, 255, 0.06);
   flex: 0 0 auto;
 }
 
 .list-text,
-.history-text { display: flex; flex-direction: column; gap: 2px; }
+.history-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
 
 .list-title,
-.history-title { font-weight: 900; line-height: 1.15; }
+.history-title {
+  font-weight: 900;
+  line-height: 1.15;
+}
 
 .list-meta,
-.history-meta { font-size: 12px; opacity: 0.75; }
+.history-meta {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.wheel-area {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* важно для flex-колонок/рядов, чтобы центр не “схлопывался” */
+  min-width: 0;
+  min-height: 0;
+}
+
+.wheel-wrap {
+  /* ✅ стабильно квадратный размер, не зависит от контента */
+  width: min(72vmin, 720px);
+  aspect-ratio: 1 / 1;
+
+  /* ✅ запретить flex’у сжимать колесо */
+  flex: 0 0 auto;
+}
+
+#wheel {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.wheel-wrap {
+  position: relative;
+  width: min(72vmin, 720px);
+  aspect-ratio: 1 / 1;
+  flex: 0 0 auto;
+}
+
+#wheel {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.wheel-wrap #spin-btn.spin-center {
+  padding: 0;
+  border: none;
+  background: var(--accent);
+  display: grid;
+  place-items: center;
+}
+
+/* Центрируем кнопку внутри контейнера колеса */
+.wheel-wrap {
+  position: relative; /* обязательно */
+}
+
+.wheel-wrap #spin-btn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+
+  /* сброс возможных старых правил "в угол" */
+  right: auto;
+  bottom: auto;
+
+  /* внешний вид как раньше */
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #000;
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: 0.6px;
+  text-align: center;
+  line-height: 1.1;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+
+  box-shadow: 0 0 0 6px rgba(0, 0, 0, 0.35), 0 0 0 8px rgba(255, 255, 255, 0.15);
+  z-index: 10;
+
+  display: grid;
+  place-items: center;
+}
+
+.wheel-wrap #spin-btn:hover {
+  filter: brightness(1.08);
+}
+
+.toast {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+
+  transform: translate(-50%, -50%);
+
+  padding: 14px 22px;
+  border-radius: 14px;
+
+  background: rgba(20, 20, 30, 0.92);
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08),
+    0 10px 30px rgba(0, 0, 0, 0.45);
+
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.toast.is-on {
+  opacity: 1;
+  transform: translate(-50%, -60%);
+}
+
+/* ===== Glow dot for section headers ===== */
+
+.left h2,
+.right h2 {
+  position: relative;
+  padding-left: 22px;
+}
+
+.left h2::before,
+.right h2::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(255, 60, 172, 0.9), 0 0 14px rgba(255, 60, 172, 0.6),
+    0 0 26px rgba(255, 60, 172, 0.35);
+}
+
+.left h2,
+.right h2 {
+  position: relative;
+  padding-left: 22px;
+  line-height: 1.2; /* фиксируем линию текста */
+}
+
+.left h2::before,
+.right h2::before {
+  content: "";
+  position: absolute;
+
+  left: 0;
+  top: 0.6em; /* ⬅️ ключевой момент */
+  transform: translateY(-50%);
+
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(255, 60, 172, 0.9), 0 0 14px rgba(255, 60, 172, 0.6),
+    0 0 26px rgba(255, 60, 172, 0.35);
+}
+
+.settings-card h2 {
+  position: relative;
+  padding-left: 22px;
+  line-height: 1.2;
+}
+
+.settings-card h2::before {
+  content: "";
+  position: absolute;
+
+  left: 0;
+  top: 0.6em;
+  transform: translateY(-50%);
+
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(255, 60, 172, 0.9), 0 0 14px rgba(255, 60, 172, 0.6),
+    0 0 26px rgba(255, 60, 172, 0.35);
+}
+
+.topbar {
+  position: relative;
+  z-index: 10;
+}
+
+.topbar-inner {
+  display: flex;
+  align-items: center; /* 🔑 вертикальное выравнивание */
+  gap: 18px;
+}
+
+/* Название сайта */
+.brand {
+  font-size: 22px; /* ⬅️ больше, чем заголовки панелей */
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  color: var(--text);
+
+  /* лёгкий акцент */
+  text-shadow: 0 0 12px rgba(255, 60, 172, 0.25);
+
+  white-space: nowrap;
+}
+
+.top-tabs .tab {
+  font-size: 14px;
+  padding: 8px 14px;
+}
+
+.wheel-area {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toast {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+
+  z-index: 20;            /* ✅ важно */
+  pointer-events: none;
+
+  padding: 14px 22px;
+  border-radius: 14px;
+
+  background: rgba(20, 20, 30, 0.92);
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,0.08),
+    0 10px 30px rgba(0,0,0,0.45);
+
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.toast.is-on {
+  opacity: 1;
+  transform: translate(-50%, -60%);
+}

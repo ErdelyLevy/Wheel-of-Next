@@ -4,6 +4,7 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import { pool } from "./db.js";
+import { clampInt } from "./utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,11 +14,6 @@ app.disable("x-powered-by");
 app.use(express.json({ limit: "2mb" }));
 
 // ---- helpers ----
-function clampInt(v, min, max, fallback) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.max(min, Math.min(max, Math.trunc(n)));
-}
 function asTextArray(x) {
   if (Array.isArray(x)) return x.map((v) => String(v).trim()).filter(Boolean);
   if (typeof x === "string")
@@ -358,11 +354,21 @@ app.post("/api/random", async (req, res) => {
       (x) => String(x?.id) === String(winnerId)
     );
 
+    // ✅ enrich wheel items with per-item weight (for drawing weighted wheel)
+    const wheelItemsWithW = wheelItems.map((it) => {
+      const w = weightFn(it);
+      // возвращаем новый объект, чтобы не мутировать poolRows
+      return { ...it, w };
+    });
+
+    // winner тоже лучше отдать с w (удобно на фронте)
+    const winnerWithW = winner ? { ...winner, w: weightFn(winner) } : null;
+
     let historyId = null;
     if (save) {
       const presetName = preset.name || "";
-      const winnerJson = JSON.stringify(winner);
-      const itemsJson = JSON.stringify(wheelItems);
+      const winnerJson = JSON.stringify(winnerWithW);
+      const itemsJson = JSON.stringify(wheelItemsWithW);
 
       // поддержка разных схем history (winner_id может отсутствовать)
       if (historyCols.has("winner_id")) {
@@ -387,18 +393,58 @@ app.post("/api/random", async (req, res) => {
         historyId = rows[0]?.id ?? null;
       }
     }
+    // poolRows = массив всех кандидатов (до выбора победителя)
+    // wheelItems = массив, который ты отправляешь на фронт (отрендерить колесо)
+    // preset = строка из БД с weights/collections/media_types и т.п.
+    // winner = выбранный объект
+
+    function countBy(arr, keyFn) {
+      const m = new Map();
+      for (const x of arr || []) {
+        const k = String(keyFn(x) ?? "");
+        m.set(k, (m.get(k) || 0) + 1);
+      }
+      return Object.fromEntries([...m.entries()].sort((a, b) => b[1] - a[1]));
+    }
+
+    function normalizeWeightsObject(w) {
+      // на всякий случай — чтобы увидеть именно объект ключ->число
+      if (!w) return {};
+      if (typeof w === "object" && !Array.isArray(w)) return w;
+      return {};
+    }
+
+    // где-то внутри /api/random, когда уже есть poolRows/preset/winner/wheelItems:
+    const poolCountsByCategory = countBy(poolRows, (x) => x?.category_name);
+    const poolCountsByMedia = countBy(poolRows, (x) => x?.media_type);
+
+    const weightsObj = normalizeWeightsObject(preset?.weights);
+    const weightKeys = Object.keys(weightsObj);
+
+    // полезно: какие категории из пула НЕ имеют веса (значит будет fallback)
+    const missingWeightKeys = Object.keys(poolCountsByCategory).filter(
+      (k) => !(k in weightsObj)
+    );
+
+    // и наоборот: какие веса заданы, но в пуле таких категорий нет
+    const unusedWeightKeys = weightKeys.filter(
+      (k) => !(k in poolCountsByCategory)
+    );
 
     res.json({
       ok: true,
       preset_id: presetId,
       preset_name: preset.name || null,
-      winner,
+
       winner_id: winnerId,
       winner_index: winnerIndex,
-      wheel_items: wheelItems,
+
+      winner: winnerWithW,
+      wheel_items: wheelItemsWithW,
+
       history_id: historyId,
       pool_total: poolRows.length,
-      wheel_size: wheelItems.length,
+      wheel_size: wheelItemsWithW.length,
     });
   } catch (e) {
     console.error("[API] /api/random failed:", e);
