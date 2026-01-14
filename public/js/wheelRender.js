@@ -1,22 +1,8 @@
 // js/wheelRender.js
 
+import { getPosterImg } from "./posterPreload.js"; // сверху файла
+
 const IMG_CACHE = new Map();
-
-function getImg(url, onUpdate) {
-  if (!url) return null;
-  if (IMG_CACHE.has(url)) return IMG_CACHE.get(url);
-
-  const img = new Image();
-  img.decoding = "async";
-  img.loading = "lazy";
-  img.src = url;
-
-  img.onload = () => onUpdate?.();
-  img.onerror = () => onUpdate?.();
-
-  IMG_CACHE.set(url, img);
-  return img;
-}
 
 function resizeCanvasToDisplaySize(canvas) {
   const dpr = window.devicePixelRatio || 1;
@@ -169,7 +155,9 @@ export function drawWheel(canvas, items, opts = {}) {
 
     // === рисуем постер: низ ровно в центре, верх ровно на внешнем радиусе ===
     const poster = String(s.item?.poster || "").trim();
-    const img = poster ? getImg(poster, onUpdate) : null;
+    const img = poster
+      ? getPosterImg(poster, onUpdate, { priority: "high" })
+      : null;
 
     // маленький овер-дро (чуть больше радиуса), чтобы не ловить микро-зазоры от антиалиасинга
     const over = 6;

@@ -164,6 +164,7 @@ function tryAutoExpandWheel(winnerId) {
       updatedAt: Date.now(),
     },
   });
+  window.requestWheelRedraw?.();
 }
 
 /**
@@ -183,7 +184,13 @@ export function applyWheelSnapshot({ wheelItems, winnerId, winnerItem } = {}) {
     : [];
 
   // прелоадим постеры; когда что-то загрузится — расширим при необходимости
-  preloadPosters(baseItems, () => tryAutoExpandWheel(computedWinnerId));
+  preloadPosters(baseItems, () => {
+    // 1) если у тебя есть логика "дозаполнения" — пусть остаётся
+    tryAutoExpandWheel(computedWinnerId);
+
+    // 2) ✅ главное: перерисовать колесо, чтобы постеры проявились
+    window.requestWheelRedraw?.();
+  });
 
   const expanded = autoExpandWheelItems(baseItems, computedWinnerId);
 

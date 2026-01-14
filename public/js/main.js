@@ -18,25 +18,36 @@ let wheelScheduleRedraw = null;
 
 function initWheelRenderer(canvas) {
   let raf = 0;
+  let dirty = false;
 
   const scheduleRedraw = () => {
+    dirty = true;
     if (raf) return;
+
     raf = requestAnimationFrame(() => {
       raf = 0;
+
+      // "снимаем" dirty на этот кадр
+      dirty = false;
 
       const s = getState();
       const items = s?.wheel?.items || [];
       const rot = Number(canvas.__rotation || 0);
 
-      drawWheel(canvas, items, { rotation: rot, onUpdate: scheduleRedraw });
+      drawWheel(canvas, items, {
+        rotation: rot,
+        onUpdate: scheduleRedraw, // если догрузился постер — попросим redraw
+      });
+
+      // если во время этого кадра кто-то снова дернул scheduleRedraw()
+      // (например, загрузился img.onload) — дорисуем следующим кадром
+      if (dirty) scheduleRedraw();
     });
   };
 
-  // ✅ при любых изменениях размеров — перерисовать
+  // ✅ перерисовка при изменении размеров
   const ro = new ResizeObserver(() => scheduleRedraw());
   ro.observe(canvas);
-
-  // (если canvas иногда меняет размер через родителя — лучше наблюдать родителя)
   if (canvas.parentElement) ro.observe(canvas.parentElement);
 
   return scheduleRedraw;
@@ -428,14 +439,19 @@ async function boot() {
   initWheelCanvas();
 
   const canvas = document.getElementById("wheel");
+  if (!canvas) return;
+
+  // initWheelRenderer возвращает scheduleRedraw
   const scheduleRedraw = initWheelRenderer(canvas);
 
-  // 1) первый рендер сразу (независимо от вкладки)
+  // ✅ делаем доступным глобально (для posterPreload / actions)
+  window.requestWheelRedraw = scheduleRedraw;
+
+  // ✅ первый рендер сразу (независимо от вкладки)
   scheduleRedraw();
 
-  // 2) любые изменения wheel/state — тоже вызывают redraw
+  // ✅ любые изменения wheel/state — тоже вызывают redraw
   subscribe((s) => {
-    // важно: не проверяем вкладку вообще
     if (s?.wheel?.updatedAt) scheduleRedraw();
   });
 
