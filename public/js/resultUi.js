@@ -69,9 +69,21 @@ function applyDescClamp(wrapEl, textEl, btnEl, maxLines = 10) {
   });
 }
 
+function normalizeValue(value) {
+  if (value == null) return "";
+
+  if (Array.isArray(value)) {
+    return value.filter(Boolean).join(", ");
+  }
+
+  return String(value).trim();
+}
+
 function addInfoRow(box, label, value) {
   if (!box) return;
-  if (value == null || value === "") return;
+
+  const v = normalizeValue(value);
+  if (!v) return;
 
   const row = document.createElement("div");
   row.className = "info-row";
@@ -80,38 +92,12 @@ function addInfoRow(box, label, value) {
   k.className = "info-k";
   k.textContent = label;
 
-  const v = document.createElement("span");
-  v.className = "info-v";
-
-  // ✅ ТУТ: special-case для описания
-  if (String(label).toLowerCase() === "описание") {
-    row.classList.add("is-desc");
-
-    const wrap = document.createElement("div");
-    wrap.className = "desc-wrap";
-
-    const text = document.createElement("div");
-    text.className = "desc-text";
-    text.textContent = String(value);
-
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "desc-more";
-    btn.textContent = "…";
-
-    wrap.appendChild(text);
-    wrap.appendChild(btn);
-    v.appendChild(wrap);
-
-    // ✅ ВОТ СЮДА добавляется вызов
-    applyDescClamp(wrap, text, btn, 10);
-  } else {
-    // обычные строки
-    v.textContent = String(value);
-  }
+  const val = document.createElement("span");
+  val.className = "info-v";
+  val.textContent = v;
 
   row.appendChild(k);
-  row.appendChild(v);
+  row.appendChild(val);
   box.appendChild(row);
 }
 
@@ -143,66 +129,81 @@ function render(item) {
     setText(badgeEl, "—");
     clear(infoEl);
     clear(actionsEl);
-    if (badgeEl) badgeEl.removeAttribute("data-type");
     return;
   }
 
   // title + poster
-  setText(titleEl, item.title || item.name || "—");
-  setImg(imgEl, item.poster || item.image || "", item.title || "");
+  const title = item.title || item.name || "—";
+  setText(titleEl, title);
+  setImg(imgEl, item.poster || item.image || "", title);
 
-  // badge (media type)
-  const rawType = item?.media_type ? String(item.media_type).toLowerCase() : "";
+  // badge: media_type приоритетнее
+  const badge = item.media_type
+    ? String(item.media_type)
+    : item.category_name
+    ? String(item.category_name)
+    : "—";
+  setText(badgeEl, badge);
 
-  const TYPE_MAP = {
-    movie: "movie",
-    show: "show",
-    anime: "anime",
-    video_game: "game",
-    book: "book",
-  };
+  // сброс старых классов типов
+  badgeEl.classList.remove(
+    "badge--movie",
+    "badge--anime",
+    "badge--show",
+    "badge--video_game",
+    "badge--book"
+  );
 
-  const type = TYPE_MAP[rawType] || "";
+  // добавим новый
+  const mt = String(item.media_type || "").toLowerCase();
+  if (mt) badgeEl.classList.add(`badge--${mt}`);
 
-  setText(badgeEl, type || "—");
+  clear(infoEl);
 
-  if (badgeEl) {
-    if (type) badgeEl.dataset.type = type;
-    else badgeEl.removeAttribute("data-type");
+  function formatRating(v) {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return "";
+    return n.toFixed(1);
   }
 
-  // info
-  clear(infoEl);
-  addInfoRow(infoEl, "Коллекция", item.category_name || item.category || "");
-  addInfoRow(infoEl, "Год", item.publish_year || item.year || "");
-  addInfoRow(infoEl, "Платформа", item.platform || "");
-  addInfoRow(infoEl, "Рейтинг", item.provider_rating || "");
-  addInfoRow(infoEl, "Статус", item.production_status || "");
-  addInfoRow(infoEl, "Описание", item.description || "");
+  // базовые
+  addInfoRow(infoEl, "Коллекция", item.category_name);
+  addInfoRow(infoEl, "Год", item.publish_year);
+  const rating = formatRating(item.provider_rating);
+  addInfoRow(infoEl, "Рейтинг", rating ? `${rating}` : "");
 
-  // ✅ clamp описания (если оно есть)
-  const descEl = infoEl.querySelector(".desc-text");
-  applyDescClamp(descEl, 10);
+  addInfoRow(infoEl, "Статус", item.production_status);
+
+  // платформы (video_game)
+  addInfoRow(infoEl, "Платформы", item.platforms);
+
+  // сериалы / аниме
+  addInfoRow(infoEl, "Сезонов", item.total_seasons);
+  addInfoRow(infoEl, "Эпизодов", item.total_episodes || item.anime_episodes);
+
+  // книги
+  addInfoRow(infoEl, "Страницы", item.pages);
+
+  // описание — всегда в конце
+  addInfoRow(infoEl, "Описание", item.description);
 
   // actions
   clear(actionsEl);
 
-  // 1) Ryot: открываем карточку в Ryot по meta_id (или id как запасной вариант)
+  // Ryot
   const ryotId = item.meta_id || item.id || "";
   if (ryotId) {
     const url = `http://erdely.ru/media/item/${encodeURIComponent(ryotId)}`;
     addActionLink(actionsEl, "Ryot", url);
   }
 
-  // 2) SOURCE кнопка -> source_url (заголовок в upper case)
-  if (item.source && item.source_url) {
+  // source_url
+  if (item.source_url) {
     addActionLink(
       actionsEl,
-      String(item.source).toUpperCase(),
+      item.source ? String(item.source).toUpperCase() : "SOURCE",
       item.source_url
     );
-  } else if (item.source_url) {
-    addActionLink(actionsEl, "SOURCE", item.source_url);
   }
 }
 

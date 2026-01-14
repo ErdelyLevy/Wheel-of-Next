@@ -252,6 +252,7 @@ button:hover,
 .result-cover img {
   width: 100%;
   display: block;
+  height: auto;
 }
 
 .badge {
@@ -1849,4 +1850,210 @@ button:hover,
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.result-info {
+  display: grid;
+  row-gap: 8px;
+}
+
+.info-row {
+  display: grid;
+  grid-template-columns: 96px 1fr; /* ← КЛЮЧЕВОЕ МЕСТО */
+  column-gap: 12px;
+  align-items: start;
+}
+
+.info-k {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.info-v {
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;      /* ✅ вертикальное центрирование */
+  justify-content: center;  /* ✅ горизонтальное центрирование */
+
+  height: 22px;             /* фиксированная высота пузыря */
+  padding: 0 10px;
+
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;           /* ❗ важно — убираем baseline-смещение */
+  white-space: nowrap;
+
+  border-radius: 999px;
+}
+
+/* контейнер постера должен быть позиционирован, чтобы бейдж сидел в углу */
+.result-cover {
+  position: relative;
+}
+
+/* базовый бейдж */
+.badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  height: 22px;
+  padding: 0 10px;
+
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  color: rgba(255,255,255,0.95);
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+  backdrop-filter: blur(6px);
+}
+
+/* дефолт */
+.badge {
+  background: rgba(255, 60, 172, 0.45);
+}
+
+/* варианты по media_type */
+.badge--movie {
+  background: linear-gradient(90deg, rgba(255,60,172,0.80), rgba(255,140,70,0.75));
+}
+.badge--anime {
+  background: linear-gradient(90deg, rgba(120,90,255,0.85), rgba(255,60,172,0.75));
+}
+.badge--show {
+  background: linear-gradient(90deg, rgba(0,200,255,0.70), rgba(120,90,255,0.75));
+}
+.badge--video_game {
+  background: linear-gradient(90deg, rgba(0,230,170,0.75), rgba(0,160,255,0.70));
+}
+.badge--book {
+  background: linear-gradient(90deg, rgba(255,200,80,0.80), rgba(255,120,120,0.70));
+}
+
+.result-info {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.08); /* разделитель от постера */
+}
+
+.info-row {
+  display: grid;
+  grid-template-columns: 92px 1fr; /* фикс ширина тега, как ты хотел */
+  gap: 10px;
+  align-items: start;
+  margin: 6px 0;
+}
+
+/* "тег" слева */
+.info-k {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  height: 22px;
+  padding: 0 10px;
+
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  color: rgba(255, 120, 200, 0.95);              /* фирменный розовый */
+  background: rgba(255, 60, 172, 0.14);          /* мягкий розовый фон */
+  border: 1px solid rgba(255, 60, 172, 0.22);    /* обводка */
+}
+
+/* значение справа */
+.info-v {
+  color: rgba(255,255,255,0.86);
+  line-height: 1.35;
+}
+
+/* для длинных значений (описание и т.п.) */
+.info-row.is-long {
+  grid-template-columns: 92px 1fr;
+}
+
+/* контейнер постера */
+.result-cover {
+  position: relative;
+  width: 100%;
+  border-radius: 14px;
+  overflow: hidden;             /* можно оставить, чтобы бейдж не вылезал */
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* сам постер — ВСЕГДА ЦЕЛИКОМ */
+.result-cover img {
+  width: 100%;
+  height: 100%;
+  display: block;
+
+  object-fit: contain;          /* ✅ ключевое */
+  object-position: center;
+
+  background: rgba(0,0,0,0.18); /* чтобы поля выглядели нормально */
+}
+
+.result-cover {
+  width: 100%;
+  overflow: hidden;
+}
+
+.result-cover img {
+  display: block;
+  width: 100%;     /* 🔥 заполняет всю ширину */
+  height: auto;    /* 🔥 сохраняет пропорции */
+  object-fit: unset;
+}
+
+/* ---- RESULT POSTER: всегда на всю ширину, без обрезки ---- */
+.result-cover { 
+  height: auto;        /* на всякий */
+}
+
+.result-cover > img {
+  display: block;
+  width: 100%;
+  height: auto !important;     /* перебиваем height:100% */
+  max-height: none !important; /* если где-то ограничивали */
+  object-fit: fill !important; /* чтобы вообще не влиял fit */
+}
+
+/* 1) Разрешаем карточке результата скроллиться, вместо обрезки */
+.result-card{
+  overflow: auto;     /* было hidden */
+  min-height: 0;      /* важно для flex-скролла */
+}
+
+/* 2) Постер НЕ должен сжиматься по высоте */
+.result-cover{
+  flex: 0 0 auto;     /* не shrink */
+}
+
+/* 3) Картинка: на всю ширину, высота по пропорциям */
+.result-cover > img{
+  display: block;
+  width: 100%;
+  height: auto !important;
+  object-fit: unset !important;
 }
