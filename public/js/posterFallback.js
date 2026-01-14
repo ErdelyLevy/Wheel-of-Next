@@ -330,16 +330,23 @@ function wrapLines(ctx, text, maxWidth, maxLines = 3) {
 }
 
 function drawNoise(ctx, w, h, alpha = 0.06) {
-  // лёгкая “пыль” как на референсе
   const img = ctx.getImageData(0, 0, w, h);
   const d = img.data;
+
+  // alpha = "сила" примеси (0..1)
+  // мы НЕ трогаем d[i+3] вообще
+  const a = Math.max(0, Math.min(1, alpha));
+
   for (let i = 0; i < d.length; i += 4) {
     const v = (Math.random() * 255) | 0;
-    d[i] = v;
-    d[i + 1] = v;
-    d[i + 2] = v;
-    d[i + 3] = (alpha * 255) | 0;
+
+    // мягко подмешиваем шум в RGB, альфу НЕ меняем
+    d[i] = (d[i] * (1 - a) + v * a) | 0;
+    d[i + 1] = (d[i + 1] * (1 - a) + v * a) | 0;
+    d[i + 2] = (d[i + 2] * (1 - a) + v * a) | 0;
+    // d[i + 3] оставляем как есть!
   }
+
   ctx.putImageData(img, 0, 0);
 }
 
@@ -358,10 +365,18 @@ function drawGlowLine(ctx, x1, y1, x2, y2, color, alpha = 0.6) {
 }
 
 function drawGlassFrame(ctx, x, y, w, h, r, c1, c2) {
-  // “стеклянная рамка” + подсветка углов как на варианте C
   ctx.save();
 
-  // основная рамка
+  // ⚠️ на всякий случай сбросим композит/альфу (часто это причина “пропало”)
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "source-over";
+  ctx.shadowBlur = 0;
+
+  // КЛИПНЕМСЯ по карточке (всё внутри неё)
+  roundRectPath(ctx, x, y, w, h, r);
+  ctx.clip();
+
+  // 1) базовая рамка
   roundRectPath(ctx, x, y, w, h, r);
   ctx.strokeStyle = "rgba(255,255,255,0.22)";
   ctx.lineWidth = 2;
@@ -369,24 +384,60 @@ function drawGlassFrame(ctx, x, y, w, h, r, c1, c2) {
   ctx.shadowBlur = 10;
   ctx.stroke();
 
-  // внутренняя тонкая линия
-  roundRectPath(ctx, x + 10, y + 10, w - 20, h - 20, r - 6);
-  ctx.strokeStyle = "rgba(255,255,255,0.14)";
+  // 2) внутренняя линия
+  const inset = 10;
+  roundRectPath(ctx, x + inset, y + inset, w - inset * 2, h - inset * 2, r - 6);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = "rgba(255,255,255,0.12)";
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  // световые акценты (левый верх — холодный, правый — тёплый)
-  drawGlowLine(ctx, x + 18, y + 28, x + 18, y + h - 48, c1, 0.55);
-  drawGlowLine(ctx, x + w - 18, y + 28, x + w - 18, y + h - 48, c2, 0.55);
+  // 3) НЕОН — рисуем ПОСЛЕ рамки, внутри клипа
+  const neonInsetX = 18;
+  const top = y + 34;
+  const bottom = y + h - 54;
 
-  // верхний блик
+  drawNeonLine(ctx, x + neonInsetX, top, x + neonInsetX, bottom, c1);
+  drawNeonLine(ctx, x + w - neonInsetX, top, x + w - neonInsetX, bottom, c2);
+
+  // 4) верхний блик
   const shine = ctx.createLinearGradient(0, y, 0, y + h * 0.55);
-  shine.addColorStop(0, "rgba(255,255,255,0.26)");
-  shine.addColorStop(0.35, "rgba(255,255,255,0.08)");
+  shine.addColorStop(0, "rgba(255,255,255,0.18)");
+  shine.addColorStop(0.35, "rgba(255,255,255,0.06)");
   shine.addColorStop(1, "rgba(255,255,255,0.00)");
   roundRectPath(ctx, x + 2, y + 2, w - 4, h - 4, r);
   ctx.fillStyle = shine;
   ctx.fill();
+
+  ctx.restore();
+}
+
+function drawNeonLine(ctx, x1, y1, x2, y2, color) {
+  ctx.save();
+
+  // ✅ “screen” делает неон видимым даже на тёмном/прозрачном стекле
+  ctx.globalCompositeOperation = "screen";
+
+  // glow
+  ctx.globalAlpha = 0.55;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 3;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 22;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+
+  // core (яркая тонкая линия)
+  ctx.globalAlpha = 0.95;
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = "rgba(255,255,255,0.75)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
 
   ctx.restore();
 }
@@ -463,24 +514,35 @@ export function makeGlassFallbackCanvas({ title, media_type, year } = {}) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return canvas;
 
-  // ====== ТВОЙ текущий рендер (drawBackdrop / drawGlassFrame / drawSmartTitle / year / caption) ======
-  drawBackdrop(ctx, W, H, c1, c2);
-
-  const pad = 28;
+  // ====== FULL BLEED GLASS CARD (NO BACKDROP) ======
+  const pad = 0;
   const x = pad;
   const y0 = pad;
   const w = W - pad * 2;
   const h = H - pad * 2;
-  const r = 24;
+  const r = 26;
 
+  // НИКАКОГО drawBackdrop(ctx, ...) тут не должно быть
+  // НИКАКОЙ тёмной подложки внутри тоже
+
+  // лёгкий “стеклянный” sheen (прозрачный!)
   ctx.save();
+  const sheen = ctx.createLinearGradient(0, 0, 0, H);
+  sheen.addColorStop(0, "rgba(255,255,255,0.06)");
+  sheen.addColorStop(0.5, "rgba(255,255,255,0.02)");
+  sheen.addColorStop(1, "rgba(0,0,0,0.02)");
   roundRectPath(ctx, x, y0, w, h, r);
-  ctx.fillStyle = "rgba(8,8,14,0.42)";
+  ctx.fillStyle = sheen;
   ctx.fill();
   ctx.restore();
 
+  // рамка + цветные линии по краям (как у тебя)
   drawGlassFrame(ctx, x, y0, w, h, r, c1, c2);
 
+  // лёгкая пыль/шум поверх (прозрачная)
+  drawNoise(ctx, W, H, 0.035);
+
+  // заголовок
   ctx.save();
   ctx.fillStyle = "rgba(255,255,255,0.92)";
   ctx.textAlign = "center";
@@ -488,38 +550,55 @@ export function makeGlassFallbackCanvas({ title, media_type, year } = {}) {
   ctx.shadowColor = "rgba(0,0,0,0.55)";
   ctx.shadowBlur = 10;
 
-  drawSmartTitle(ctx, t, { x: W / 2, yCenter: H * 0.46, maxWidth: w - 56 });
+  drawSmartTitle(ctx, t, {
+    x: W / 2,
+    yCenter: H * 0.46,
+    maxWidth: w - 56,
+  });
 
   ctx.restore();
 
   if (y) {
-    ctx.save();
-    ctx.fillStyle = "rgba(255,255,255,0.72)";
-    ctx.font = "700 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-
     const yearY = H * 0.82;
-    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    const mid = W / 2;
+
+    ctx.save();
+
+    // линии (короткие)
+    ctx.strokeStyle = "rgba(255,255,255,0.20)";
     ctx.lineWidth = 1;
 
-    const mid = W / 2;
+    const gap = 34; // расстояние от года до линии
+    const lineLen = 56; // длина линии
+
     ctx.beginPath();
-    ctx.moveTo(mid - 110, yearY);
-    ctx.lineTo(mid - 48, yearY);
-    ctx.moveTo(mid + 48, yearY);
-    ctx.lineTo(mid + 110, yearY);
+    ctx.moveTo(mid - gap - lineLen, yearY);
+    ctx.lineTo(mid - gap, yearY);
+
+    ctx.moveTo(mid + gap, yearY);
+    ctx.lineTo(mid + gap + lineLen, yearY);
     ctx.stroke();
 
+    // год
+    ctx.fillStyle = "rgba(255,255,255,0.78)";
+    ctx.font = "800 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(0,0,0,0.55)";
+    ctx.shadowBlur = 10;
     ctx.fillText(y, mid, yearY);
+
     ctx.restore();
   }
 
+  // подпись
   ctx.save();
   ctx.fillStyle = "rgba(255,255,255,0.60)";
   ctx.font = "600 14px system-ui, -apple-system, Segoe UI, Roboto, Arial";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+  ctx.shadowColor = "rgba(0,0,0,0.55)";
+  ctx.shadowBlur = 8;
   ctx.fillText("No poster available", W / 2, H * 0.875);
   ctx.restore();
 
