@@ -106,7 +106,14 @@ export function drawWheel(canvas, items, opts = {}) {
 
   const cx = rect.width / 2;
   const cy = rect.height / 2;
+
+  // ✅ FIX: один раз объявляем R и сразу гарантируем валидность
   const R = Math.min(rect.width, rect.height) / 2 - 10;
+  if (R <= 0) return;
+
+  // рисуем в CSS координатах
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, rect.width, rect.height);
 
   // чуть “вверх”, чтобы указатель был сверху
   const ROT0 = -Math.PI / 2 + rotation;

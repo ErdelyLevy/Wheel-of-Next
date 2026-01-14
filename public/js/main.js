@@ -14,6 +14,34 @@ import { stopSpinSound, playDing } from "./spinSound.js";
 
 const LS_ACTIVE_PRESET = "won:activePresetId";
 
+let wheelScheduleRedraw = null;
+
+function initWheelRenderer(canvas) {
+  let raf = 0;
+
+  const scheduleRedraw = () => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+
+      const s = getState();
+      const items = s?.wheel?.items || [];
+      const rot = Number(canvas.__rotation || 0);
+
+      drawWheel(canvas, items, { rotation: rot, onUpdate: scheduleRedraw });
+    });
+  };
+
+  // ✅ при любых изменениях размеров — перерисовать
+  const ro = new ResizeObserver(() => scheduleRedraw());
+  ro.observe(canvas);
+
+  // (если canvas иногда меняет размер через родителя — лучше наблюдать родителя)
+  if (canvas.parentElement) ro.observe(canvas.parentElement);
+
+  return scheduleRedraw;
+}
+
 function setActivePresetId(id) {
   localStorage.setItem(LS_ACTIVE_PRESET, String(id || ""));
 }
@@ -21,7 +49,7 @@ function getActivePresetId() {
   return localStorage.getItem(LS_ACTIVE_PRESET) || "";
 }
 
-let rightListItems = [];
+let rightListAllItems = [];
 
 /** --- UI: список справа --- */
 // где-то в main.js или в listUi.js
@@ -31,11 +59,34 @@ let rightListById = new Map();
 
 let __toastTimer = 0;
 
-function showToast(text, ms = 1600) {
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (ch) => {
+    switch (ch) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&#39;";
+      default:
+        return ch;
+    }
+  });
+}
+
+function showToast(text, ms = 1600, opts = {}) {
   const el = document.getElementById("toast");
   if (!el) return;
 
-  el.textContent = text || "";
+  if (opts.html) {
+    el.innerHTML = text || "";
+  } else {
+    el.textContent = text || "";
+  }
   el.classList.add("is-on");
 
   clearTimeout(__toastTimer);
@@ -112,6 +163,11 @@ async function applyPresetToWheelPage(presetId) {
   // 1) список справа — ИММУТАБЕЛЬНАЯ КОПИЯ
   const items = await apiGetItemsByPreset(presetId);
   const listItems = structuredClone(items); // ⬅️ КЛЮЧ
+  rightListAllItems = listItems;
+
+  // сброс поиска при смене пресета
+  const searchInput = document.getElementById("search-input");
+  if (searchInput) searchInput.value = "";
 
   renderRightList(listItems);
 
@@ -229,20 +285,24 @@ function initRollButton() {
 
       await stopSpinSound({ fadeMs: 250 });
 
-      showToast(`Победитель: ${winnerItem.title}`);
-
-      await playDing({ src: "/sounds/ding.mp3", volume: 0.9 });
-
-      // 4) теперь показываем победителя слева
-      if (winnerItem) openResult(winnerItem);
-
+      // 4) покажем тост с победителем (до звука, чтобы не пропасть при ошибке audio)
       if (winnerItem?.title) {
-        showToast(`Победитель: ${winnerItem.title}`);
+        const safeTitle = escapeHtml(winnerItem.title);
+        showToast(
+          `Победитель: <span class="toast-winner">${safeTitle}</span>`,
+          1600,
+          { html: true }
+        );
       } else if (winnerId) {
         showToast(`Победитель определён`);
       }
 
-      // 5) обновим историю
+      await playDing({ src: "/sounds/ding.mp3", volume: 0.9 });
+
+      // 5) теперь показываем победителя слева
+      if (winnerItem) openResult(winnerItem);
+
+      // 6) обновим историю
       window.refreshHistory?.();
     } catch (e) {
       console.error(e);
@@ -269,15 +329,55 @@ function initRightListClicks() {
   });
 }
 
+function initRightListSearch() {
+  const input = document.getElementById("search-input");
+  if (!input) return;
+
+  input.addEventListener("input", () => {
+    const term = input.value.trim().toLowerCase();
+    const base = Array.isArray(rightListAllItems) ? rightListAllItems : [];
+
+    if (!term) {
+      renderRightList(base);
+      return;
+    }
+
+    const filtered = base.filter((it) =>
+      String(it?.title || "")
+        .toLowerCase()
+        .includes(term)
+    );
+    renderRightList(filtered);
+  });
+}
+
 function initWheelCanvas() {
   const canvas = document.getElementById("wheel");
   if (!canvas) return;
 
   let rotation = 0;
 
-  const redraw = () => {
-    const items = getState()?.wheel?.items || [];
-    drawWheel(canvas, items, { rotation, onUpdate: redraw });
+  let __raf = 0;
+
+  const scheduleRedraw = () => {
+    // не рисуем, если вкладка не "колесо" (иначе будут странные лаги на settings)
+    if (getState().view !== "wheel") return;
+
+    if (__raf) return;
+    __raf = requestAnimationFrame(() => {
+      __raf = 0;
+
+      const s = getState();
+      const items = s?.wheel?.items || [];
+
+      // rotation бери из canvas.__rotation (это “истина” после спина)
+      const rot = Number(canvas.__rotation || 0);
+
+      drawWheel(canvas, items, {
+        rotation: rot,
+        onUpdate: scheduleRedraw, // ✅ ВАЖНО: именно scheduleRedraw
+      });
+    });
   };
 
   // 1) перерисовка при любом обновлении wheel (snapshot / expand / preload)
@@ -286,23 +386,23 @@ function initWheelCanvas() {
     const u = getState()?.wheel?.updatedAt || null;
     if (u && u !== last) {
       last = u;
-      redraw();
+      scheduleRedraw();
     }
   });
 
   // 2) перерисовка на ресайз
-  window.addEventListener("resize", redraw);
+  window.addEventListener("resize", scheduleRedraw);
 
   // 3) первый рендер (на случай если state уже заполнен)
-  redraw();
+  scheduleRedraw();
 
   // можно вернуть доступ к rotation для будущей анимации
   return {
     setRotation(rad) {
       rotation = Number(rad) || 0;
-      redraw();
+      scheduleRedraw();
     },
-    redraw,
+    scheduleRedraw,
   };
 }
 
@@ -315,6 +415,7 @@ async function boot() {
   await initPresetCatalog();
 
   initRightListClicks();
+  initRightListSearch();
 
   // UI списка/истории/результата
   initHistoryUI();
@@ -325,6 +426,18 @@ async function boot() {
 
   // ✅ колесо: подписки + resize
   initWheelCanvas();
+
+  const canvas = document.getElementById("wheel");
+  const scheduleRedraw = initWheelRenderer(canvas);
+
+  // 1) первый рендер сразу (независимо от вкладки)
+  scheduleRedraw();
+
+  // 2) любые изменения wheel/state — тоже вызывают redraw
+  subscribe((s) => {
+    // важно: не проверяем вкладку вообще
+    if (s?.wheel?.updatedAt) scheduleRedraw();
+  });
 
   // табы пресетов сверху + сразу применить активный
   await refreshPresetTabsFromDB();

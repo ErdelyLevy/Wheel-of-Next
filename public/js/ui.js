@@ -17,12 +17,13 @@ function applyView() {
   const topTabs = $("top-tabs");
   const viewWheel = $("view-wheel");
   const viewSettings = $("view-settings");
-
   if (!topTabs || !viewWheel || !viewSettings) return;
 
   const isWheel = s.view === "wheel";
-  viewWheel.classList.toggle("is-hidden", !isWheel);
-  viewSettings.classList.toggle("is-hidden", isWheel);
+
+  viewWheel.classList.toggle("is-hidden-visually", !isWheel);
+  viewSettings.classList.toggle("is-hidden-visually", isWheel);
+
   setActiveTabs(topTabs, (b) => b.dataset.view === s.view);
 }
 

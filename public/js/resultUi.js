@@ -103,21 +103,18 @@ function render(item) {
   // actions
   clear(actionsEl);
 
-  // 1) открыть в базе (пока заглушка, потом подставим реальный URL/роут)
-  // если у тебя уже есть правильный путь — просто замени href
-  const id = item.id || item.meta_id || "";
-  if (id)
-    addActionLink(
-      actionsEl,
-      "Открыть в базе",
-      `/item/${encodeURIComponent(id)}`
-    );
+  // 1) Ryot: открываем карточку в Ryot по meta_id (или id как запасной вариант)
+  const ryotId = item.meta_id || item.id || "";
+  if (ryotId) {
+    const url = `http://erdely.ru/media/item/${encodeURIComponent(ryotId)}`;
+    addActionLink(actionsEl, "Ryot", url);
+  }
 
-  // 2) source кнопка -> source_url
+  // 2) SOURCE кнопка -> source_url (заголовок в upper case)
   if (item.source && item.source_url) {
-    addActionLink(actionsEl, String(item.source), item.source_url);
+    addActionLink(actionsEl, String(item.source).toUpperCase(), item.source_url);
   } else if (item.source_url) {
-    addActionLink(actionsEl, "Source", item.source_url);
+    addActionLink(actionsEl, "SOURCE", item.source_url);
   }
 }
 

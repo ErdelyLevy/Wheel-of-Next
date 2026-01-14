@@ -98,6 +98,22 @@ function renderCatalog(presetsArg) {
 
   ul.innerHTML = "";
 
+  {
+    const li = document.createElement("li");
+    li.className = "preset-item";
+
+    const btn = document.createElement("button");
+    btn.className =
+      "preset-btn is-create" + (!s.activePresetId ? " is-active" : "");
+
+    btn.type = "button";
+    btn.dataset.action = "preset-create";
+    btn.textContent = "Создать…";
+
+    li.appendChild(btn);
+    ul.appendChild(li);
+  }
+
   if (!presets.length) {
     const li = document.createElement("li");
     li.className = "preset-item";
@@ -130,13 +146,44 @@ function renderCatalog(presetsArg) {
 }
 
 function applyPresetToEditor(preset) {
+  const name =
+    preset?.name ??
+    preset?.preset_name ??
+    preset?.presetName ??
+    preset?.title ??
+    "";
+
+  const media = preset?.media ?? preset?.media_types ?? [];
+
+  const categories = preset?.categories ?? preset?.collections ?? [];
+
+  const weights = preset?.weights ?? {};
+
   setState({ activePresetId: preset.id });
+
   setPresetDraft({
-    name: preset.name || "",
-    media: preset.media || [],
-    categories: preset.categories || [],
-    weights: preset.weights || {},
+    name,
+    media,
+    categories,
+    weights,
   });
+
+  syncPresetEditorFromState();
+  renderCatalog();
+  applyPresetValidationUI();
+}
+
+function startNewPresetDraft() {
+  // важно: чтобы "Сохранить" создавало новый, а не перезаписывало
+  setState({ activePresetId: null });
+
+  setPresetDraft({
+    name: "",
+    media: [],
+    categories: [],
+    weights: {},
+  });
+
   syncPresetEditorFromState();
   renderCatalog();
   applyPresetValidationUI();
@@ -150,6 +197,12 @@ function initCatalogClick() {
     const btn = e.target.closest(".preset-btn");
     if (!btn || btn.disabled) return;
 
+    // ✅ "Создать…"
+    if (btn.dataset.action === "preset-create") {
+      startNewPresetDraft();
+      return;
+    }
+
     const id = String(btn.dataset.presetId || "");
     if (!id) return;
 
@@ -158,10 +211,9 @@ function initCatalogClick() {
     const preset = presets.find((x) => String(x.id) === id);
     if (!preset) return;
 
-    // нормализуем форму под редактор (у тебя редактор ожидает media/categories)
     applyPresetToEditor({
       id: String(preset.id),
-      name: preset.name,
+      name: preset.name ?? preset.preset_name ?? preset.title ?? "",
       media: preset.media_types ?? preset.media ?? [],
       categories: preset.collections ?? preset.categories ?? [],
       weights: preset.weights ?? {},
@@ -329,18 +381,16 @@ export async function initPresetCatalog() {
   initUpsertDelete();
   initNameBinding();
 
+  // ✅ по умолчанию — создаём новый (пустой) пресет
+  startNewPresetDraft();
+
   // 3) авто-выбор первого пресета при старте
   const s = getState();
   const list = Array.isArray(s.presets) ? s.presets : [];
-  if (!s.activePresetId && list[0]) {
-    applyPresetToEditor({
-      id: String(list[0].id),
-      name: list[0].name,
-      media: list[0].media_types ?? list[0].media ?? [],
-      categories: list[0].collections ?? list[0].categories ?? [],
-      weights: list[0].weights ?? {},
-    });
-    setState({ activePresetId: String(list[0].id) });
+  if (s.activePresetId) {
+    // если активный уже есть — подтянем его (по желанию, можно оставить как есть)
+  } else if (list[0]) {
+    // оставь как было
   }
 
   // 4) подписка на state: только UI валидации (каталог не перерисовываем на каждое изменение)

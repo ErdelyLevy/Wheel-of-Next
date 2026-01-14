@@ -24,10 +24,11 @@ const initial = {
   spin: loadSpinFromLS(),
   presetDraft: {
     name: "",
-    media: safeJsonParse(localStorage.getItem("won:presetMedia"), []),
-    categories: safeJsonParse(localStorage.getItem("won:presetCategories"), []),
-    weights: safeJsonParse(localStorage.getItem("won:presetWeights"), {}),
+    media: [],
+    categories: [],
+    weights: {},
   },
+
   activePresetId: null,
   result: {
     item: null, // текущая карточка слева

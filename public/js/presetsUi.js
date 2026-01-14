@@ -1,6 +1,16 @@
 // js/presetsUi.js
 import { getState, setState, setPresetDraft, subscribe } from "./state.js";
 
+function resetPresetEditorForm() {
+  // очисти поля формы (name, collections, media_types, weights и т.д.)
+  // и главное:
+  setState({ editor: { presetId: null } }); // или как у тебя устроен state
+}
+
+document.getElementById("preset-new-btn")?.addEventListener("click", () => {
+  resetPresetEditorForm();
+});
+
 async function fetchMeta() {
   const r = await fetch("/api/meta", { cache: "no-store" });
   if (!r.ok) throw new Error("meta fetch failed");
@@ -105,7 +115,6 @@ function buildMultiSelect(msRoot, values, getSelected, setSelected, onChange) {
     pop.classList.add("is-hidden");
     btn.setAttribute("aria-expanded", "false");
     document.removeEventListener("keydown", onKeyDown);
-    btn.focus();
   }
 
   function onKeyDown(e) {
