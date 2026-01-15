@@ -259,7 +259,7 @@ async function upsertPreset(payload) {
 }
 
 async function deletePreset(id) {
-  const r = await fetch(`/api/presets/${encodeURIComponent(id)}`, {
+  const r = await fetch(`/wheel/api/presets/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
   const j = await r.json().catch(() => ({ ok: true }));

@@ -558,7 +558,7 @@ export function getPosterSrc(item, { w = 512, fmt = "webp" } = {}) {
 
   // всегда ходим через серверный прокси-кэш
   const u = encodeURIComponent(url);
-  return `/api/poster?u=${u}&w=${encodeURIComponent(
+  return `/wheel/api/poster?u=${u}&w=${encodeURIComponent(
     String(w)
   )}&fmt=${encodeURIComponent(String(fmt))}`;
 }

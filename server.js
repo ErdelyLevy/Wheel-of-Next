@@ -108,7 +108,7 @@ function clampInt(v, min, max, fallback = min) {
 function proxifyPoster(posterUrl, { w = 512, fmt = "webp" } = {}) {
   const u = String(posterUrl || "").trim();
   if (!u) return "";
-  return `/api/poster?u=${encodeURIComponent(u)}&w=${w}&fmt=${fmt}`;
+  return `/wheel/api/poster?u=${encodeURIComponent(u)}&w=${w}&fmt=${fmt}`;
 }
 
 function asTextArray(x) {
@@ -456,14 +456,14 @@ function safeJsonParse(s) {
 
 /**
  * @openapi
- * /api/virtual-collections:
+ * /wheel/api/virtual-collections:
  *   get:
  *     tags: [Virtual Collections]
  *     summary: List virtual collections
  *     responses:
  *       200: { description: OK }
  */
-app.get("/api/virtual-collections", async (req, res) => {
+app.get("/wheel/api/virtual-collections", async (req, res) => {
   try {
     const { rows } = await pool.query(
       `
@@ -475,14 +475,14 @@ app.get("/api/virtual-collections", async (req, res) => {
 
     res.json({ ok: true, rows });
   } catch (e) {
-    console.error("[API] /api/virtual-collections GET failed:", e);
+    console.error("[API] /wheel/api/virtual-collections GET failed:", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
 
 /**
  * @openapi
- * /api/virtual-collections:
+ * /wheel/api/virtual-collections:
  *   post:
  *     tags: [Virtual Collections]
  *     summary: Create or update virtual collection (upsert)
@@ -502,7 +502,7 @@ app.get("/api/virtual-collections", async (req, res) => {
  *       200: { description: OK }
  *       400: { description: Bad Request }
  */
-app.post("/api/virtual-collections", async (req, res) => {
+app.post("/wheel/api/virtual-collections", async (req, res) => {
   try {
     const b = req.body || {};
     const id = toVcId(b.id);
@@ -536,14 +536,14 @@ app.post("/api/virtual-collections", async (req, res) => {
 
     res.json({ ok: true, row: rows[0] || null });
   } catch (e) {
-    console.error("[API] /api/virtual-collections POST failed:", e);
+    console.error("[API] /wheel/api/virtual-collections POST failed:", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
 
 /**
  * @openapi
- * /api/virtual-collections/{id}:
+ * /wheel/api/virtual-collections/{id}:
  *   delete:
  *     tags: [Virtual Collections]
  *     summary: Delete virtual collection by id (and remove from presets)
@@ -557,7 +557,7 @@ app.post("/api/virtual-collections", async (req, res) => {
  *       400: { description: Bad Request }
  *       404: { description: Not Found }
  */
-app.delete("/api/virtual-collections/:id", async (req, res) => {
+app.delete("/wheel/api/virtual-collections/:id", async (req, res) => {
   const id = toVcId(req.params.id);
   if (!id) return res.status(400).json({ ok: false, error: "id required" });
 
@@ -590,7 +590,7 @@ app.delete("/api/virtual-collections/:id", async (req, res) => {
     res.json({ ok: true, id });
   } catch (e) {
     await client.query("rollback");
-    console.error("[API] /api/virtual-collections DELETE failed:", e);
+    console.error("[API] /wheel/api/virtual-collections DELETE failed:", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   } finally {
     client.release();
@@ -599,7 +599,7 @@ app.delete("/api/virtual-collections/:id", async (req, res) => {
 
 /**
  * @openapi
- * /api/poster:
+ * /wheel/api/poster:
  *   get:
  *     tags: [Assets]
  *     summary: Proxy and cache poster by URL
@@ -615,12 +615,12 @@ app.delete("/api/virtual-collections/:id", async (req, res) => {
  *       404: { description: Not Found }
  *       502: { description: Bad Gateway }
  */
-app.get("/api/poster", async (req, res) => {
+app.get("/wheel/api/poster", async (req, res) => {
   try {
     let url = String(req.query.u || req.query.url || "").trim();
 
-    // ✅ если прилетел уже проксированный url вида "/api/poster?u=..."
-    if (url.startsWith("/api/poster")) {
+    // ✅ если прилетел уже проксированный url вида "/wheel/api/poster?u=..."
+    if (url.startsWith("/wheel/api/poster")) {
       const inner = new URL(url, "http://localhost"); // базовый домен любой, нужен только для парсинга
       const u2 =
         inner.searchParams.get("u") || inner.searchParams.get("url") || "";
@@ -681,7 +681,7 @@ app.get("/api/poster", async (req, res) => {
       }
 
       // остальные — логируем и возвращаем статус
-      console.error("[API] /api/poster fetch failed:", e);
+      console.error("[API] /wheel/api/poster fetch failed:", e);
       return res.status(st).json({ ok: false, error: msg });
     }
 
@@ -691,7 +691,7 @@ app.get("/api/poster", async (req, res) => {
     return res.sendFile(key, { root: POSTER_CACHE_DIR });
   } catch (e) {
     const status = Number(e?.status) || 500;
-    if (status >= 500) console.error("[API] /api/poster failed:", e);
+    if (status >= 500) console.error("[API] /wheel/api/poster failed:", e);
     return res
       .status(status)
       .json({ ok: false, error: String(e.message || e) });
@@ -700,7 +700,7 @@ app.get("/api/poster", async (req, res) => {
 
 /**
  * @openapi
- * /api/health:
+ * /wheel/api/health:
  *   get:
  *     tags: [System]
  *     summary: Health check (DB ping)
@@ -708,7 +708,7 @@ app.get("/api/poster", async (req, res) => {
  *       200: { description: OK }
  *       500: { description: Server Error }
  */
-app.get("/api/health", async (req, res) => {
+app.get("/wheel/api/health", async (req, res) => {
   try {
     await pool.query("select 1 as ok");
     res.json({ ok: true });
@@ -719,14 +719,14 @@ app.get("/api/health", async (req, res) => {
 
 /**
  * @openapi
- * /api/meta:
+ * /wheel/api/meta:
  *   get:
  *     tags: [Meta]
  *     summary: Dropdown meta (media types + collections)
  *     responses:
  *       200: { description: OK }
  */
-app.get("/api/meta", async (req, res) => {
+app.get("/wheel/api/meta", async (req, res) => {
   try {
     const media = await pool.query(
       `select distinct media_type from wheel_items where media_type is not null order by 1`
@@ -741,21 +741,21 @@ app.get("/api/meta", async (req, res) => {
       collections: cols.rows.map((r) => r.category_name),
     });
   } catch (e) {
-    console.error("[API] /api/meta failed:", e);
+    console.error("[API] /wheel/api/meta failed:", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
 
 /**
  * @openapi
- * /api/presets:
+ * /wheel/api/presets:
  *   get:
  *     tags: [Presets]
  *     summary: List presets
  *     responses:
  *       200: { description: OK }
  */
-app.get("/api/presets", async (req, res) => {
+app.get("/wheel/api/presets", async (req, res) => {
   try {
     const { rows } = await pool.query(
       `select * from ${T_PRESETS} order by created_at asc nulls last, name asc`
@@ -795,14 +795,14 @@ app.get("/api/presets", async (req, res) => {
 
     res.json({ ok: true, presets });
   } catch (e) {
-    console.error("[API] /api/presets failed:", e);
+    console.error("[API] /wheel/api/presets failed:", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
 
 /**
  * @openapi
- * /api/presets:
+ * /wheel/api/presets:
  *   post:
  *     tags: [Presets]
  *     summary: Create or update preset (upsert)
@@ -833,7 +833,7 @@ app.get("/api/presets", async (req, res) => {
  *       200: { description: OK }
  *       400: { description: Bad Request }
  */
-app.post("/api/presets", async (req, res) => {
+app.post("/wheel/api/presets", async (req, res) => {
   try {
     const body = req.body || {};
 
@@ -916,14 +916,14 @@ app.post("/api/presets", async (req, res) => {
 
     res.json({ ok: true, preset: rows[0] });
   } catch (e) {
-    console.error("[API] POST /api/presets failed:", e);
+    console.error("[API] POST /wheel/api/presets failed:", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
 
 /**
  * @openapi
- * /api/presets/{id}:
+ * /wheel/api/presets/{id}:
  *   delete:
  *     tags: [Presets]
  *     summary: Delete preset by id
@@ -936,7 +936,7 @@ app.post("/api/presets", async (req, res) => {
  *       200: { description: OK }
  *       400: { description: Bad Request }
  */
-app.delete("/api/presets/:id", async (req, res) => {
+app.delete("/wheel/api/presets/:id", async (req, res) => {
   try {
     const id = String(req.params.id || "").trim();
     if (!id) return res.status(400).json({ ok: false, error: "id required" });
@@ -944,14 +944,14 @@ app.delete("/api/presets/:id", async (req, res) => {
     await pool.query(`delete from ${T_PRESETS} where id = $1`, [id]);
     res.json({ ok: true });
   } catch (e) {
-    console.error("[API] DELETE /api/presets failed:", e);
+    console.error("[API] DELETE /wheel/api/presets failed:", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
 
 /**
  * @openapi
- * /api/history:
+ * /wheel/api/history:
  *   get:
  *     tags: [History]
  *     summary: List history (latest first)
@@ -963,7 +963,7 @@ app.delete("/api/presets/:id", async (req, res) => {
  *     responses:
  *       200: { description: OK }
  */
-app.get("/api/history", async (req, res) => {
+app.get("/wheel/api/history", async (req, res) => {
   try {
     const limit = clampInt(req.query.limit, 1, 200, 50);
     const { rows } = await pool.query(
@@ -978,14 +978,14 @@ app.get("/api/history", async (req, res) => {
 
     res.json({ ok: true, rows: out });
   } catch (e) {
-    console.error("[API] /api/history failed:", e);
+    console.error("[API] /wheel/api/history failed:", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
 
 /**
  * @openapi
- * /api/history/{id}:
+ * /wheel/api/history/{id}:
  *   get:
  *     tags: [History]
  *     summary: Get history item by id
@@ -999,7 +999,7 @@ app.get("/api/history", async (req, res) => {
  *       400: { description: Bad Request }
  *       404: { description: Not Found }
  */
-app.get("/api/history/:id", async (req, res) => {
+app.get("/wheel/api/history/:id", async (req, res) => {
   try {
     const id = String(req.params.id || "").trim();
     if (!id) return res.status(400).json({ ok: false, error: "id required" });
@@ -1014,14 +1014,14 @@ app.get("/api/history/:id", async (req, res) => {
     const row = await enrichVcInHistoryRow(pool, rows[0]);
     res.json({ ok: true, row });
   } catch (e) {
-    console.error("[API] /api/history/:id failed:", e);
+    console.error("[API] /wheel/api/history/:id failed:", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
 
 /**
  * @openapi
- * /api/random:
+ * /wheel/api/random:
  *   post:
  *     tags: [Wheel]
  *     summary: Pick random winner and build wheel items
@@ -1041,7 +1041,7 @@ app.get("/api/history/:id", async (req, res) => {
  *       400: { description: Bad Request }
  *       404: { description: Not Found }
  */
-app.post("/api/random", async (req, res) => {
+app.post("/wheel/api/random", async (req, res) => {
   try {
     const body = req.body || {};
     const presetId = String(body.preset_id || body.presetId || "").trim();
@@ -1349,14 +1349,14 @@ select id, name, media, poster, source_label, source_url, created_at, updated_at
       wheel_size: wheelItemsWithW.length,
     });
   } catch (e) {
-    console.error("[API] /api/random failed:", e);
+    console.error("[API] /wheel/api/random failed:", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
 
 /**
  * @openapi
- * /api/items:
+ * /wheel/api/items:
  *   get:
  *     tags: [Wheel]
  *     summary: List items for preset (filtered by preset media_types + collections)
@@ -1370,7 +1370,7 @@ select id, name, media, poster, source_label, source_url, created_at, updated_at
  *       400: { description: Bad Request }
  *       404: { description: Not Found }
  */
-app.get("/api/items", async (req, res) => {
+app.get("/wheel/api/items", async (req, res) => {
   try {
     const presetId = String(req.query.preset_id || "").trim();
     if (!presetId)
@@ -1456,7 +1456,7 @@ app.get("/api/items", async (req, res) => {
 
     return res.json({ ok: true, rows: [...outItems, ...outVcs] });
   } catch (e) {
-    console.error("[API] /api/items failed:", e);
+    console.error("[API] /wheel/api/items failed:", e);
     return res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
@@ -1466,7 +1466,7 @@ app.get("/api/items", async (req, res) => {
 const PUBLIC_DIR = path.join(__dirname, "public");
 app.use(express.static(PUBLIC_DIR));
 
-// SPA fallback: всегда index.html из PUBLIC_DIR (кроме /api/*)
+// SPA fallback: всегда index.html из PUBLIC_DIR (кроме /wheel/api/*)
 app.get(/^(?!\/api\/).*/, (req, res) => {
   res.sendFile("index.html", { root: PUBLIC_DIR }, (err) => {
     if (err) {

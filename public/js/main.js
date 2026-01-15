@@ -431,7 +431,7 @@ function initWheelCanvas() {
 
 /** --- boot --- */
 async function boot() {
-  // dropdowns (зависят от /api/meta)
+  // dropdowns
   await initPresetDropdowns();
 
   // каталог/редактор пресетов

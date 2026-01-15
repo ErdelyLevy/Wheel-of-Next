@@ -102,9 +102,9 @@ function render(item) {
   // сначала ставим fallback — сразу красиво
   setImg(imgEl, fallback, title);
 
-  // потом пробуем реальный через /api/poster
+  // потом пробуем реальный
   imgEl.onerror = () => {
-    // если /api/poster отдал ошибку или битую картинку — возвращаем fallback
+    // если /wheel/api/poster отдал ошибку или битую картинку — возвращаем fallback
     setImg(imgEl, fallback, title);
   };
   imgEl.src = src;

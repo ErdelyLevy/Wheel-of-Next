@@ -251,7 +251,7 @@ function getFallbackSrcCached(item) {
 }
 
 export function getCanvasPosterImage(item, onUpdate) {
-  // пробуем реальный постер через /api/poster
+  // пробуем реальный постер через /wheel/api/poster
   const src = getPosterSrc(item, { w: 512, fmt: "webp" });
 
   // 1) если это fallback dataURL — отдаем КЕШИРОВАННЫЙ fallback и НЕ спамим onUpdate

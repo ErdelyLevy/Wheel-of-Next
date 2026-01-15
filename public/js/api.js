@@ -15,7 +15,7 @@ export async function apiGetPresets() {
 
 export async function apiGetItemsByPreset(presetId) {
   const r = await fetch(
-    `/api/items?preset_id=${encodeURIComponent(presetId)}`,
+    `/wheel/api/items?preset_id=${encodeURIComponent(presetId)}`,
     { cache: "no-store" }
   );
   const j = await r.json();
@@ -36,9 +36,12 @@ export async function apiRoll(presetId, { save = true } = {}) {
 }
 
 export async function apiGetHistory(limit = 50) {
-  const r = await fetch(`/api/history?limit=${encodeURIComponent(limit)}`, {
-    cache: "no-store",
-  });
+  const r = await fetch(
+    `/wheel/api/history?limit=${encodeURIComponent(limit)}`,
+    {
+      cache: "no-store",
+    }
+  );
   const j = await r.json();
   if (!r.ok || j?.ok === false)
     throw new Error(j?.error || "history fetch failed");
@@ -46,7 +49,7 @@ export async function apiGetHistory(limit = 50) {
 }
 
 export async function apiGetHistoryById(id) {
-  const r = await fetch(`/api/history/${encodeURIComponent(id)}`, {
+  const r = await fetch(`/wheel/api/history/${encodeURIComponent(id)}`, {
     cache: "no-store",
   });
   const j = await r.json();
@@ -76,9 +79,12 @@ export async function apiUpsertVirtualCollection(payload) {
 }
 
 export async function apiDeleteVirtualCollection(id) {
-  const r = await fetch(`/api/virtual-collections/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-  });
+  const r = await fetch(
+    `/wheel/api/virtual-collections/${encodeURIComponent(id)}`,
+    {
+      method: "DELETE",
+    }
+  );
   await jsonOrThrow(r);
   return true;
 }
