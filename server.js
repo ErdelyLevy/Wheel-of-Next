@@ -456,14 +456,14 @@ function safeJsonParse(s) {
 
 /**
  * @openapi
- * /wheel/api/virtual-collections:
+ * /api/virtual-collections:
  *   get:
  *     tags: [Virtual Collections]
  *     summary: List virtual collections
  *     responses:
  *       200: { description: OK }
  */
-app.get("/wheel/api/virtual-collections", async (req, res) => {
+app.get("/api/virtual-collections", async (req, res) => {
   try {
     const { rows } = await pool.query(
       `
@@ -482,7 +482,7 @@ app.get("/wheel/api/virtual-collections", async (req, res) => {
 
 /**
  * @openapi
- * /wheel/api/virtual-collections:
+ * /api/virtual-collections:
  *   post:
  *     tags: [Virtual Collections]
  *     summary: Create or update virtual collection (upsert)
@@ -502,7 +502,7 @@ app.get("/wheel/api/virtual-collections", async (req, res) => {
  *       200: { description: OK }
  *       400: { description: Bad Request }
  */
-app.post("/wheel/api/virtual-collections", async (req, res) => {
+app.post("/api/virtual-collections", async (req, res) => {
   try {
     const b = req.body || {};
     const id = toVcId(b.id);
@@ -543,7 +543,7 @@ app.post("/wheel/api/virtual-collections", async (req, res) => {
 
 /**
  * @openapi
- * /wheel/api/virtual-collections/{id}:
+ * /api/virtual-collections/{id}:
  *   delete:
  *     tags: [Virtual Collections]
  *     summary: Delete virtual collection by id (and remove from presets)
@@ -557,7 +557,7 @@ app.post("/wheel/api/virtual-collections", async (req, res) => {
  *       400: { description: Bad Request }
  *       404: { description: Not Found }
  */
-app.delete("/wheel/api/virtual-collections/:id", async (req, res) => {
+app.delete("/api/virtual-collections/:id", async (req, res) => {
   const id = toVcId(req.params.id);
   if (!id) return res.status(400).json({ ok: false, error: "id required" });
 
@@ -599,7 +599,7 @@ app.delete("/wheel/api/virtual-collections/:id", async (req, res) => {
 
 /**
  * @openapi
- * /wheel/api/poster:
+ * /api/poster:
  *   get:
  *     tags: [Assets]
  *     summary: Proxy and cache poster by URL
@@ -615,7 +615,7 @@ app.delete("/wheel/api/virtual-collections/:id", async (req, res) => {
  *       404: { description: Not Found }
  *       502: { description: Bad Gateway }
  */
-app.get("/wheel/api/poster", async (req, res) => {
+app.get("/api/poster", async (req, res) => {
   try {
     let url = String(req.query.u || req.query.url || "").trim();
 
@@ -700,7 +700,7 @@ app.get("/wheel/api/poster", async (req, res) => {
 
 /**
  * @openapi
- * /wheel/api/health:
+ * /api/health:
  *   get:
  *     tags: [System]
  *     summary: Health check (DB ping)
@@ -708,7 +708,7 @@ app.get("/wheel/api/poster", async (req, res) => {
  *       200: { description: OK }
  *       500: { description: Server Error }
  */
-app.get("/wheel/api/health", async (req, res) => {
+app.get("/api/health", async (req, res) => {
   try {
     await pool.query("select 1 as ok");
     res.json({ ok: true });
@@ -719,14 +719,14 @@ app.get("/wheel/api/health", async (req, res) => {
 
 /**
  * @openapi
- * /wheel/api/meta:
+ * /api/meta:
  *   get:
  *     tags: [Meta]
  *     summary: Dropdown meta (media types + collections)
  *     responses:
  *       200: { description: OK }
  */
-app.get("/wheel/api/meta", async (req, res) => {
+app.get("/api/meta", async (req, res) => {
   try {
     const media = await pool.query(
       `select distinct media_type from wheel_items where media_type is not null order by 1`
@@ -748,14 +748,14 @@ app.get("/wheel/api/meta", async (req, res) => {
 
 /**
  * @openapi
- * /wheel/api/presets:
+ * /api/presets:
  *   get:
  *     tags: [Presets]
  *     summary: List presets
  *     responses:
  *       200: { description: OK }
  */
-app.get("/wheel/api/presets", async (req, res) => {
+app.get("/api/presets", async (req, res) => {
   try {
     const { rows } = await pool.query(
       `select * from ${T_PRESETS} order by created_at asc nulls last, name asc`
@@ -802,7 +802,7 @@ app.get("/wheel/api/presets", async (req, res) => {
 
 /**
  * @openapi
- * /wheel/api/presets:
+ * /api/presets:
  *   post:
  *     tags: [Presets]
  *     summary: Create or update preset (upsert)
@@ -833,7 +833,7 @@ app.get("/wheel/api/presets", async (req, res) => {
  *       200: { description: OK }
  *       400: { description: Bad Request }
  */
-app.post("/wheel/api/presets", async (req, res) => {
+app.post("/api/presets", async (req, res) => {
   try {
     const body = req.body || {};
 
@@ -923,7 +923,7 @@ app.post("/wheel/api/presets", async (req, res) => {
 
 /**
  * @openapi
- * /wheel/api/presets/{id}:
+ * /api/presets/{id}:
  *   delete:
  *     tags: [Presets]
  *     summary: Delete preset by id
@@ -936,7 +936,7 @@ app.post("/wheel/api/presets", async (req, res) => {
  *       200: { description: OK }
  *       400: { description: Bad Request }
  */
-app.delete("/wheel/api/presets/:id", async (req, res) => {
+app.delete("/api/presets/:id", async (req, res) => {
   try {
     const id = String(req.params.id || "").trim();
     if (!id) return res.status(400).json({ ok: false, error: "id required" });
@@ -951,7 +951,7 @@ app.delete("/wheel/api/presets/:id", async (req, res) => {
 
 /**
  * @openapi
- * /wheel/api/history:
+ * /api/history:
  *   get:
  *     tags: [History]
  *     summary: List history (latest first)
@@ -963,7 +963,7 @@ app.delete("/wheel/api/presets/:id", async (req, res) => {
  *     responses:
  *       200: { description: OK }
  */
-app.get("/wheel/api/history", async (req, res) => {
+app.get("/api/history", async (req, res) => {
   try {
     const limit = clampInt(req.query.limit, 1, 200, 50);
     const { rows } = await pool.query(
@@ -985,7 +985,7 @@ app.get("/wheel/api/history", async (req, res) => {
 
 /**
  * @openapi
- * /wheel/api/history/{id}:
+ * /api/history/{id}:
  *   get:
  *     tags: [History]
  *     summary: Get history item by id
@@ -999,7 +999,7 @@ app.get("/wheel/api/history", async (req, res) => {
  *       400: { description: Bad Request }
  *       404: { description: Not Found }
  */
-app.get("/wheel/api/history/:id", async (req, res) => {
+app.get("/api/history/:id", async (req, res) => {
   try {
     const id = String(req.params.id || "").trim();
     if (!id) return res.status(400).json({ ok: false, error: "id required" });
@@ -1021,7 +1021,7 @@ app.get("/wheel/api/history/:id", async (req, res) => {
 
 /**
  * @openapi
- * /wheel/api/random:
+ * /api/random:
  *   post:
  *     tags: [Wheel]
  *     summary: Pick random winner and build wheel items
@@ -1041,7 +1041,7 @@ app.get("/wheel/api/history/:id", async (req, res) => {
  *       400: { description: Bad Request }
  *       404: { description: Not Found }
  */
-app.post("/wheel/api/random", async (req, res) => {
+app.post("/api/random", async (req, res) => {
   try {
     const body = req.body || {};
     const presetId = String(body.preset_id || body.presetId || "").trim();
@@ -1356,7 +1356,7 @@ select id, name, media, poster, source_label, source_url, created_at, updated_at
 
 /**
  * @openapi
- * /wheel/api/items:
+ * /api/items:
  *   get:
  *     tags: [Wheel]
  *     summary: List items for preset (filtered by preset media_types + collections)
@@ -1370,7 +1370,7 @@ select id, name, media, poster, source_label, source_url, created_at, updated_at
  *       400: { description: Bad Request }
  *       404: { description: Not Found }
  */
-app.get("/wheel/api/items", async (req, res) => {
+app.get("/api/items", async (req, res) => {
   try {
     const presetId = String(req.query.preset_id || "").trim();
     if (!presetId)
