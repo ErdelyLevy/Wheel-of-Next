@@ -1,5 +1,9 @@
 // public/js/api.js
 
+const WHEEL_BASE = window.location.pathname.startsWith("/wheel/")
+  ? "/wheel"
+  : "";
+
 async function jsonOrThrow(r) {
   const j = await r.json().catch(() => null);
   if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
@@ -8,14 +12,14 @@ async function jsonOrThrow(r) {
 }
 
 export async function apiGetPresets() {
-  const r = await fetch("/wheel/api/presets", { cache: "no-store" });
+  const r = await fetch(`${WHEEL_BASE}/api/presets`, { cache: "no-store" });
   const j = await jsonOrThrow(r);
   return j.presets || [];
 }
 
 export async function apiGetItemsByPreset(presetId) {
   const r = await fetch(
-    `/wheel/api/items?preset_id=${encodeURIComponent(presetId)}`,
+    `${WHEEL_BASE}/api/items?preset_id=${encodeURIComponent(presetId)}`,
     { cache: "no-store" }
   );
   const j = await r.json();
@@ -25,7 +29,7 @@ export async function apiGetItemsByPreset(presetId) {
 }
 
 export async function apiRoll(presetId, { save = true } = {}) {
-  const r = await fetch("/wheel/api/random", {
+  const r = await fetch(`${WHEEL_BASE}/api/random`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ preset_id: presetId, save }),
@@ -37,7 +41,7 @@ export async function apiRoll(presetId, { save = true } = {}) {
 
 export async function apiGetHistory(limit = 50) {
   const r = await fetch(
-    `/wheel/api/history?limit=${encodeURIComponent(limit)}`,
+    `${WHEEL_BASE}/api/history?limit=${encodeURIComponent(limit)}`,
     {
       cache: "no-store",
     }
@@ -49,7 +53,7 @@ export async function apiGetHistory(limit = 50) {
 }
 
 export async function apiGetHistoryById(id) {
-  const r = await fetch(`/wheel/api/history/${encodeURIComponent(id)}`, {
+  const r = await fetch(`${WHEEL_BASE}/api/history/${encodeURIComponent(id)}`, {
     cache: "no-store",
   });
   const j = await r.json();
@@ -61,7 +65,7 @@ export async function apiGetHistoryById(id) {
 // --- Virtual Collections ---
 
 export async function apiGetVirtualCollections() {
-  const r = await fetch("/wheel/api/virtual-collections", {
+  const r = await fetch(`${WHEEL_BASE}/api/virtual-collections`, {
     cache: "no-store",
   });
   const j = await jsonOrThrow(r);
@@ -69,7 +73,7 @@ export async function apiGetVirtualCollections() {
 }
 
 export async function apiUpsertVirtualCollection(payload) {
-  const r = await fetch("/wheel/api/virtual-collections", {
+  const r = await fetch(`${WHEEL_BASE}/api/virtual-collections`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload || {}),
@@ -80,7 +84,7 @@ export async function apiUpsertVirtualCollection(payload) {
 
 export async function apiDeleteVirtualCollection(id) {
   const r = await fetch(
-    `/wheel/api/virtual-collections/${encodeURIComponent(id)}`,
+    `${WHEEL_BASE}/api/virtual-collections/${encodeURIComponent(id)}`,
     {
       method: "DELETE",
     }

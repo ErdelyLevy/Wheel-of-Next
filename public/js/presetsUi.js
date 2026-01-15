@@ -2,6 +2,10 @@
 import { getState, setState, setPresetDraft } from "./state.js";
 import { apiGetVirtualCollections } from "./api.js";
 
+const WHEEL_BASE = window.location.pathname.startsWith("/wheel/")
+  ? "/wheel"
+  : "";
+
 function resetPresetEditorForm() {
   // очисти поля формы (name, collections, media_types, weights и т.д.)
   // и главное:
@@ -13,7 +17,7 @@ document.getElementById("preset-new-btn")?.addEventListener("click", () => {
 });
 
 export async function fetchMeta() {
-  const r = await fetch("/wheel/api/meta", { cache: "no-store" });
+  const r = await fetch(`${WHEEL_BASE}/api/meta`, { cache: "no-store" });
   if (!r.ok) throw new Error("meta fetch failed");
   return r.json();
 }

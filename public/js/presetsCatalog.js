@@ -3,6 +3,10 @@ import { subscribe, getState, setState, setPresetDraft } from "./state.js";
 import { syncPresetEditorFromState } from "./presetsUi.js";
 // если в одном модуле — адаптируй импорт
 
+const WHEEL_BASE = window.location.pathname.startsWith("/wheel/")
+  ? "/wheel"
+  : "";
+
 function validateDraft(d) {
   const errors = [];
 
@@ -239,7 +243,7 @@ function initCatalogClick() {
 }
 
 async function fetchPresets() {
-  const r = await fetch("/wheel/api/presets", { cache: "no-store" });
+  const r = await fetch(`${WHEEL_BASE}/api/presets`, { cache: "no-store" });
   const j = await r.json();
   if (!r.ok || j?.ok === false)
     throw new Error(j?.error || "presets fetch failed");
@@ -247,7 +251,7 @@ async function fetchPresets() {
 }
 
 async function upsertPreset(payload) {
-  const r = await fetch("/wheel/api/presets", {
+  const r = await fetch(`${WHEEL_BASE}/api/presets`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -259,7 +263,7 @@ async function upsertPreset(payload) {
 }
 
 async function deletePreset(id) {
-  const r = await fetch(`/wheel/api/presets/${encodeURIComponent(id)}`, {
+  const r = await fetch(`${WHEEL_BASE}/api/presets/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
   const j = await r.json().catch(() => ({ ok: true }));
