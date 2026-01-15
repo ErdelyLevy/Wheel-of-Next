@@ -13,6 +13,9 @@ import { bindLazyPoster } from "./posterFallback.js"; // добавь импор
 import { initVirtualCollectionsUI } from "./virtualCollectionsUI.js";
 
 const LS_ACTIVE_PRESET = "won:activePresetId";
+const WHEEL_BASE = window.location.pathname.startsWith("/wheel/")
+  ? "/wheel"
+  : "";
 
 function setActivePresetId(id) {
   localStorage.setItem(LS_ACTIVE_PRESET, String(id || ""));
@@ -281,8 +284,8 @@ function initRollButton() {
   if (!btn || !canvas) return;
 
   btn.addEventListener("click", async () => {
-    ensureSpinAudio("/sounds/spin.mp3");
-    ensureDingAudio("/sounds/ding.mp3");
+    ensureSpinAudio(`${WHEEL_BASE}/sounds/spin.mp3`);
+    ensureDingAudio(`${WHEEL_BASE}/sounds/ding.mp3`);
     const presetId = getActivePresetId();
     if (!presetId) return alert("Выбери пресет");
 
@@ -331,7 +334,7 @@ function initRollButton() {
         showToast(`Победитель определён`);
       }
 
-      await playDing({ src: "/sounds/ding.mp3", volume: 0.9 });
+      await playDing({ src: `${WHEEL_BASE}/sounds/ding.mp3`, volume: 0.9 });
 
       // 5) теперь показываем победителя слева
       if (winnerItem) openResult(winnerItem);
@@ -481,7 +484,7 @@ window.refreshPresetTabsFromDB = refreshPresetTabsFromDB;
 let spinAudio = null;
 let dingAudio = null;
 
-export function ensureSpinAudio(src = "/sounds/spin.mp3") {
+export function ensureSpinAudio(src = `${WHEEL_BASE}/sounds/spin.mp3`) {
   if (spinAudio) return spinAudio;
   spinAudio = new Audio(src);
   spinAudio.loop = true;
@@ -534,7 +537,7 @@ export function stopSpinSound({ fadeMs = 200 } = {}) {
   });
 }
 
-export function ensureDingAudio(src = "/sounds/ding.mp3") {
+export function ensureDingAudio(src = `${WHEEL_BASE}/sounds/ding.mp3`) {
   if (dingAudio) return dingAudio;
   dingAudio = new Audio(src);
   dingAudio.loop = false;
@@ -544,7 +547,7 @@ export function ensureDingAudio(src = "/sounds/ding.mp3") {
 }
 
 export async function playDing({
-  src = "/sounds/ding.mp3",
+  src = `${WHEEL_BASE}/sounds/ding.mp3`,
   volume = 0.9,
   rate = 1,
 } = {}) {
