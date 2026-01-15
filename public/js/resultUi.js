@@ -162,6 +162,24 @@ function render(item) {
   // actions
   clear(actionsEl);
 
+  // ===== VC =====
+  if (item.__kind === "vc") {
+    // ❌ Ryot для VC не показываем
+
+    // ✅ Source для VC
+    if (item.source_url) {
+      addActionLink(
+        actionsEl,
+        item.source_label ? String(item.source_label).toUpperCase() : "SOURCE",
+        item.source_url
+      );
+    }
+
+    return; // ⬅️ важно: дальше не идём
+  }
+
+  // ===== Обычный item =====
+
   // Ryot
   const ryotId = item.meta_id || item.id || "";
   if (ryotId) {

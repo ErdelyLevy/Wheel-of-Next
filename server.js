@@ -379,6 +379,79 @@ function toVcId(x) {
   return normStr(x);
 }
 
+async function enrichVcInHistoryRow(client, row) {
+  if (!row) return row;
+
+  // row.winner и row.wheel_items могут быть jsonb (объект/массив) или строкой — страхуемся
+  const winner =
+    typeof row.winner === "string" ? safeJsonParse(row.winner) : row.winner;
+  const wheel_items =
+    typeof row.wheel_items === "string"
+      ? safeJsonParse(row.wheel_items)
+      : row.wheel_items;
+
+  const ids = new Set();
+
+  function collect(x) {
+    if (!x || x.__kind !== "vc") return;
+    const id = String(x.__vc_id || x.id || "").trim();
+    if (id) ids.add(id);
+  }
+
+  collect(winner);
+  (Array.isArray(wheel_items) ? wheel_items : []).forEach(collect);
+
+  const vcIds = [...ids];
+  if (!vcIds.length) {
+    // просто вернём, но уже нормализованные winner/wheel_items
+    return { ...row, winner, wheel_items };
+  }
+
+  const { rows } = await client.query(
+    `
+    select id, name, media, poster, source_label, source_url
+      from won_virtual_collections
+     where id = any($1::text[])
+    `,
+    [vcIds]
+  );
+
+  const map = new Map(rows.map((r) => [String(r.id), r]));
+
+  function merge(x) {
+    if (!x || x.__kind !== "vc") return x;
+
+    const id = String(x.__vc_id || x.id || "").trim();
+    const vc = map.get(id);
+    if (!vc) return x;
+
+    return {
+      ...x,
+      // подтягиваем “справочные” поля, но не перетираем уже существующие
+      title: x.title || vc.name || x.name || "—",
+      name: x.name || vc.name || "—",
+      media_type: x.media_type || vc.media || "book",
+      poster: x.poster || vc.poster || "",
+      source_label: x.source_label || vc.source_label || "",
+      source_url: x.source_url || vc.source_url || "",
+    };
+  }
+
+  return {
+    ...row,
+    winner: merge(winner),
+    wheel_items: (Array.isArray(wheel_items) ? wheel_items : []).map(merge),
+  };
+}
+
+function safeJsonParse(s) {
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
+}
+
 // ---- API ----
 
 /**
@@ -394,11 +467,12 @@ app.get("/api/virtual-collections", async (req, res) => {
   try {
     const { rows } = await pool.query(
       `
-      select id, name, media, poster, created_at, updated_at
-        from won_virtual_collections
-       order by name asc
-      `
+  select id, name, media, poster, source_label, source_url, created_at, updated_at
+    from won_virtual_collections
+   order by name asc
+  `
     );
+
     res.json({ ok: true, rows });
   } catch (e) {
     console.error("[API] /api/virtual-collections GET failed:", e);
@@ -435,6 +509,8 @@ app.post("/api/virtual-collections", async (req, res) => {
     const name = normStr(b.name);
     const media = normStr(b.media);
     const poster = normStr(b.poster);
+    const source_label = normStr(b.source_label ?? b.sourceLabel);
+    const source_url = normStr(b.source_url ?? b.sourceUrl);
 
     if (!id) return res.status(400).json({ ok: false, error: "id required" });
     if (!name)
@@ -444,16 +520,18 @@ app.post("/api/virtual-collections", async (req, res) => {
 
     const { rows } = await pool.query(
       `
-      insert into won_virtual_collections (id, name, media, poster)
-      values ($1, $2, $3, nullif($4,''))
-      on conflict (id) do update
-        set name = excluded.name,
-            media = excluded.media,
-            poster = excluded.poster,
-            updated_at = now()
-      returning id, name, media, poster, created_at, updated_at
-      `,
-      [id, name, media, poster]
+  insert into won_virtual_collections (id, name, media, poster, source_label, source_url)
+  values ($1, $2, $3, nullif($4,''), nullif($5,''), nullif($6,''))
+  on conflict (id) do update
+    set name = excluded.name,
+        media = excluded.media,
+        poster = excluded.poster,
+        source_label = excluded.source_label,
+        source_url = excluded.source_url,
+        updated_at = now()
+  returning id, name, media, poster, source_label, source_url, created_at, updated_at
+  `,
+      [id, name, media, poster, source_label, source_url]
     );
 
     res.json({ ok: true, row: rows[0] || null });
@@ -892,7 +970,13 @@ app.get("/api/history", async (req, res) => {
       `select * from ${T_HISTORY} order by created_at desc limit $1`,
       [limit]
     );
-    res.json({ ok: true, rows });
+
+    // обогащаем VC (можно параллельно)
+    const out = await Promise.all(
+      rows.map((r) => enrichVcInHistoryRow(pool, r))
+    );
+
+    res.json({ ok: true, rows: out });
   } catch (e) {
     console.error("[API] /api/history failed:", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
@@ -927,7 +1011,8 @@ app.get("/api/history/:id", async (req, res) => {
     if (!rows[0])
       return res.status(404).json({ ok: false, error: "not found" });
 
-    res.json({ ok: true, row: rows[0] });
+    const row = await enrichVcInHistoryRow(pool, rows[0]);
+    res.json({ ok: true, row });
   } catch (e) {
     console.error("[API] /api/history/:id failed:", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
@@ -1005,9 +1090,10 @@ app.post("/api/random", async (req, res) => {
     if (vcIds.length) {
       const r = await pool.query(
         `
-    select id, name, media, poster, created_at, updated_at
-      from won_virtual_collections
-     where id = any($1::text[])
+select id, name, media, poster, source_label, source_url, created_at, updated_at
+  from won_virtual_collections
+ where id = any($1::text[])
+
     `,
         [vcIds]
       );
@@ -1032,6 +1118,9 @@ app.post("/api/random", async (req, res) => {
         media_type: String(vc.media || "book"),
         category_name: "__virtual__", // просто маркер
         poster: vc.poster || "",
+        // ✅ ДОБАВИТЬ
+        source_label: vc.source_label || "",
+        source_url: vc.source_url || "",
         __kind: "vc",
         __vc_id: String(vc.id),
       };
@@ -1302,7 +1391,13 @@ app.get("/api/items", async (req, res) => {
       ? preset[PRESET_COL_COLLECTIONS]
       : [];
 
-    const { rows } = await pool.query(
+    // ✅ NEW: VC ids from preset
+    const vcIds = Array.isArray(preset.virtual_collection_ids)
+      ? preset.virtual_collection_ids
+      : [];
+
+    // --- items from view ---
+    const { rows: itemRows } = await pool.query(
       `
       select *
         from wheel_items
@@ -1313,15 +1408,53 @@ app.get("/api/items", async (req, res) => {
       [media_types, collections]
     );
 
+    // --- VC rows ---
+    let vcRows = [];
+    if (vcIds.length) {
+      const r = await pool.query(
+        `
+        select id, name, media, poster, source_label, source_url, created_at, updated_at
+          from won_virtual_collections
+         where id = any($1::text[])
+         order by name asc
+        `,
+        [vcIds]
+      );
+      vcRows = r.rows || [];
+    }
+
+    function vcToWheelItem(vc) {
+      return {
+        id: String(vc.id),
+        title: String(vc.name || "—"),
+        name: String(vc.name || "—"),
+        media_type: String(vc.media || "book"),
+        category_name: "__virtual__",
+        poster: vc.poster || "",
+        source_label: vc.source_label || null,
+        source_url: vc.source_url || null,
+        __kind: "vc",
+        __vc_id: String(vc.id),
+      };
+    }
+
     res.set("Cache-Control", "no-store");
 
-    const out = rows.map((it) => ({
+    const outItems = (itemRows || []).map((it) => ({
       ...it,
       poster: it?.poster
         ? proxifyPoster(it.poster, { w: 256, fmt: "webp" })
         : it.poster,
     }));
-    return res.json({ ok: true, rows: out });
+
+    const outVcs = (vcRows || []).map(vcToWheelItem).map((it) => ({
+      ...it,
+      poster: it?.poster
+        ? proxifyPoster(it.poster, { w: 256, fmt: "webp" })
+        : it.poster,
+    }));
+
+    return res.json({ ok: true, rows: [...outItems, ...outVcs] });
   } catch (e) {
     console.error("[API] /api/items failed:", e);
     return res.status(500).json({ ok: false, error: String(e.message || e) });

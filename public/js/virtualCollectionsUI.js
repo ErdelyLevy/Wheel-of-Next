@@ -141,6 +141,26 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
     />
   </div>
 
+  <div class="vc-cell vc-source-label-cell">
+    <input
+      class="vc-source-label"
+      type="text"
+      placeholder="Источник (лейбл) напр. MARVEL"
+      value="${escapeHtml(data.source_label || "")}"
+      aria-label="Источник (лейбл)"
+    />
+  </div>
+
+  <div class="vc-cell vc-source-url-cell">
+    <input
+      class="vc-source-url"
+      type="text"
+      placeholder="Источник (URL) https://…"
+      value="${escapeHtml(data.source_url || "")}"
+      aria-label="Источник (URL)"
+    />
+  </div>
+
   <div class="vc-cell vc-actions">
     <button class="tab vc-save" type="button" title="Сохранить" aria-label="Сохранить" disabled>💾</button>
     <button class="tab vc-del" type="button" title="Удалить" aria-label="Удалить">×</button>
@@ -153,6 +173,13 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
       ?.addEventListener("input", () => markDirty(row));
     row
       .querySelector(".vc-poster")
+      ?.addEventListener("input", () => markDirty(row));
+    row
+      .querySelector(".vc-source-label")
+      ?.addEventListener("input", () => markDirty(row));
+
+    row
+      .querySelector(".vc-source-url")
       ?.addEventListener("input", () => markDirty(row));
 
     initMediaSelect(row);
@@ -184,18 +211,36 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
 
   // save/delete (делегирование)
   listEl.addEventListener("click", async (e) => {
+    console.log("[vc] click target=", e.target);
     const saveBtn = e.target?.closest?.(".vc-save");
     const delBtn = e.target?.closest?.(".vc-del");
     const row = e.target?.closest?.(".vc-row");
+    console.log("[vc] saveBtn?", !!saveBtn, "delBtn?", !!delBtn, "row?", !!row);
     if (!row) return;
 
     // SAVE
     if (saveBtn) {
+      console.log("[vc] SAVE clicked");
       const name = String(row.querySelector(".vc-name")?.value || "").trim();
       const media = String(row.querySelector(".vc-media")?.value || "").trim();
       const poster = String(
         row.querySelector(".vc-poster")?.value || ""
       ).trim();
+      const source_label = String(
+        row.querySelector(".vc-source-label")?.value || ""
+      ).trim();
+
+      const source_url = String(
+        row.querySelector(".vc-source-url")?.value || ""
+      ).trim();
+
+      console.log("[vc] payload fields:", {
+        name,
+        media,
+        poster,
+        source_label,
+        source_url,
+      });
 
       if (!name) return toast("VC: имя обязательно");
       if (!media) return toast("VC: media обязательно");
@@ -207,6 +252,8 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
         row.dataset.id = id;
       }
 
+      console.log("[vc] calling apiUpsertVirtualCollection...", id);
+
       saveBtn.disabled = true;
       try {
         const saved = await apiUpsertVirtualCollection({
@@ -214,13 +261,18 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
           name,
           media,
           poster,
+          source_label,
+          source_url,
         });
+
+        console.log("[vc] saved=", saved);
 
         // на всякий случай синхронизируем из ответа
         if (saved?.id) row.dataset.id = String(saved.id);
         clearDirty(row);
         toast("Сохранено");
       } catch (err) {
+        console.error("[vc] upsert failed:", err);
         saveBtn.disabled = false;
         toast(String(err?.message || err));
       }
@@ -229,6 +281,7 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
 
     // DELETE
     if (delBtn) {
+      console.log("[vc] DELETE clicked");
       const id = String(row.dataset.id || "").trim();
 
       // если в БД ещё нет — просто удаляем из DOM

@@ -63,11 +63,11 @@ export async function apiGetVirtualCollections() {
   return j.rows || [];
 }
 
-export async function apiUpsertVirtualCollection({ id, name, media, poster }) {
+export async function apiUpsertVirtualCollection(payload) {
   const r = await fetch("/api/virtual-collections", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, name, media, poster }),
+    body: JSON.stringify(payload || {}),
   });
   const j = await jsonOrThrow(r);
   return j.row || null;
