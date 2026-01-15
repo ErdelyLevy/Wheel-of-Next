@@ -29,7 +29,7 @@ function getWheelItems(r) {
   return Array.isArray(r?.wheel_items) ? r.wheel_items : [];
 }
 
-export async function renderHistoryList() {
+async function renderHistoryList() {
   const ul = document.getElementById("history-list");
   if (!ul) return;
 
@@ -94,7 +94,7 @@ export async function renderHistoryList() {
   }
 }
 
-export function initHistoryClicks() {
+function initHistoryClicks() {
   const ul = document.getElementById("history-list");
   if (!ul) return;
 

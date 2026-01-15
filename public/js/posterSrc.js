@@ -1,4 +1,3 @@
-// posterSrc.js (или где у тебя сейчас getFallbackPosterSrc)
 import { makeGlassFallbackDataUrl } from "./posterFallback.js";
 
 const FALLBACK_CACHE = new Map(); // key -> dataUrl

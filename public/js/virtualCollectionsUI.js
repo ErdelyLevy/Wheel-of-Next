@@ -28,21 +28,7 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
   const addBtn = document.getElementById("vc-add");
   if (!listEl || !addBtn) return;
 
-  let meta;
-  try {
-    meta = await fetchMeta();
-  } catch (e) {
-    console.error("[vc] meta fetch failed:", e);
-    meta = { media_types: [] };
-  }
-
   let __vcMeta = null;
-
-  async function getVcMeta() {
-    if (__vcMeta) return __vcMeta;
-    __vcMeta = await fetchMeta(); // твоя функция: GET /api/meta
-    return __vcMeta;
-  }
 
   async function initMediaSelect(row) {
     const msRoot = row.querySelector(".vc-ms");
@@ -148,7 +134,7 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
 /**
  * Сбор данных из UI
  */
-export function getVirtualCollectionsFromUI(
+function getVirtualCollectionsFromUI(
   rootEl = document.getElementById("vc-list")
 ) {
   const root = rootEl;

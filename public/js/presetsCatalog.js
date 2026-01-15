@@ -1,8 +1,7 @@
 // js/presetsCatalog.js
 import { subscribe, getState, setState, setPresetDraft } from "./state.js";
 import { syncPresetEditorFromState } from "./presetsUi.js";
-import { apiSavePreset, apiDeletePreset } from "./api.js";
-import { refreshPresetTabsFromDB } from "./main.js"; // если в одном модуле — адаптируй импорт
+// если в одном модуле — адаптируй импорт
 
 function validateDraft(d) {
   const errors = [];
@@ -71,14 +70,6 @@ function applyPresetValidationUI() {
   );
 
   return v;
-}
-
-function safeParse(v, fb) {
-  try {
-    return JSON.parse(v);
-  } catch {
-    return fb;
-  }
 }
 
 function renderCatalog(presetsArg) {
@@ -285,7 +276,7 @@ function initUpsertDelete() {
 
       // проще: добавь renderCatalogFrom(presets) или сохрани presets в state.
       // Я делаю минимально: сохраняю в state и вызываю renderCatalog()
-      setState({ presets }); // ✅ добавим presets в wonState (если ещё нет — просто появится)
+      setState({ presets });
       renderCatalog(presets);
 
       // применяем сохранённый пресет в редактор (чтобы поля стали консистентны)
@@ -298,7 +289,6 @@ function initUpsertDelete() {
       });
 
       // обновить вкладки режимов на странице колеса
-      // если у тебя есть функция refreshPresetTabsFromDB — вызывай её
       if (typeof window.refreshPresetTabsFromDB === "function") {
         await window.refreshPresetTabsFromDB({ selectId: saved.id });
       }
@@ -367,7 +357,7 @@ function initNameBinding() {
 export async function initPresetCatalog() {
   // 1) загрузить пресеты из БД и положить в state
   try {
-    const presets = await fetchPresets(); // это твой helper из предыдущего шага (GET /api/presets)
+    const presets = await fetchPresets();
     setState({ presets });
   } catch (e) {
     console.error("[presets] fetch failed:", e);

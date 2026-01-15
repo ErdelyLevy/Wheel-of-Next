@@ -18,7 +18,7 @@ export async function startSpinSound({ src, volume = 0.35, rate = 1 } = {}) {
 
   try {
     await a.play();
-  } catch (e) {
+  } catch {
     // blocked by browser → ignore
   }
 }
@@ -81,7 +81,7 @@ export async function playDing({
 
   try {
     await a.play();
-  } catch (e) {
+  } catch {
     // blocked → просто выходим
     return;
   }

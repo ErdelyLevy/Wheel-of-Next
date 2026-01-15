@@ -29,47 +29,6 @@ function clear(el) {
   el.innerHTML = "";
 }
 
-function applyDescClamp(wrapEl, textEl, btnEl, maxLines = 10) {
-  if (!wrapEl || !textEl || !btnEl) return;
-
-  wrapEl.classList.remove("is-open");
-  textEl.classList.remove("is-open");
-  btnEl.classList.add("is-hidden");
-
-  requestAnimationFrame(() => {
-    const cs = getComputedStyle(textEl);
-    const lineH = parseFloat(cs.lineHeight) || 16;
-    const maxH = Math.round(lineH * maxLines);
-
-    if (textEl.scrollHeight <= maxH + 2) {
-      btnEl.classList.add("is-hidden");
-      textEl.style.maxHeight = "none";
-      textEl.style.overflow = "visible";
-      return;
-    }
-
-    btnEl.classList.remove("is-hidden");
-    textEl.style.maxHeight = `${maxH}px`;
-    textEl.style.overflow = "hidden";
-
-    btnEl.onclick = () => {
-      const open = !textEl.classList.contains("is-open");
-      textEl.classList.toggle("is-open", open);
-      wrapEl.classList.toggle("is-open", open);
-
-      if (open) {
-        textEl.style.maxHeight = "none";
-        textEl.style.overflow = "visible";
-        btnEl.textContent = "СВЕРНУТЬ";
-      } else {
-        textEl.style.maxHeight = `${maxH}px`;
-        textEl.style.overflow = "hidden";
-        btnEl.textContent = "…";
-      }
-    };
-  });
-}
-
 function normalizeValue(value) {
   if (value == null) return "";
 
@@ -115,16 +74,6 @@ function addActionLink(box, label, href) {
   a.textContent = label;
 
   box.appendChild(a);
-}
-
-let resultRaf = 0;
-function scheduleResultRender() {
-  if (resultRaf) return;
-  resultRaf = requestAnimationFrame(() => {
-    resultRaf = 0;
-    const it = getState()?.result?.item;
-    render(it);
-  });
 }
 
 function render(item) {
@@ -185,12 +134,6 @@ function render(item) {
   if (mt) badgeEl.classList.add(`badge--${mt}`);
 
   clear(infoEl);
-
-  function formatRating(v) {
-    const n = Number(v);
-    if (!Number.isFinite(n) || n <= 0) return "";
-    return n.toFixed(1);
-  }
 
   function normalizeValue(v) {
     if (v == null) return "";

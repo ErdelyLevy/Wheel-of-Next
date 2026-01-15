@@ -1,14 +1,6 @@
 // js/state.js
 // Single source of truth for UI state (no frameworks)
 
-function safeJsonParse(v, fallback) {
-  try {
-    return JSON.parse(v);
-  } catch {
-    return fallback;
-  }
-}
-
 function loadSpinFromLS() {
   const duration = Number(localStorage.getItem("won:spinDuration"));
   const speed = Number(localStorage.getItem("won:spinSpeed"));
@@ -41,7 +33,7 @@ const initial = {
   },
 };
 
-export const wonState = (window.wonState = initial);
+const wonState = (window.wonState = initial);
 
 const subs = new Set();
 export function subscribe(fn) {
@@ -54,10 +46,6 @@ export function getState() {
 
 function emit() {
   for (const fn of subs) fn(wonState);
-}
-
-function isObject(x) {
-  return x && typeof x === "object" && !Array.isArray(x);
 }
 
 function isPlainObject(x) {
@@ -102,13 +90,6 @@ function mergeDeep(target, patch, path = "") {
 }
 
 export function setState(patch) {
-  // --- DEBUG: кто меняет result ---
-  try {
-    if (patch && Object.prototype.hasOwnProperty.call(patch, "result")) {
-      const it = patch?.result?.item;
-    }
-  } catch {}
-
   mergeDeep(wonState, patch);
   emit();
 }

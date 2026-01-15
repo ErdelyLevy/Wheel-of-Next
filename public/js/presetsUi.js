@@ -310,9 +310,6 @@ export async function initPresetDropdowns() {
     () => getState().presetDraft.categories || [],
     (arr) => {
       renderWeights(arr);
-    },
-    (arr) => {
-      /* onChange тоже через renderWeights */
     }
   );
 

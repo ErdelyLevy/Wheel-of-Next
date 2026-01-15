@@ -17,10 +17,6 @@ function getGradient(mediaType = "") {
   }
 }
 
-function clamp(n, a, b) {
-  return Math.max(a, Math.min(b, n));
-}
-
 function roundRectPath(ctx, x, y, w, h, r) {
   const rr = Math.min(r, w / 2, h / 2);
   ctx.beginPath();
@@ -350,20 +346,6 @@ function drawNoise(ctx, w, h, alpha = 0.06) {
   ctx.putImageData(img, 0, 0);
 }
 
-function drawGlowLine(ctx, x1, y1, x2, y2, color, alpha = 0.6) {
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 16;
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.stroke();
-  ctx.restore();
-}
-
 function drawGlassFrame(ctx, x, y, w, h, r, c1, c2) {
   ctx.save();
 
@@ -442,61 +424,7 @@ function drawNeonLine(ctx, x1, y1, x2, y2, color) {
   ctx.restore();
 }
 
-function drawBackdrop(ctx, w, h, c1, c2) {
-  // фон “космос/туман” как на C: градиент + мягкие засветки
-  const bg = ctx.createLinearGradient(0, 0, w, h);
-  bg.addColorStop(0, "rgba(10,10,18,1)");
-  bg.addColorStop(0.5, "rgba(14,14,26,1)");
-  bg.addColorStop(1, "rgba(8,8,14,1)");
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, w, h);
-
-  // мягкие blobs
-  ctx.save();
-  ctx.globalAlpha = 0.9;
-
-  const g1 = ctx.createRadialGradient(
-    w * 0.22,
-    h * 0.22,
-    0,
-    w * 0.22,
-    h * 0.22,
-    w * 0.72
-  );
-  g1.addColorStop(0, hexToRgba(c1, 0.35));
-  g1.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = g1;
-  ctx.fillRect(0, 0, w, h);
-
-  const g2 = ctx.createRadialGradient(
-    w * 0.82,
-    h * 0.38,
-    0,
-    w * 0.82,
-    h * 0.38,
-    w * 0.75
-  );
-  g2.addColorStop(0, hexToRgba(c2, 0.28));
-  g2.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = g2;
-  ctx.fillRect(0, 0, w, h);
-
-  ctx.restore();
-
-  // лёгкая “пыль”
-  drawNoise(ctx, w, h, 0.045);
-}
-
-function hexToRgba(hex, a) {
-  const h = String(hex || "").replace("#", "");
-  if (h.length !== 6) return `rgba(255,255,255,${a})`;
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  return `rgba(${r},${g},${b},${a})`;
-}
-
-export function makeGlassFallbackCanvas({ title, media_type, year } = {}) {
+function makeGlassFallbackCanvas({ title, media_type, year } = {}) {
   const W = 400;
   const H = 600;
 
@@ -521,9 +449,6 @@ export function makeGlassFallbackCanvas({ title, media_type, year } = {}) {
   const w = W - pad * 2;
   const h = H - pad * 2;
   const r = 26;
-
-  // НИКАКОГО drawBackdrop(ctx, ...) тут не должно быть
-  // НИКАКОЙ тёмной подложки внутри тоже
 
   // лёгкий “стеклянный” sheen (прозрачный!)
   ctx.save();

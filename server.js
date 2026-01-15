@@ -4,7 +4,6 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import { pool } from "./db.js";
-import { clampInt } from "./utils.js";
 import fs from "fs";
 import fsp from "fs/promises";
 import crypto from "crypto";
@@ -81,6 +80,12 @@ app.disable("x-powered-by");
 app.use(express.json({ limit: "2mb" }));
 
 // ---- helpers ----
+function clampInt(v, min, max, fallback = min) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, Math.trunc(n)));
+}
+
 function proxifyPoster(posterUrl, { w = 512, fmt = "webp" } = {}) {
   const u = String(posterUrl || "").trim();
   if (!u) return "";

@@ -20,45 +20,6 @@ import { initVirtualCollectionsUI } from "./virtualCollectionsUI.js";
 
 const LS_ACTIVE_PRESET = "won:activePresetId";
 
-let wheelScheduleRedraw = null;
-
-function initWheelRenderer(canvas) {
-  let raf = 0;
-  let dirty = false;
-
-  const scheduleRedraw = () => {
-    dirty = true;
-    if (raf) return;
-
-    raf = requestAnimationFrame(() => {
-      raf = 0;
-
-      // "снимаем" dirty на этот кадр
-      dirty = false;
-
-      const s = getState();
-      const items = s?.wheel?.items || [];
-      const rot = Number(canvas.__rotation || 0);
-
-      drawWheel(canvas, items, {
-        rotation: rot,
-        onUpdate: scheduleRedraw, // если догрузился постер — попросим redraw
-      });
-
-      // если во время этого кадра кто-то снова дернул scheduleRedraw()
-      // (например, загрузился img.onload) — дорисуем следующим кадром
-      if (dirty) scheduleRedraw();
-    });
-  };
-
-  // ✅ перерисовка при изменении размеров
-  const ro = new ResizeObserver(() => scheduleRedraw());
-  ro.observe(canvas);
-  if (canvas.parentElement) ro.observe(canvas.parentElement);
-
-  return scheduleRedraw;
-}
-
 function setActivePresetId(id) {
   localStorage.setItem(LS_ACTIVE_PRESET, String(id || ""));
 }
@@ -165,7 +126,6 @@ function makeRightListRow(it) {
   img.decoding = "async";
   img.loading = "lazy"; // можно оставить, но IO важнее
 
-  // ✅ ВАЖНО: bindLazyPoster должен ставить src ТОЛЬКО когда элемент видим
   bindLazyPoster(img, it);
 
   const text = document.createElement("div");
@@ -264,7 +224,7 @@ async function applyPresetToWheelPage(presetId) {
 }
 
 /** --- табы пресетов сверху (на колесе) --- */
-export async function refreshPresetTabsFromDB({ selectId } = {}) {
+async function refreshPresetTabsFromDB({ selectId } = {}) {
   const root = document.getElementById("preset-tabs");
   if (!root) return;
 
@@ -299,7 +259,7 @@ export async function refreshPresetTabsFromDB({ selectId } = {}) {
   }
 }
 
-export function initPresetTabsClicksFromDB(onPresetChange) {
+function initPresetTabsClicksFromDB(onPresetChange) {
   const root = document.getElementById("preset-tabs");
   if (!root) return;
 

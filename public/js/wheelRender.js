@@ -2,8 +2,6 @@
 
 import { getCanvasPosterImage } from "./canvasPoster.js";
 
-const IMG_CACHE = new Map();
-
 function resizeCanvasToDisplaySize(canvas) {
   const dpr = window.devicePixelRatio || 1;
 
@@ -185,37 +183,4 @@ export function drawWheel(canvas, items, opts = {}) {
   ctx.lineWidth = 2;
   ctx.fill();
   ctx.stroke();
-}
-
-// wheelAnim.js (или wheelRender.js в конец файла)
-
-let raf = 0;
-let currentRotation = 0;
-
-export function stopWheelAnimation() {
-  if (raf) cancelAnimationFrame(raf);
-  raf = 0;
-}
-
-function clamp01(x) {
-  return Math.max(0, Math.min(1, x));
-}
-
-function easeOutCubic(t) {
-  return 1 - Math.pow(1 - t, 3);
-}
-
-// выбираем угол внутри сектора, чтобы не попадать на границу
-function pickAngleInside(seg, pad = 0.12) {
-  const a0 = seg.start;
-  const a1 = seg.end;
-  const span = a1 - a0;
-  const safe0 = a0 + span * pad;
-  const safe1 = a1 - span * pad;
-  return safe0 + Math.random() * Math.max(0, safe1 - safe0);
-}
-
-// если нужно где-то выставлять rotation (например после смены пресета)
-export function setWheelRotation(rad = 0) {
-  currentRotation = Number(rad) || 0;
 }

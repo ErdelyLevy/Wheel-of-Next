@@ -1,6 +1,6 @@
 // js/wheelSpin.js
 import { drawWheel, buildWeightedSegments } from "./wheelRender.js";
-import { startSpinSound, stopSpinSound, playDing } from "./spinSound.js";
+import { startSpinSound } from "./spinSound.js";
 
 function normRad(a) {
   const two = Math.PI * 2;

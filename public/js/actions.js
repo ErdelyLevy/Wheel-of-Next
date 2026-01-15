@@ -1,10 +1,15 @@
 // public/js/actions.js
 import { getState, setState } from "./state.js";
-import { clampInt } from "./uiUtils.js";
 
 /**
  * Открыть карточку слева (результат)
  */
+function clampInt(v, min, max) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return min;
+  return Math.max(min, Math.min(max, Math.trunc(n)));
+}
+
 export function openResult(item) {
   setState({
     result: { item: item || null, updatedAt: Date.now() },
@@ -32,7 +37,6 @@ function getWheelGeometry() {
   return { outerR, innerR };
 }
 
-const FALLBACK_ASPECT = 2 / 3; // если постер ещё не загружен
 const OVERSCAN = 1.06; // чуть шире, чтобы не ловить щели
 const MIN_N = 6;
 const MAX_N = 200;
@@ -145,24 +149,6 @@ function autoExpandWheelItems(items, winnerId) {
   // ключ: режем именно широкие сектора на уровне весов
   const split = splitWideSegments(items, winnerId, geom.outerR);
   return split;
-}
-
-function tryAutoExpandWheel(winnerId) {
-  const s = getState();
-  const cur = s?.wheel?.items || [];
-  if (!cur.length) return;
-
-  const expanded = autoExpandWheelItems(cur, winnerId);
-  if (expanded.length === cur.length) return;
-
-  setState({
-    wheel: {
-      ...s.wheel,
-      items: expanded,
-      updatedAt: Date.now(),
-    },
-  });
-  window.requestWheelRedraw?.();
 }
 
 /**

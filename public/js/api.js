@@ -13,29 +13,6 @@ export async function apiGetPresets() {
   return j.presets || [];
 }
 
-export async function apiSavePreset(payload) {
-  const r = await fetch("/api/presets", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const j = await jsonOrThrow(r);
-  // сервер может вернуть preset как "preset" или в списке — поддержим оба варианта
-  return j.preset || j;
-}
-
-export async function apiDeletePreset(id) {
-  const r = await fetch(`/api/presets/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-  });
-  return jsonOrThrow(r);
-}
-
-export async function apiGetMeta() {
-  const r = await fetch("/api/meta", { cache: "no-store" });
-  return jsonOrThrow(r);
-}
-
 export async function apiGetItemsByPreset(presetId) {
   const r = await fetch(
     `/api/items?preset_id=${encodeURIComponent(presetId)}`,
