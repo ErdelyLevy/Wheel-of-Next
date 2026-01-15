@@ -1477,9 +1477,12 @@ app.get(/^(?!\/api\/).*/, (req, res) => {
 });
 
 // ---- start ----
-const PORT = Number(process.env.PORT || 3000);
 
 await resolveSchema();
+
+const PORT = process.env.PORT || 3000;
+const HOST = "0.0.0.0";
+
 app.listen(PORT, () => {
-  console.log(`[BOOT] server listening on http://localhost:${PORT}`);
+  console.log(`[BOOT] server listening on http://${HOST}:${PORT}`);
 });

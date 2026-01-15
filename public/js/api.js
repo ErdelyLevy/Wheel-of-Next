@@ -8,7 +8,7 @@ async function jsonOrThrow(r) {
 }
 
 export async function apiGetPresets() {
-  const r = await fetch("/api/presets", { cache: "no-store" });
+  const r = await fetch("/wheel/api/presets", { cache: "no-store" });
   const j = await jsonOrThrow(r);
   return j.presets || [];
 }
@@ -25,7 +25,7 @@ export async function apiGetItemsByPreset(presetId) {
 }
 
 export async function apiRoll(presetId, { save = true } = {}) {
-  const r = await fetch("/api/random", {
+  const r = await fetch("/wheel/api/random", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ preset_id: presetId, save }),
@@ -58,13 +58,15 @@ export async function apiGetHistoryById(id) {
 // --- Virtual Collections ---
 
 export async function apiGetVirtualCollections() {
-  const r = await fetch("/api/virtual-collections", { cache: "no-store" });
+  const r = await fetch("/wheel/api/virtual-collections", {
+    cache: "no-store",
+  });
   const j = await jsonOrThrow(r);
   return j.rows || [];
 }
 
 export async function apiUpsertVirtualCollection(payload) {
-  const r = await fetch("/api/virtual-collections", {
+  const r = await fetch("/wheel/api/virtual-collections", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload || {}),

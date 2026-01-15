@@ -239,7 +239,7 @@ function initCatalogClick() {
 }
 
 async function fetchPresets() {
-  const r = await fetch("/api/presets", { cache: "no-store" });
+  const r = await fetch("/wheel/api/presets", { cache: "no-store" });
   const j = await r.json();
   if (!r.ok || j?.ok === false)
     throw new Error(j?.error || "presets fetch failed");
@@ -247,7 +247,7 @@ async function fetchPresets() {
 }
 
 async function upsertPreset(payload) {
-  const r = await fetch("/api/presets", {
+  const r = await fetch("/wheel/api/presets", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

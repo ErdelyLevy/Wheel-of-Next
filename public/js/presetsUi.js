@@ -13,7 +13,7 @@ document.getElementById("preset-new-btn")?.addEventListener("click", () => {
 });
 
 export async function fetchMeta() {
-  const r = await fetch("/api/meta", { cache: "no-store" });
+  const r = await fetch("/wheel/api/meta", { cache: "no-store" });
   if (!r.ok) throw new Error("meta fetch failed");
   return r.json();
 }
