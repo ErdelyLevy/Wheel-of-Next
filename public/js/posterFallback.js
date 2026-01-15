@@ -534,3 +534,77 @@ function makeGlassFallbackCanvas({ title, media_type, year } = {}) {
 export function makeGlassFallbackDataUrl(args = {}) {
   return makeGlassFallbackCanvas(args).toDataURL("image/png");
 }
+const FALLBACK_CACHE = new Map(); // key -> dataUrl
+
+export function getFallbackPosterSrc(item) {
+  const title = (item?.title || item?.name || "—").trim();
+  const media_type = String(item?.media_type || "").trim();
+  const year = item?.publish_year ?? item?.year ?? "";
+  const y = String(year ?? "").trim();
+
+  const key = `${media_type}::${y}::${title}`;
+
+  const cached = FALLBACK_CACHE.get(key);
+  if (cached) return cached;
+
+  const dataUrl = makeGlassFallbackDataUrl({ title, media_type, year: y });
+  FALLBACK_CACHE.set(key, dataUrl);
+  return dataUrl;
+}
+
+export function getPosterSrc(item, { w = 512, fmt = "webp" } = {}) {
+  const url = String(item?.poster || item?.image || "").trim();
+  if (!url) return getFallbackPosterSrc(item);
+
+  // всегда ходим через серверный прокси-кэш
+  const u = encodeURIComponent(url);
+  return `/api/poster?u=${u}&w=${encodeURIComponent(
+    String(w)
+  )}&fmt=${encodeURIComponent(String(fmt))}`;
+}
+
+let io;
+
+function ensureIO() {
+  if (io) return io;
+
+  io = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+
+        const img = e.target;
+        io.unobserve(img);
+
+        const item = img.__lazyItem;
+        if (!item) continue;
+
+        // ставим реальный постер через серверный прокси-кэш
+        img.src = getPosterSrc(item, { w: 256, fmt: "webp" });
+      }
+    },
+    { root: null, rootMargin: "300px 0px", threshold: 0.01 }
+  );
+
+  return io;
+}
+
+export function bindLazyPoster(imgEl, item) {
+  if (!imgEl) return;
+
+  imgEl.__lazyItem = item;
+
+  // 1) мгновенный fallback
+  imgEl.src = getFallbackPosterSrc(item);
+
+  // 2) если реальный постер не загрузился — назад на fallback
+  // и больше не дёргаем сеть для этого img
+  imgEl.onerror = () => {
+    imgEl.onerror = null;
+    imgEl.__lazyItem = null;
+    imgEl.src = getFallbackPosterSrc(item);
+  };
+
+  // 3) загрузку реального постера начинаем только при появлении в viewport
+  ensureIO().observe(imgEl);
+}

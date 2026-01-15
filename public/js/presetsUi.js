@@ -1,5 +1,6 @@
 // js/presetsUi.js
 import { getState, setState, setPresetDraft } from "./state.js";
+import { apiGetVirtualCollections } from "./api.js";
 
 function resetPresetEditorForm() {
   // очисти поля формы (name, collections, media_types, weights и т.д.)
@@ -27,11 +28,16 @@ function renderMsLabel(msRoot, selected) {
   if (!textEl) return;
 
   if (!selected.length) textEl.textContent = placeholder;
-  else if (selected.length <= 2) textEl.textContent = selected.join(", ");
-  else
-    textEl.textContent = `${selected[0]}, ${selected[1]} +${
-      selected.length - 2
-    }`;
+  const labelOf =
+    typeof msRoot.__labelOf === "function"
+      ? msRoot.__labelOf
+      : (x) => String(x);
+
+  const labels = selected.map(labelOf);
+
+  if (!labels.length) textEl.textContent = placeholder;
+  else if (labels.length <= 2) textEl.textContent = labels.join(", ");
+  else textEl.textContent = `${labels[0]}, ${labels[1]} +${labels.length - 2}`;
 }
 
 function syncHidden(id, arr) {
@@ -48,7 +54,15 @@ function buildMultiSelect(msRoot, values, getSelected, setSelected, onChange) {
 
   if (!btn || !pop || !list) return;
 
-  const all = [...(values || [])];
+  const all = [...(values || [])].map((v) => {
+    if (v && typeof v === "object") {
+      const value = String(v.value ?? "").trim();
+      const label = String(v.label ?? value).trim();
+      return { value, label };
+    }
+    const value = String(v ?? "").trim();
+    return { value, label: value };
+  });
 
   // ✅ режим: по умолчанию multi, single только если явно выставлен
   const isSingle = (msRoot?.dataset?.mode || "").toLowerCase() === "single";
@@ -92,51 +106,50 @@ function buildMultiSelect(msRoot, values, getSelected, setSelected, onChange) {
       .toLowerCase();
     const selected = Array.isArray(getSelected?.()) ? getSelected() : [];
 
-    for (const v of all) {
-      const vs = String(v);
+    for (const opt of all) {
+      const vs = opt.label; // фильтруем по label
       if (f && !vs.toLowerCase().includes(f)) continue;
 
+      const value = opt.value;
+
       if (isSingle) {
-        // ✅ SINGLE: без чекбоксов, кликабельная строка
         const row = document.createElement("button");
         row.type = "button";
         row.className = "ms-opt ms-opt-single";
         row.setAttribute("role", "option");
 
-        const isSel = selected.length && String(selected[0]) === vs;
+        const isSel = selected.length && String(selected[0]) === value;
         row.setAttribute("aria-selected", isSel ? "true" : "false");
         if (isSel) row.classList.add("is-selected");
 
-        row.textContent = vs;
+        row.textContent = opt.label;
 
         row.addEventListener("click", () => {
-          const next = [v]; // строго одно значение
+          const next = [value];
           setSelected(next);
           renderMsLabel(msRoot, next);
           if (typeof onChange === "function") onChange(next);
-
-          // обновим список (подсветка)
           renderList(search?.value || "");
-          // закрываем попап
           close();
         });
 
         list.appendChild(row);
       } else {
-        // ✅ MULTI: как было (чекбоксы)
         const row = document.createElement("label");
         row.className = "ms-opt";
 
         const cb = document.createElement("input");
         cb.type = "checkbox";
-        cb.checked = selected.includes(v);
+        cb.dataset.value = value; // ✅ ВАЖНО
+        cb.value = vs;
+        cb.checked = selected.includes(value);
 
         cb.addEventListener("change", () => {
           let next = Array.isArray(getSelected?.()) ? getSelected() : [];
           if (cb.checked) {
-            if (!next.includes(v)) next = [...next, v];
+            if (!next.includes(value)) next = [...next, value];
           } else {
-            next = next.filter((x) => x !== v);
+            next = next.filter((x) => x !== value);
           }
           setSelected(next);
           renderMsLabel(msRoot, next);
@@ -145,7 +158,7 @@ function buildMultiSelect(msRoot, values, getSelected, setSelected, onChange) {
         });
 
         const txt = document.createElement("span");
-        txt.textContent = vs;
+        txt.textContent = opt.label;
 
         row.appendChild(cb);
         row.appendChild(txt);
@@ -173,105 +186,151 @@ function buildMultiSelect(msRoot, values, getSelected, setSelected, onChange) {
 
 const DEFAULT_WEIGHT = 1.0;
 
-function stableSortCategories(arr) {
-  // стабильный порядок для UI: алфавит, без сюрпризов
-  return [...(arr || [])].sort((a, b) =>
-    String(a).localeCompare(String(b), "ru", {
-      sensitivity: "base",
-      numeric: true,
-    })
+function stableSortEntries(entries) {
+  return [...(entries || [])].sort((a, b) =>
+    String(a?.label ?? a?.key ?? "").localeCompare(
+      String(b?.label ?? b?.key ?? ""),
+      "ru",
+      { sensitivity: "base", numeric: true }
+    )
   );
 }
 
-function normalizeWeights(categories, weights) {
+function normalizeWeightsEntries(entries, weights) {
   const w = weights || {};
   const out = {};
 
-  // ВАЖНО: сортируем один раз — это и будет "стабильный UI порядок"
-  const sorted = stableSortCategories(categories);
+  const sorted = stableSortEntries(entries);
 
-  for (const name of sorted) {
-    const v = Number(w[name]);
-    out[name] = Number.isFinite(v) && v >= 0 ? v : DEFAULT_WEIGHT;
+  for (const e of sorted) {
+    const v = Number(w[e.key]);
+    out[e.key] = Number.isFinite(v) && v >= 0 ? v : DEFAULT_WEIGHT;
   }
 
-  // out содержит ТОЛЬКО выбранные категории
-  return { sortedCategories: sorted, weights: out };
+  return { sortedEntries: sorted, weights: out };
 }
 
-function renderWeights(selectedCategories) {
+function buildWeightEntriesFromDraft(draft) {
+  const cats = (draft?.categories || []).map((c) => ({
+    kind: "cat",
+    key: String(c),
+    label: String(c),
+  }));
+
+  const vcs = (draft?.virtual_collection_ids || []).map((id) => ({
+    kind: "vc",
+    key: "vc:" + String(id),
+    label: vcNameById(id), // у тебя уже есть
+  }));
+
+  return [...cats, ...vcs];
+}
+
+function getWeightEntriesFromDraft(draft) {
+  const cats = Array.isArray(draft?.categories) ? draft.categories : [];
+  const vcIds = Array.isArray(draft?.virtual_collection_ids)
+    ? draft.virtual_collection_ids
+    : [];
+
+  const entries = [];
+
+  for (const c of cats) {
+    const key = String(c || "").trim();
+    if (!key) continue;
+    entries.push({ key, label: key, kind: "cat" });
+  }
+
+  for (const id of vcIds) {
+    const sid = String(id || "").trim();
+    if (!sid) continue;
+    entries.push({ key: "vc:" + sid, label: vcNameById(sid), kind: "vc" });
+  }
+
+  return entries;
+}
+
+function renderWeights() {
   const box = document.getElementById("preset-weights");
   if (!box) return;
 
-  const s = getState();
+  const st = getState();
+  const draft = st.presetDraft || {};
 
-  // Нормализуем: (1) сортировка стабильна, (2) дефолты, (3) удаление лишнего
-  const norm = normalizeWeights(
-    selectedCategories || [],
-    s.presetDraft.weights || {}
+  console.log("[renderWeights] ENTER");
+  console.log("  draft.categories:", draft.categories);
+  console.log("  draft.virtual_collection_ids:", draft.virtual_collection_ids);
+  console.log("  draft.weights:", draft.weights);
+
+  const entries = getWeightEntriesFromDraft(draft);
+
+  console.log(
+    "  weight entries:",
+    entries.map((e) => ({ key: e.key, label: e.label, kind: e.kind }))
   );
 
-  const cats = norm.sortedCategories;
+  const norm = normalizeWeightsEntries(entries, draft.weights || {});
+  const sortedEntries = norm.sortedEntries;
   const weights = norm.weights;
 
-  // Синк hidden по нормализованным категориям
-  syncHidden("preset-category", cats);
-
-  // Обновляем state ТОЛЬКО если реально есть изменения
-  // (важно: не дергать setPresetDraft на каждый рендер)
-  const prevCatsJson = JSON.stringify(s.presetDraft.categories || []);
-  const nextCatsJson = JSON.stringify(cats);
-
-  const prevWJson = JSON.stringify(s.presetDraft.weights || {});
+  // ⚠️ ВАЖНО: не трогаем virtual_collection_ids тут вообще
+  // и не пересобираем draft “с нуля”
+  const prevWJson = JSON.stringify(draft.weights || {});
   const nextWJson = JSON.stringify(weights);
 
-  if (prevCatsJson !== nextCatsJson || prevWJson !== nextWJson) {
-    setPresetDraft({
-      ...s.presetDraft,
-      categories: cats,
-      weights,
-    });
+  if (prevWJson !== nextWJson) {
+    setPresetDraft({ ...draft, weights });
+    console.log("[renderWeights] updating weights only");
+    console.log(
+      "  BEFORE setPresetDraft, draft.virtual_collection_ids =",
+      draft.virtual_collection_ids
+    );
+
+    setTimeout(() => {
+      const d = getState().presetDraft;
+      console.log(
+        "  AFTER setPresetDraft, draft.virtual_collection_ids =",
+        d.virtual_collection_ids
+      );
+    }, 0);
   }
 
-  // Рендер
   box.innerHTML = "";
 
-  if (!cats.length) {
+  if (!sortedEntries.length) {
     const div = document.createElement("div");
     div.className = "muted";
-    div.textContent = "Выбери хотя бы одну коллекцию, чтобы задать веса.";
+    div.textContent = "Выбери коллекции и/или VC, чтобы задать веса.";
     box.appendChild(div);
     return;
   }
 
-  for (const name of cats) {
+  for (const e of sortedEntries) {
     const row = document.createElement("div");
     row.className = "weight-row";
 
     const left = document.createElement("div");
     left.className = "name";
-    left.textContent = name;
+    left.textContent = e.label;
 
     const inp = document.createElement("input");
     inp.type = "number";
     inp.min = "0";
     inp.step = "0.1";
-    inp.value = String(weights[name]); // берем из norm.weights
+    inp.value = String(weights[e.key]);
 
     inp.addEventListener("input", () => {
       const v = Number(inp.value);
+      const st2 = getState();
+      const d2 = st2.presetDraft || {};
 
-      const st = getState();
-      const next = normalizeWeights(st.presetDraft.categories || [], {
-        ...(st.presetDraft.weights || {}),
-        [name]: Number.isFinite(v) && v >= 0 ? v : DEFAULT_WEIGHT,
+      const entries2 = getWeightEntriesFromDraft(d2);
+      const next = normalizeWeightsEntries(entries2, {
+        ...(d2.weights || {}),
+        [e.key]: Number.isFinite(v) && v >= 0 ? v : DEFAULT_WEIGHT,
       });
 
-      setPresetDraft({
-        ...st.presetDraft,
-        categories: next.sortedCategories,
-        weights: next.weights,
-      });
+      // опять же: только weights
+      setPresetDraft({ ...d2, weights: next.weights });
     });
 
     row.appendChild(left);
@@ -283,40 +342,79 @@ function renderWeights(selectedCategories) {
 export async function initPresetDropdowns() {
   const msMedia = document.getElementById("ms-media");
   const msCollection = document.getElementById("ms-collection");
-  if (!msMedia || !msCollection) return;
+  const msVc = document.getElementById("ms-vc");
+  if (!msMedia || !msCollection || !msVc) return;
 
   const meta = await fetchMeta();
+
+  const vcRows = await apiGetVirtualCollections(); // [{id,name,media,...}]
+  __vcCache = vcRows || [];
+
+  // после __vcCache = vcRows || [];
+  msVc.__labelOf = (id) => {
+    const sid = String(id || "");
+    const row = (__vcCache || []).find((x) => String(x?.id || "") === sid);
+    return String(row?.name || sid);
+  };
+
+  const vcOptions = (__vcCache || []).map((x) => ({
+    value: String(x.id),
+    label: String(x.name || x.id),
+  }));
+
   const s = getState();
 
   __msMediaRoot = msMedia;
   __msCollectionRoot = msCollection;
+  __msVcRoot = msVc;
   __metaCache = meta;
 
-  // media
+  // ✅ MEDIA
   buildMultiSelect(
     msMedia,
     meta.media_types || [],
     () => getState().presetDraft.media || [],
     (arr) => {
-      setPresetDraft({ ...getState().presetDraft, media: arr });
-      syncHidden("preset-media", arr);
+      setPresetDraft({ ...getState().presetDraft, media: arr || [] });
+      syncHidden("preset-media", arr || []);
+      renderWeights(); // необязательно, но пусть будет консистентно
     }
   );
 
-  // collections -> + weights
+  // ✅ RYOT COLLECTIONS
   buildMultiSelect(
     msCollection,
     meta.collections || [],
     () => getState().presetDraft.categories || [],
     (arr) => {
-      renderWeights(arr);
+      setPresetDraft({ ...getState().presetDraft, categories: arr || [] });
+      syncHidden("preset-category", arr || []);
+      renderWeights();
     }
   );
 
-  // начальный синк hidden + веса
+  // ✅ VIRTUAL COLLECTIONS
+  buildMultiSelect(
+    msVc,
+    vcOptions,
+    () => getState().presetDraft.virtual_collection_ids || [],
+    (arr) => {
+      setPresetDraft({
+        ...getState().presetDraft,
+        virtual_collection_ids: arr || [],
+      });
+      syncHidden("preset-vc", arr || []);
+      renderWeights();
+    }
+  );
+
+  // initial sync
   syncHidden("preset-media", s.presetDraft.media || []);
   syncHidden("preset-category", s.presetDraft.categories || []);
-  renderWeights(s.presetDraft.categories || []);
+  syncHidden("preset-vc", s.presetDraft.virtual_collection_ids || []);
+  renderWeights(); // ✅ без аргументов
+
+  syncPresetEditorFromState();
 }
 
 export function buildSingleSelect(msRoot, options, getValue, setValue) {
@@ -340,8 +438,18 @@ export function buildSingleSelect(msRoot, options, getValue, setValue) {
 let __msMediaRoot = null;
 let __msCollectionRoot = null;
 let __metaCache = { media_types: [], collections: [] };
+let __msVcRoot = null;
+let __vcCache = []; // [{id,name,media,poster,...}]
 
 // маленькие локальные хелперы (используем те, что уже есть в файле)
+
+function vcNameById(id) {
+  const sid = String(id || "");
+  const row = (__vcCache || []).find((x) => String(x?.id || "") === sid);
+  const name = String(row?.name || "").trim();
+  return name || sid;
+}
+
 function __qs(sel, root) {
   return root.querySelector(sel);
 }
@@ -359,11 +467,24 @@ function __applyMultiSelectUI(msRoot, selected) {
   if (!list) return;
 
   // просто пробежим по чекбоксам и выставим checked
-  const set = new Set(selected);
+  const set = new Set((selected || []).map((x) => String(x)));
+
   list.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
-    const label = cb.closest(".ms-opt");
-    const text = label?.querySelector("span")?.textContent ?? "";
-    cb.checked = set.has(text);
+    const set = new Set((selected || []).map((x) => String(x)));
+    list.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+      // ✅ сначала пробуем value (правильно), потом fallback на текст (старое поведение)
+      const v = String(cb.value || "").trim();
+      if (v) {
+        cb.checked = set.has(v);
+        return;
+      }
+
+      const label = cb.closest(".ms-opt");
+      const text = String(
+        label?.querySelector("span")?.textContent ?? ""
+      ).trim();
+      cb.checked = set.has(text);
+    });
   });
 }
 
@@ -373,22 +494,22 @@ export function syncPresetEditorFromState() {
     name: "",
     media: [],
     categories: [],
+    virtual_collection_ids: [],
     weights: {},
   };
 
-  // name
   const nameEl = document.getElementById("preset-name");
   if (nameEl) nameEl.value = draft.name || "";
 
-  // hidden
   syncHidden("preset-media", draft.media || []);
   syncHidden("preset-category", draft.categories || []);
+  syncHidden("preset-vc", draft.virtual_collection_ids || []);
 
-  // обновить UI dropdown лейблы/checkboxes
   if (__msMediaRoot) __applyMultiSelectUI(__msMediaRoot, draft.media || []);
   if (__msCollectionRoot)
     __applyMultiSelectUI(__msCollectionRoot, draft.categories || []);
+  if (__msVcRoot)
+    __applyMultiSelectUI(__msVcRoot, draft.virtual_collection_ids || []);
 
-  // веса
-  renderWeights(draft.categories || []);
+  renderWeights(); // ✅ без аргументов
 }

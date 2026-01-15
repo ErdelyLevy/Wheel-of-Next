@@ -144,17 +144,11 @@
             <section class="settings-card" id="vc-card">
               <h2>Виртуальные коллекции</h2>
 
-              <div class="muted vc-hint">
-                Пользовательские сегменты для колеса (например: Marvel Comics,
-                DC Comics). Они не являются Items и участвуют в рандоме как
-                единое целое.
-              </div>
-
               <div class="vc-head">
                 <div>Название</div>
                 <div>Тип медиа</div>
                 <div>Постер (опц.)</div>
-                <div></div>
+                <div style="text-align: right">Действия</div>
               </div>
 
               <div id="vc-list" class="vc-list"></div>
@@ -253,6 +247,43 @@
                       </div>
 
                       <input type="hidden" id="preset-category" value="[]" />
+                    </div>
+                  </div>
+
+                  <div class="form-row">
+                    <label>Виртуальные коллекции</label>
+
+                    <div class="ms" id="ms-vc">
+                      <button
+                        class="ms-btn"
+                        type="button"
+                        aria-haspopup="listbox"
+                        aria-expanded="false">
+                        <span class="ms-text" data-placeholder="Выбрать…"
+                          >Выбрать…</span
+                        >
+                        <span class="ms-caret">▾</span>
+                      </button>
+
+                      <div class="ms-pop is-hidden">
+                        <div class="ms-search">
+                          <input
+                            type="search"
+                            class="ms-search-input"
+                            placeholder="Поиск…" />
+                          <button
+                            class="tab ms-clear"
+                            type="button"
+                            title="Очистить">
+                            ×
+                          </button>
+                        </div>
+
+                        <div class="ms-list" role="listbox"></div>
+                      </div>
+
+                      <!-- храним ids VC -->
+                      <input type="hidden" id="preset-vc" value="[]" />
                     </div>
                   </div>
 

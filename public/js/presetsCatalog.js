@@ -145,19 +145,43 @@ function applyPresetToEditor(preset) {
     "";
 
   const media = preset?.media ?? preset?.media_types ?? [];
-
   const categories = preset?.categories ?? preset?.collections ?? [];
-
   const weights = preset?.weights ?? {};
 
+  // ✅ НОВОЕ: виртуальные коллекции (массив ID)
+  const virtual_collection_ids =
+    preset?.virtual_collection_ids ??
+    preset?.virtualCollections ??
+    preset?.virtual_collections ??
+    preset?.vc_ids ??
+    [];
+
   setState({ activePresetId: preset.id });
+
+  console.log("[applyPresetToEditor]");
+  console.log("  incoming preset.id =", preset?.id);
+  console.log(
+    "  incoming preset.virtual_collection_ids =",
+    preset?.virtual_collection_ids
+  );
+  console.log("  draft BEFORE setPresetDraft =", getState().presetDraft);
 
   setPresetDraft({
     name,
     media,
     categories,
     weights,
+    virtual_collection_ids: Array.isArray(virtual_collection_ids)
+      ? virtual_collection_ids
+          .map((x) => String(x || "").trim())
+          .filter(Boolean)
+      : [],
   });
+
+  console.log("  draft AFTER setPresetDraft =", getState().presetDraft);
+
+  // если у тебя есть синк скрытого поля под VC — раскомментируй
+  // syncHidden("preset-virtual-collections", getState().presetDraft.virtual_collection_ids || []);
 
   syncPresetEditorFromState();
   renderCatalog();
@@ -173,6 +197,7 @@ function startNewPresetDraft() {
     media: [],
     categories: [],
     weights: {},
+    virtual_collection_ids: [], // ✅ NEW
   });
 
   syncPresetEditorFromState();
@@ -207,6 +232,7 @@ function initCatalogClick() {
       name: preset.name ?? preset.preset_name ?? preset.title ?? "",
       media: preset.media_types ?? preset.media ?? [],
       categories: preset.collections ?? preset.categories ?? [],
+      virtual_collection_ids: preset.virtual_collection_ids ?? [],
       weights: preset.weights ?? {},
     });
   });
@@ -255,12 +281,14 @@ function initUpsertDelete() {
 
     const name = (d.name || "").trim();
     const payload = {
-      // если редактируем существующий — шлём id, иначе null
       id: s.activePresetId || null,
       name,
       media_types: d.media || [],
       collections: d.categories || [],
       weights: d.weights || {},
+
+      // ✅ ВАЖНО: новое поле
+      virtual_collection_ids: d.virtual_collection_ids || [],
     };
 
     try {
@@ -285,6 +313,7 @@ function initUpsertDelete() {
         name: saved.name,
         media: saved.media_types ?? saved.media ?? [],
         categories: saved.collections ?? saved.categories ?? [],
+        virtual_collection_ids: saved.virtual_collection_ids ?? [],
         weights: saved.weights ?? {},
       });
 
@@ -323,8 +352,10 @@ function initUpsertDelete() {
           name: p.name,
           media: p.media_types ?? p.media ?? [],
           categories: p.collections ?? p.categories ?? [],
+          virtual_collection_ids: p.virtual_collection_ids ?? [],
           weights: p.weights ?? {},
         });
+
         setState({ activePresetId: String(p.id) });
       }
 

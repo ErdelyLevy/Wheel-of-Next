@@ -12,6 +12,8 @@ import { Resolver } from "node:dns/promises";
 import dns from "node:dns";
 import net from "node:net";
 import { Agent, setGlobalDispatcher } from "undici";
+import swaggerUi from "swagger-ui-express";
+import swaggerJsdoc from "swagger-jsdoc";
 
 const BAD_IP = new Set(["127.0.0.1", "0.0.0.0", "::1"]);
 
@@ -80,6 +82,23 @@ app.disable("x-powered-by");
 app.use(express.json({ limit: "2mb" }));
 
 // ---- helpers ----
+const openapiSpec = swaggerJsdoc({
+  definition: {
+    openapi: "3.0.0",
+    info: {
+      title: "My API",
+      version: "1.0.0",
+    },
+  },
+  apis: ["./server.js"], // позже расширим на ./routes/*.js если надо
+});
+
+// Swagger UI
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapiSpec));
+
+// Raw OpenAPI JSON (это будет нужно Postman)
+app.get("/openapi.json", (req, res) => res.json(openapiSpec));
+
 function clampInt(v, min, max, fallback = min) {
   const n = Number(v);
   if (!Number.isFinite(n)) return fallback;
@@ -350,8 +369,174 @@ async function resolveSchema() {
   console.log("[DB] history table:", T_HISTORY);
 }
 
+function normStr(x) {
+  return String(x ?? "").trim();
+}
+
+function toVcId(x) {
+  // id: text primary key — лучше нормализовать, чтобы не было пробелов/слешей
+  // если хочешь — замени на uuid, но сейчас под твою схему:
+  return normStr(x);
+}
+
 // ---- API ----
 
+/**
+ * @openapi
+ * /api/virtual-collections:
+ *   get:
+ *     tags: [Virtual Collections]
+ *     summary: List virtual collections
+ *     responses:
+ *       200: { description: OK }
+ */
+app.get("/api/virtual-collections", async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `
+      select id, name, media, poster, created_at, updated_at
+        from won_virtual_collections
+       order by name asc
+      `
+    );
+    res.json({ ok: true, rows });
+  } catch (e) {
+    console.error("[API] /api/virtual-collections GET failed:", e);
+    res.status(500).json({ ok: false, error: String(e.message || e) });
+  }
+});
+
+/**
+ * @openapi
+ * /api/virtual-collections:
+ *   post:
+ *     tags: [Virtual Collections]
+ *     summary: Create or update virtual collection (upsert)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [id, name, media]
+ *             properties:
+ *               id: { type: string }
+ *               name: { type: string }
+ *               media: { type: string }
+ *               poster: { type: string, nullable: true }
+ *     responses:
+ *       200: { description: OK }
+ *       400: { description: Bad Request }
+ */
+app.post("/api/virtual-collections", async (req, res) => {
+  try {
+    const b = req.body || {};
+    const id = toVcId(b.id);
+    const name = normStr(b.name);
+    const media = normStr(b.media);
+    const poster = normStr(b.poster);
+
+    if (!id) return res.status(400).json({ ok: false, error: "id required" });
+    if (!name)
+      return res.status(400).json({ ok: false, error: "name required" });
+    if (!media)
+      return res.status(400).json({ ok: false, error: "media required" });
+
+    const { rows } = await pool.query(
+      `
+      insert into won_virtual_collections (id, name, media, poster)
+      values ($1, $2, $3, nullif($4,''))
+      on conflict (id) do update
+        set name = excluded.name,
+            media = excluded.media,
+            poster = excluded.poster,
+            updated_at = now()
+      returning id, name, media, poster, created_at, updated_at
+      `,
+      [id, name, media, poster]
+    );
+
+    res.json({ ok: true, row: rows[0] || null });
+  } catch (e) {
+    console.error("[API] /api/virtual-collections POST failed:", e);
+    res.status(500).json({ ok: false, error: String(e.message || e) });
+  }
+});
+
+/**
+ * @openapi
+ * /api/virtual-collections/{id}:
+ *   delete:
+ *     tags: [Virtual Collections]
+ *     summary: Delete virtual collection by id (and remove from presets)
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: OK }
+ *       400: { description: Bad Request }
+ *       404: { description: Not Found }
+ */
+app.delete("/api/virtual-collections/:id", async (req, res) => {
+  const id = toVcId(req.params.id);
+  if (!id) return res.status(400).json({ ok: false, error: "id required" });
+
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+
+    // 1) удаляем VC
+    const del = await client.query(
+      `delete from won_virtual_collections where id = $1 returning id`,
+      [id]
+    );
+    if (!del.rowCount) {
+      await client.query("rollback");
+      return res.status(404).json({ ok: false, error: "not found" });
+    }
+
+    // 2) чистим все пресеты, которые ссылались на неё
+    await client.query(
+      `
+      update won_presets
+         set virtual_collection_ids =
+             array_remove(virtual_collection_ids, $1)
+       where $1 = any(virtual_collection_ids)
+      `,
+      [id]
+    );
+
+    await client.query("commit");
+    res.json({ ok: true, id });
+  } catch (e) {
+    await client.query("rollback");
+    console.error("[API] /api/virtual-collections DELETE failed:", e);
+    res.status(500).json({ ok: false, error: String(e.message || e) });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * @openapi
+ * /api/poster:
+ *   get:
+ *     tags: [Assets]
+ *     summary: Proxy and cache poster by URL
+ *     parameters:
+ *       - in: query
+ *         name: u
+ *         required: true
+ *         schema: { type: string }
+ *         description: Source URL (http/https). You can also pass `url`.
+ *     responses:
+ *       200: { description: OK (image bytes) }
+ *       400: { description: Bad Request }
+ *       404: { description: Not Found }
+ *       502: { description: Bad Gateway }
+ */
 app.get("/api/poster", async (req, res) => {
   try {
     let url = String(req.query.u || req.query.url || "").trim();
@@ -435,6 +620,16 @@ app.get("/api/poster", async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /api/health:
+ *   get:
+ *     tags: [System]
+ *     summary: Health check (DB ping)
+ *     responses:
+ *       200: { description: OK }
+ *       500: { description: Server Error }
+ */
 app.get("/api/health", async (req, res) => {
   try {
     await pool.query("select 1 as ok");
@@ -444,7 +639,15 @@ app.get("/api/health", async (req, res) => {
   }
 });
 
-// META: dropdown data from view wheel_items
+/**
+ * @openapi
+ * /api/meta:
+ *   get:
+ *     tags: [Meta]
+ *     summary: Dropdown meta (media types + collections)
+ *     responses:
+ *       200: { description: OK }
+ */
 app.get("/api/meta", async (req, res) => {
   try {
     const media = await pool.query(
@@ -465,20 +668,48 @@ app.get("/api/meta", async (req, res) => {
   }
 });
 
-// PRESETS
+/**
+ * @openapi
+ * /api/presets:
+ *   get:
+ *     tags: [Presets]
+ *     summary: List presets
+ *     responses:
+ *       200: { description: OK }
+ */
 app.get("/api/presets", async (req, res) => {
   try {
     const { rows } = await pool.query(
       `select * from ${T_PRESETS} order by created_at asc nulls last, name asc`
     );
 
+    const asTextArray = (v) => {
+      if (!v) return [];
+      if (Array.isArray(v))
+        return v.map((x) => String(x ?? "").trim()).filter(Boolean);
+      // на всякий случай, если вдруг прилетит строкой
+      return String(v)
+        .split(",")
+        .map((x) => x.trim())
+        .filter(Boolean);
+    };
+
     // нормализуем форму под фронт
     const presets = rows.map((p) => ({
       id: p.id,
       name: p.name,
-      media_types: p.media_types ?? p.media ?? [],
-      collections:
-        p[PRESET_COL_COLLECTIONS] ?? p.categories ?? p.collections ?? [],
+
+      media_types: asTextArray(p.media_types ?? p.media ?? []),
+
+      collections: asTextArray(
+        p[PRESET_COL_COLLECTIONS] ?? p.categories ?? p.collections ?? []
+      ),
+
+      // ✅ NEW
+      virtual_collection_ids: asTextArray(
+        p.virtual_collection_ids ?? p.virtualCollections ?? []
+      ),
+
       weights: p.weights ?? {},
       created_at: p.created_at ?? null,
       updated_at: p.updated_at ?? null,
@@ -491,16 +722,60 @@ app.get("/api/presets", async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /api/presets:
+ *   post:
+ *     tags: [Presets]
+ *     summary: Create or update preset (upsert)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, media_types, collections]
+ *             properties:
+ *               id: { type: string, nullable: true }
+ *               name: { type: string }
+ *               media_types:
+ *                 type: array
+ *                 items: { type: string }
+ *               collections:
+ *                 type: array
+ *                 items: { type: string }
+ *               virtual_collection_ids:
+ *                 type: array
+ *                 items: { type: string }
+ *               weights:
+ *                 type: object
+ *                 additionalProperties: { type: number }
+ *               save: { type: boolean }
+ *     responses:
+ *       200: { description: OK }
+ *       400: { description: Bad Request }
+ */
 app.post("/api/presets", async (req, res) => {
   try {
     const body = req.body || {};
 
     const id = body.id ? String(body.id).trim() : null;
     const name = String(body.name || "").trim();
+
     const media_types = asTextArray(body.media_types ?? body.media);
+
     const collections = asTextArray(
       body.collections ?? body.categories ?? body.category_names
     );
+
+    // ✅ NEW: virtual collections ids (optional)
+    const virtual_collection_ids = asTextArray(
+      body.virtual_collection_ids ??
+        body.virtualCollections ??
+        body.virtual_collections ??
+        body.vc_ids
+    );
+
     const weights = normalizeWeightsObject(body.weights);
 
     if (!name)
@@ -516,6 +791,9 @@ app.post("/api/presets", async (req, res) => {
 
     const colCollections = PRESET_COL_COLLECTIONS;
 
+    // ✅ имя колонки в БД
+    const colVC = "virtual_collection_ids";
+
     // upsert by id (если нет id — create)
     if (id) {
       const { rows } = await pool.query(
@@ -524,37 +802,38 @@ app.post("/api/presets", async (req, res) => {
            set name = $2,
                media_types = $3,
                ${colCollections} = $4,
-               weights = $5,
+               ${colVC} = $5,
+               weights = $6,
                updated_at = now()
          where id = $1
          returning *
         `,
-        [id, name, media_types, collections, weights]
+        [id, name, media_types, collections, virtual_collection_ids, weights]
       );
 
       if (rows[0]) {
         return res.json({ ok: true, preset: rows[0] });
       }
 
-      // если id не найден — создаём с этим id (если колонка id допускает вставку)
+      // если id не найден — создаём с этим id
       const ins = await pool.query(
         `
-        insert into ${T_PRESETS} (id, name, media_types, ${colCollections}, weights, created_at, updated_at)
-        values ($1, $2, $3, $4, $5, now(), now())
+        insert into ${T_PRESETS} (id, name, media_types, ${colCollections}, ${colVC}, weights, created_at, updated_at)
+        values ($1, $2, $3, $4, $5, $6, now(), now())
         returning *
         `,
-        [id, name, media_types, collections, weights]
+        [id, name, media_types, collections, virtual_collection_ids, weights]
       );
       return res.json({ ok: true, preset: ins.rows[0] });
     }
 
     const { rows } = await pool.query(
       `
-      insert into ${T_PRESETS} (name, media_types, ${colCollections}, weights, created_at, updated_at)
-      values ($1, $2, $3, $4, now(), now())
+      insert into ${T_PRESETS} (name, media_types, ${colCollections}, virtual_collection_ids, weights, created_at, updated_at)
+      values ($1, $2, $3, $4, $5, now(), now())
       returning *
       `,
-      [name, media_types, collections, weights]
+      [name, media_types, collections, virtual_collection_ids, weights]
     );
 
     res.json({ ok: true, preset: rows[0] });
@@ -564,6 +843,21 @@ app.post("/api/presets", async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /api/presets/{id}:
+ *   delete:
+ *     tags: [Presets]
+ *     summary: Delete preset by id
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: OK }
+ *       400: { description: Bad Request }
+ */
 app.delete("/api/presets/:id", async (req, res) => {
   try {
     const id = String(req.params.id || "").trim();
@@ -577,7 +871,20 @@ app.delete("/api/presets/:id", async (req, res) => {
   }
 });
 
-// HISTORY
+/**
+ * @openapi
+ * /api/history:
+ *   get:
+ *     tags: [History]
+ *     summary: List history (latest first)
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+ *     responses:
+ *       200: { description: OK }
+ */
 app.get("/api/history", async (req, res) => {
   try {
     const limit = clampInt(req.query.limit, 1, 200, 50);
@@ -592,6 +899,22 @@ app.get("/api/history", async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /api/history/{id}:
+ *   get:
+ *     tags: [History]
+ *     summary: Get history item by id
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: OK }
+ *       400: { description: Bad Request }
+ *       404: { description: Not Found }
+ */
 app.get("/api/history/:id", async (req, res) => {
   try {
     const id = String(req.params.id || "").trim();
@@ -611,6 +934,28 @@ app.get("/api/history/:id", async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /api/random:
+ *   post:
+ *     tags: [Wheel]
+ *     summary: Pick random winner and build wheel items
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [preset_id]
+ *             properties:
+ *               preset_id: { type: string }
+ *               size: { type: integer, minimum: 3, maximum: 128, default: 18 }
+ *               save: { type: boolean, default: false }
+ *     responses:
+ *       200: { description: OK }
+ *       400: { description: Bad Request }
+ *       404: { description: Not Found }
+ */
 app.post("/api/random", async (req, res) => {
   try {
     const body = req.body || {};
@@ -641,54 +986,179 @@ app.post("/api/random", async (req, res) => {
     }
 
     // Pool from view
+    // берём ещё vcIds из пресета
+    const vcIds = asTextArray(preset.virtual_collection_ids);
+
+    // Pool from view (обычные Items)
     const { rows: poolRows } = await pool.query(
       `
-      select *
-        from wheel_items
-       where media_type = any($1::text[])
-         and category_name = any($2::text[])
-      `,
+  select *
+    from wheel_items
+   where media_type = any($1::text[])
+     and category_name = any($2::text[])
+  `,
       [media_types, collections]
     );
-    if (!poolRows.length)
-      return res
-        .status(404)
-        .json({ ok: false, error: "No items for this preset" });
 
-    const weightFn = (it) => {
-      const key = String(it?.category_name || "");
+    // Virtual collections rows (VC)
+    let vcRows = [];
+    if (vcIds.length) {
+      const r = await pool.query(
+        `
+    select id, name, media, poster, created_at, updated_at
+      from won_virtual_collections
+     where id = any($1::text[])
+    `,
+        [vcIds]
+      );
+      vcRows = r.rows || [];
+    }
+
+    // если вообще нет кандидатов — 404
+    if (!poolRows.length && !vcRows.length) {
+      return res.status(404).json({
+        ok: false,
+        error: "No items or virtual collections for this preset",
+      });
+    }
+
+    // --- helpers ---
+
+    function vcToWheelItem(vc) {
+      return {
+        id: String(vc.id),
+        title: String(vc.name || "—"),
+        name: String(vc.name || "—"),
+        media_type: String(vc.media || "book"),
+        category_name: "__virtual__", // просто маркер
+        poster: vc.poster || "",
+        __kind: "vc",
+        __vc_id: String(vc.id),
+      };
+    }
+
+    // веса: обычные категории -> key=category_name
+    // VC -> key="vc:"+id
+    function getCollectionWeight(key) {
       const w = weights[key];
       return Number.isFinite(Number(w)) ? Math.max(0, Number(w)) : 1.0;
-    };
+    }
 
-    const winnerIndexInPool = weightedPickIndex(poolRows, weightFn);
-    const winner = poolRows[winnerIndexInPool];
+    function weightFn(it) {
+      if (it && it.__kind === "vc") {
+        return getCollectionWeight("vc:" + String(it.__vc_id || it.id || ""));
+      }
+      return getCollectionWeight(String(it?.category_name || ""));
+    }
+
+    // 1) строим список “коллекций” (обычные + VC) для выбора
+    const collectionCandidates = [];
+
+    // обычные: только те, у которых реально есть items (иначе шанс уйдёт в пустоту)
+    if (poolRows.length) {
+      const presentCats = new Set(
+        poolRows.map((x) => String(x?.category_name || ""))
+      );
+      for (const c of collections) {
+        const key = String(c);
+        if (!presentCats.has(key)) continue;
+        collectionCandidates.push({ kind: "cat", key, value: key });
+      }
+    }
+
+    // VC: только те, что реально нашли в таблице
+    for (const vc of vcRows) {
+      const id = String(vc.id);
+      collectionCandidates.push({ kind: "vc", key: "vc:" + id, value: id });
+    }
+
+    if (!collectionCandidates.length) {
+      return res.status(404).json({
+        ok: false,
+        error: "No selectable collections (check preset collections/vcIds)",
+      });
+    }
+
+    // 2) выбираем коллекцию по весам (ВАЖНО: независимо от кол-ва items внутри)
+    const pickedColIdx = weightedPickIndex(collectionCandidates, (c) =>
+      getCollectionWeight(c.key)
+    );
+    const picked = collectionCandidates[pickedColIdx];
+
+    // 3) внутри выбранной коллекции выбираем winner
+    let winner = null;
+
+    if (picked.kind === "vc") {
+      const vc = vcRows.find((x) => String(x.id) === String(picked.value));
+      winner = vc ? vcToWheelItem(vc) : null;
+    } else {
+      const bucket = poolRows.filter(
+        (x) => String(x?.category_name || "") === String(picked.value)
+      );
+      if (bucket.length) winner = bucket[(Math.random() * bucket.length) | 0];
+    }
+
+    // финальная страховка
+    if (!winner) {
+      return res.status(500).json({ ok: false, error: "winner pick failed" });
+    }
+
     const winnerId = winner?.id ?? null;
 
-    // fillers
+    const vcWheelItems = vcRows.map(vcToWheelItem);
+    const allCandidates = [...poolRows, ...vcWheelItems];
+
+    // exclude winner (и item, и VC)
     const exclude = new Set();
-    if (winnerId != null) exclude.add(String(winnerId));
+    if (winner && winner.__kind === "vc") {
+      exclude.add("vc:" + String(winner.__vc_id || winner.id || ""));
+    } else if (winnerId != null) {
+      exclude.add("it:" + String(winnerId));
+    }
 
-    const fillers = poolRows.filter(
-      (x) => x && x.id != null && !exclude.has(String(x.id))
-    );
-    shuffleInPlace(fillers);
+    // fillers from combined pool
+    const fillersPool = allCandidates.filter((x) => {
+      if (!x) return false;
 
-    const wheelItems = [winner, ...fillers.slice(0, Math.max(0, size - 1))];
-    shuffleInPlace(wheelItems);
+      if (x.__kind === "vc") {
+        const key = "vc:" + String(x.__vc_id || x.id || "");
+        return !exclude.has(key);
+      }
 
-    const winnerIndex = wheelItems.findIndex(
-      (x) => String(x?.id) === String(winnerId)
-    );
-
-    // ✅ enrich wheel items with per-item weight (for drawing weighted wheel)
-    const wheelItemsWithW = wheelItems.map((it) => {
-      const w = weightFn(it);
-      // возвращаем новый объект, чтобы не мутировать poolRows
-      return { ...it, w };
+      if (x.id == null) return false;
+      const key = "it:" + String(x.id);
+      return !exclude.has(key);
     });
 
-    // winner тоже лучше отдать с w (удобно на фронте)
+    shuffleInPlace(fillersPool);
+
+    const need = Math.max(0, size - 1);
+    const fillers = fillersPool.slice(0, need);
+
+    const wheelItems = [winner, ...fillers];
+    shuffleInPlace(wheelItems);
+
+    // winner index (учитываем VC)
+    const winnerIndex = wheelItems.findIndex((x) => {
+      if (!x) return false;
+
+      if (winner && winner.__kind === "vc") {
+        return (
+          x.__kind === "vc" &&
+          String(x.__vc_id || x.id) === String(winner.__vc_id || winner.id)
+        );
+      }
+
+      return String(x?.id) === String(winnerId);
+    });
+
+    // ✅ enrich wheel items with per-item weight (collection weight)
+    const wheelItemsWithW = wheelItems.map((it) => ({
+      ...it,
+      w: weightFn(it),
+    }));
+
+    // winner тоже лучше отдать с w
     const winnerWithW = winner ? { ...winner, w: weightFn(winner) } : null;
 
     let historyId = null;
@@ -741,7 +1211,6 @@ app.post("/api/random", async (req, res) => {
       return {};
     }
 
-    // где-то внутри /api/random, когда уже есть poolRows/preset/winner/wheelItems:
     const poolCountsByCategory = countBy(poolRows, (x) => x?.category_name);
     const poolCountsByMedia = countBy(poolRows, (x) => x?.media_type);
 
@@ -786,7 +1255,8 @@ app.post("/api/random", async (req, res) => {
       wheel_items: wheelItemsOut,
 
       history_id: historyId,
-      pool_total: poolRows.length,
+      pool_total: allCandidates.length,
+
       wheel_size: wheelItemsWithW.length,
     });
   } catch (e) {
@@ -795,6 +1265,22 @@ app.post("/api/random", async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /api/items:
+ *   get:
+ *     tags: [Wheel]
+ *     summary: List items for preset (filtered by preset media_types + collections)
+ *     parameters:
+ *       - in: query
+ *         name: preset_id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: OK }
+ *       400: { description: Bad Request }
+ *       404: { description: Not Found }
+ */
 app.get("/api/items", async (req, res) => {
   try {
     const presetId = String(req.query.preset_id || "").trim();
@@ -836,8 +1322,6 @@ app.get("/api/items", async (req, res) => {
         : it.poster,
     }));
     return res.json({ ok: true, rows: out });
-
-    return res.json({ ok: true, rows });
   } catch (e) {
     console.error("[API] /api/items failed:", e);
     return res.status(500).json({ ok: false, error: String(e.message || e) });

@@ -113,16 +113,28 @@ export function setSpin(spin) {
 
 export function setPresetDraft(presetDraft) {
   setState({ presetDraft });
+
   localStorage.setItem(
     "won:presetMedia",
     JSON.stringify(presetDraft.media || [])
   );
+
   localStorage.setItem(
     "won:presetCategories",
     JSON.stringify(presetDraft.categories || [])
   );
+
   localStorage.setItem(
     "won:presetWeights",
     JSON.stringify(presetDraft.weights || {})
   );
+
+  // ✅ НОВОЕ: виртуальные коллекции
+  localStorage.setItem(
+    "won:presetVirtualCollections",
+    JSON.stringify(presetDraft.virtual_collection_ids || [])
+  );
 }
+
+// ⚠️ DEBUG ONLY
+window.__getState = getState;

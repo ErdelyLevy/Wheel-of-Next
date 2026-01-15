@@ -2,7 +2,7 @@
 import { setView } from "./state.js";
 import { applyWheelSnapshot } from "./actions.js";
 import { apiGetHistory, apiGetHistoryById } from "./api.js";
-import { bindLazyPoster } from "./lazyPoster.js"; // добавь импорт сверху
+import { bindLazyPoster } from "./posterFallback.js"; // добавь импорт сверху
 
 function fmtDate(iso) {
   try {

@@ -1,6 +1,6 @@
 // js/resultUi.js
 import { subscribe, getState } from "./state.js";
-import { getPosterSrc, getFallbackPosterSrc } from "./posterSrc.js"; // добавь вверху файла
+import { getPosterSrc, getFallbackPosterSrc } from "./posterFallback.js"; // добавь вверху файла
 
 function $(id) {
   return document.getElementById(id);

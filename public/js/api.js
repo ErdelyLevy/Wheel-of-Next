@@ -54,3 +54,29 @@ export async function apiGetHistoryById(id) {
     throw new Error(j?.error || "history fetch failed");
   return j.row || null;
 }
+
+// --- Virtual Collections ---
+
+export async function apiGetVirtualCollections() {
+  const r = await fetch("/api/virtual-collections", { cache: "no-store" });
+  const j = await jsonOrThrow(r);
+  return j.rows || [];
+}
+
+export async function apiUpsertVirtualCollection({ id, name, media, poster }) {
+  const r = await fetch("/api/virtual-collections", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, name, media, poster }),
+  });
+  const j = await jsonOrThrow(r);
+  return j.row || null;
+}
+
+export async function apiDeleteVirtualCollection(id) {
+  const r = await fetch(`/api/virtual-collections/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+  await jsonOrThrow(r);
+  return true;
+}

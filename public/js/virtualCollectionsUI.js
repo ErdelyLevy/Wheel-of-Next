@@ -1,5 +1,10 @@
 // public/js/virtualCollectionsUi.js
 import { buildSingleSelect, fetchMeta } from "./presetsUi.js";
+import {
+  apiGetVirtualCollections,
+  apiUpsertVirtualCollection,
+  apiDeleteVirtualCollection,
+} from "./api.js";
 
 function escapeHtml(s) {
   return String(s ?? "").replace(
@@ -19,86 +24,143 @@ function uid(prefix = "vcms") {
   return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now()}`;
 }
 
+function slugify(s) {
+  const x = String(s || "")
+    .trim()
+    .toLowerCase()
+    .replace(/['"]/g, "")
+    .replace(/[^a-z0-9а-яё]+/gi, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 40);
+  return x || "vc";
+}
+
+function genVcIdFromName(name) {
+  return `vc_${slugify(name)}`;
+}
+
+// маленький хелпер: показать ошибку пользователю (можно заменить на твой toast)
+function toast(msg) {
+  const el = document.getElementById("toast");
+  if (!el) return alert(msg);
+  el.textContent = msg;
+  el.classList.add("is-show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove("is-show"), 2600);
+}
+
 /**
  * Инициализация UI виртуальных коллекций.
- * Опционально можно передать initial массив [{name, media, poster}]
+ * initial (optional): массив rows из API [{id,name,media,poster,...}]
  */
 export async function initVirtualCollectionsUI({ initial = null } = {}) {
   const listEl = document.getElementById("vc-list");
   const addBtn = document.getElementById("vc-add");
   if (!listEl || !addBtn) return;
 
-  let __vcMeta = null;
-
   async function initMediaSelect(row) {
     const msRoot = row.querySelector(".vc-ms");
     const hidden = row.querySelector(".vc-media");
     if (!msRoot || !hidden) return;
 
-    const meta = await fetchMeta(); // твой fetchMeta из presetsUi.js
-
+    const meta = await fetchMeta(); // media_types
     buildSingleSelect(
       msRoot,
       meta.media_types || [],
       () => hidden.value,
       (v) => {
         hidden.value = String(v || "");
+        markDirty(row);
       }
     );
+  }
+
+  function markDirty(row) {
+    row.dataset.dirty = "1";
+    row.classList.add("is-dirty");
+    const saveBtn = row.querySelector(".vc-save");
+    if (saveBtn) saveBtn.disabled = false;
+  }
+
+  function clearDirty(row) {
+    row.dataset.dirty = "0";
+    row.classList.remove("is-dirty");
+    const saveBtn = row.querySelector(".vc-save");
+    if (saveBtn) saveBtn.disabled = true;
   }
 
   function makeRow(data = {}) {
     const row = document.createElement("div");
     row.className = "vc-row";
 
+    // сохраняем id (если уже есть в БД)
+    const id = String(data.id || "").trim();
+    if (id) row.dataset.id = id;
+
     const msId = uid();
 
     row.innerHTML = `
-      <div class="form-row">
-        <input
-          class="vc-name"
-          type="text"
-          placeholder="Название (напр. Marvel Comics)"
-          value="${escapeHtml(data.name || "")}"
-          aria-label="Название"
-        />
-      </div>
+  <div class="vc-cell vc-name-cell">
+    <input
+      class="vc-name"
+      type="text"
+      placeholder="Название (напр. Marvel Comics)"
+      value="${escapeHtml(data.name || "")}"
+      aria-label="Название"
+    />
+  </div>
 
-      <div class="form-row">
-        <div class="ms vc-ms" id="${msId}">
-          <button class="ms-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
-            <span class="ms-text" data-placeholder="Выбрать…">Выбрать…</span>
-            <span class="ms-caret">▾</span>
-          </button>
+  <div class="vc-cell vc-media-cell">
+    <div class="ms vc-ms" id="${msId}">
+      <button class="ms-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
+        <span class="ms-text" data-placeholder="Выбрать…">Выбрать…</span>
+        <span class="ms-caret">▾</span>
+      </button>
 
-          <div class="ms-pop is-hidden">
-            <div class="ms-search">
-              <input type="search" class="ms-search-input" placeholder="Поиск…" />
-              <button class="tab ms-clear" type="button" title="Очистить">×</button>
-            </div>
-            <div class="ms-list" role="listbox"></div>
-          </div>
-
-          <input type="hidden" class="vc-media" value="${escapeHtml(
-            (data.media || "").trim()
-          )}" />
+      <div class="ms-pop is-hidden">
+        <div class="ms-search">
+          <input type="search" class="ms-search-input" placeholder="Поиск…" />
+          <button class="tab ms-clear" type="button" title="Очистить">×</button>
         </div>
+        <div class="ms-list" role="listbox"></div>
       </div>
 
-      <div class="form-row">
-        <input
-          class="vc-poster"
-          type="text"
-          placeholder="Постер (https://…)"
-          value="${escapeHtml(data.poster || "")}"
-          aria-label="Постер"
-        />
-      </div>
+      <input type="hidden" class="vc-media" value="${escapeHtml(
+        (data.media || "").trim()
+      )}" />
+    </div>
+  </div>
 
-      <button class="tab vc-del" type="button" title="Удалить" aria-label="Удалить">×</button>
-    `;
+  <div class="vc-cell vc-poster-cell">
+    <input
+      class="vc-poster"
+      type="text"
+      placeholder="Постер (https://…)"
+      value="${escapeHtml(data.poster || "")}"
+      aria-label="Постер"
+    />
+  </div>
+
+  <div class="vc-cell vc-actions">
+    <button class="tab vc-save" type="button" title="Сохранить" aria-label="Сохранить" disabled>💾</button>
+    <button class="tab vc-del" type="button" title="Удалить" aria-label="Удалить">×</button>
+  </div>
+`;
+
+    // любые изменения -> dirty
+    row
+      .querySelector(".vc-name")
+      ?.addEventListener("input", () => markDirty(row));
+    row
+      .querySelector(".vc-poster")
+      ?.addEventListener("input", () => markDirty(row));
 
     initMediaSelect(row);
+
+    // если это уже существующая строка — считаем чистой
+    if (id) clearDirty(row);
+    else markDirty(row);
+
     return row;
   }
 
@@ -106,50 +168,95 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
     listEl.appendChild(makeRow(data));
   }
 
-  // add
-  addBtn.addEventListener("click", () => addRow());
+  async function reload() {
+    try {
+      const rows = await apiGetVirtualCollections();
 
-  // delete (делегирование)
-  listEl.addEventListener("click", (e) => {
-    const btn = e.target?.closest?.(".vc-del");
-    if (!btn) return;
-    const row = btn.closest(".vc-row");
-    if (row) row.remove();
-  });
-
-  // initial render
-  if (Array.isArray(initial)) {
-    listEl.innerHTML = "";
-    initial.forEach((x) => addRow(x));
+      listEl.innerHTML = "";
+      rows.forEach((x) => addRow(x));
+    } catch (e) {
+      toast(String(e?.message || e));
+    }
   }
 
-  // удобные хелперы (можно убрать позже)
-  window.__vcGet = () => getVirtualCollectionsFromUI(listEl);
-  window.__vcSet = (arr) => {
-    listEl.innerHTML = "";
-    (Array.isArray(arr) ? arr : []).forEach((x) => addRow(x));
-  };
-}
+  // add new row
+  addBtn.addEventListener("click", () => addRow({}));
 
-/**
- * Сбор данных из UI
- */
-function getVirtualCollectionsFromUI(
-  rootEl = document.getElementById("vc-list")
-) {
-  const root = rootEl;
-  if (!root) return [];
+  // save/delete (делегирование)
+  listEl.addEventListener("click", async (e) => {
+    const saveBtn = e.target?.closest?.(".vc-save");
+    const delBtn = e.target?.closest?.(".vc-del");
+    const row = e.target?.closest?.(".vc-row");
+    if (!row) return;
 
-  return [...root.querySelectorAll(".vc-row")]
-    .map((row) => {
+    // SAVE
+    if (saveBtn) {
       const name = String(row.querySelector(".vc-name")?.value || "").trim();
       const media = String(row.querySelector(".vc-media")?.value || "").trim();
       const poster = String(
         row.querySelector(".vc-poster")?.value || ""
       ).trim();
 
-      if (!name && !media && !poster) return null;
-      return { name, media, poster };
-    })
-    .filter(Boolean);
+      if (!name) return toast("VC: имя обязательно");
+      if (!media) return toast("VC: media обязательно");
+
+      // если id нет — генерим из имени
+      let id = String(row.dataset.id || "").trim();
+      if (!id) {
+        id = genVcIdFromName(name);
+        row.dataset.id = id;
+      }
+
+      saveBtn.disabled = true;
+      try {
+        const saved = await apiUpsertVirtualCollection({
+          id,
+          name,
+          media,
+          poster,
+        });
+
+        // на всякий случай синхронизируем из ответа
+        if (saved?.id) row.dataset.id = String(saved.id);
+        clearDirty(row);
+        toast("Сохранено");
+      } catch (err) {
+        saveBtn.disabled = false;
+        toast(String(err?.message || err));
+      }
+      return;
+    }
+
+    // DELETE
+    if (delBtn) {
+      const id = String(row.dataset.id || "").trim();
+
+      // если в БД ещё нет — просто удаляем из DOM
+      if (!id) {
+        row.remove();
+        return;
+      }
+
+      try {
+        await apiDeleteVirtualCollection(id);
+
+        row.remove();
+        toast("Удалено");
+      } catch (err) {
+        toast(String(err?.message || err));
+      }
+    }
+  });
+
+  // initial render
+  if (Array.isArray(initial)) {
+    listEl.innerHTML = "";
+    initial.forEach((x) => addRow(x));
+  } else {
+    // ✅ автозагрузка из API
+    await reload();
+  }
+
+  // debug helpers
+  window.__vcReload = reload;
 }
