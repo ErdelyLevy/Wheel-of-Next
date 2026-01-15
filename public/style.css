@@ -2002,7 +2002,6 @@ button:hover,
 #vc-card .vc-head,
 #vc-card .vc-row {
   display: grid;
-  grid-template-columns: 1.2fr 0.9fr 1.4fr 92px; /* name | media | poster | actions */
   gap: 12px;
   align-items: center;
 }
@@ -2108,7 +2107,6 @@ button:hover,
 #vc-card .vc-head,
 #vc-card .vc-row {
   display: grid;
-  grid-template-columns: 1.2fr 0.9fr 1.4fr 96px; /* name | media | poster | actions */
   gap: 12px;
   align-items: center;
 }
@@ -2177,4 +2175,160 @@ button:hover,
 
 #vc-card .vc-ms .ms-btn {
   padding-left: var(--vc-ctl-pad);
+}
+
+/* Убрать стрелки у number input (Chrome, Edge, Safari) */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Убрать стрелки у number input (Firefox) */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+#preset-weights input[type="number"] {
+  text-align: center;
+}
+
+/* 2 колонки + зоны */
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+
+  grid-template-areas:
+    "presets catalog"
+    "presets spin"
+    "vc      vc";
+}
+
+/* назначаем зоны */
+#preset-card {
+  grid-area: presets;
+}
+#catalog-card {
+  grid-area: catalog;
+}
+#spin-card {
+  grid-area: spin;
+}
+#vc-card {
+  grid-area: vc;
+}
+
+/* перебиваем старое "span-2", чтобы не ломало grid */
+.settings-grid .settings-span-2 {
+  grid-column: auto !important;
+}
+
+/* чтобы внутренности не раздували колонки */
+#preset-card,
+#catalog-card,
+#spin-card,
+#vc-card {
+  min-width: 0;
+}
+
+#vc-card {
+  overflow-x: auto;
+}
+
+/* общая сетка для заголовка и строк */
+.vc-head,
+.vc-row {
+  display: grid;
+  grid-template-columns:
+    220px /* название */
+    140px /* тип медиа */
+    1fr /* постер */
+    140px /* источник (лейбл) */
+    1fr /* источник (url) */
+    96px; /* действия */
+  gap: 12px;
+  align-items: center;
+}
+
+/* чтобы 1fr не распирало grid */
+.vc-head > div,
+.vc-row > .vc-cell {
+  min-width: 0;
+}
+
+/* инпуты в VC */
+.vc-row input[type="text"],
+.vc-row .ms {
+  width: 100%;
+}
+
+/* если ссылка длинная — не ломаем строку */
+.vc-row input[type="text"] {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* и label внутри ms тоже обрезаем */
+.vc-row .ms-btn {
+  width: 100%;
+}
+
+.vc-row .ms-text {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.vc-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+/* VC table grid: 6 columns */
+#vc-card .vc-head,
+#vc-card .vc-row {
+  display: grid;
+  grid-template-columns:
+    220px /* name */
+    140px /* media */
+    1fr /* poster */
+    140px /* source label */
+    1fr /* source url */
+    96px; /* actions */
+  gap: 12px;
+  align-items: center;
+}
+
+/* важно: чтобы 1fr мог сжиматься и не выталкивал всё */
+#vc-card .vc-head > div,
+#vc-card .vc-row > .vc-cell {
+  min-width: 0;
+}
+
+/* элементы внутри ячеек занимают ширину колонки */
+#vc-card .vc-row input[type="text"],
+#vc-card .vc-row .ms,
+#vc-card .vc-row .ms-btn {
+  width: 100%;
+}
+
+/* длинные URL не должны ломать layout */
+#vc-card .vc-row input[type="text"],
+#vc-card .vc-row .ms-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* действия в одну линию */
+#vc-card .vc-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  white-space: nowrap;
 }
