@@ -1980,3 +1980,333 @@ button:hover,
   object-fit: unset !important;
   width: 100%;
 }
+
+.vc-table-wrap {
+  overflow-x: auto;
+}
+
+.vc-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.vc-table th,
+.vc-table td {
+  padding: 8px;
+  border-bottom: 1px solid rgb(255, 255, 255, 8%);
+  vertical-align: middle;
+}
+
+.vc-table input,
+.vc-table select {
+  width: 100%;
+}
+
+.vc-head {
+  display: grid;
+  grid-template-columns: 1.3fr 0.7fr 1fr 44px;
+  gap: 12px;
+  align-items: center;
+  margin-top: 10px;
+  padding: 10px 0 12px;
+  border-bottom: 1px solid rgb(255, 255, 255, 8%);
+  color: rgb(255, 255, 255, 75%);
+  font-weight: 700;
+}
+
+.vc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.vc-row {
+  display: grid;
+  grid-template-columns: 1.3fr 0.7fr 1fr 44px;
+  gap: 12px;
+  align-items: end;
+}
+
+/* важно: чтобы применились “пресетные” стили инпутов */
+.vc-row .form-row {
+  margin: 0; /* чтобы не было лишних отступов */
+}
+
+.vc-row input {
+  width: 100%;
+  min-width: 0;
+}
+
+.vc-del {
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+  text-align: center;
+}
+
+/* адаптив */
+@media (width <= 900px) {
+  .vc-head {
+    display: none;
+  }
+
+  .vc-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .vc-del {
+    justify-self: end;
+  }
+}
+
+/* чтобы заголовки красиво центрировались */
+.vc-head > div{
+  text-align: center;
+}
+
+/* делаем “удалить” как input */
+.vc-del{
+  height: 44px;                 /* подгони под твой input (обычно 44–46) */
+  border-radius: 12px;
+  border: 1px solid rgb(255,255,255,10%);
+  background: rgb(0,0,0,22%);
+  color: rgb(255,255,255,85%);
+  box-shadow: inset 0 1px 0 rgb(255,255,255,6%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.vc-del:hover{
+  border-color: rgb(255,255,255,16%);
+  background: rgb(0,0,0,28%);
+}
+
+.vc-del:active{
+  transform: translateY(1px);
+}
+
+.vc-head{
+  display: grid;
+  grid-template-columns: 1.3fr 0.7fr 1fr 44px; /* как у строк */
+  gap: 12px;
+  align-items: end;
+}
+
+.vc-head > div{
+  text-align: center;
+}
+
+/* одинаковая сетка у заголовка и строк */
+.vc-head,
+.vc-row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.7fr 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+/* сами ячейки заголовка */
+.vc-head {
+  margin: 10px 0 8px;
+  opacity: 0.75;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* чтобы form-row внутри grid не ломал ширину */
+.vc-row .form-row {
+  margin: 0;
+}
+
+/* кнопка удаления “как инпут” — ты уже используешь class="tab" */
+.vc-del.tab {
+  height: 38px;          /* подгони под высоту твоих инпутов/tab */
+  min-width: 38px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+/* ===== Virtual Collections: media select fixes ===== */
+
+#vc-card .ms-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  min-height: 34px;
+}
+
+/* убираем превью-квадраты */
+#vc-card .ms-option .thumb,
+#vc-card .ms-option img,
+#vc-card .ms-option .poster,
+#vc-card .ms-option .preview {
+  display: none !important;
+}
+
+/* текст как обычный пункт */
+#vc-card .ms-option .label,
+#vc-card .ms-option span {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+/* сам popup компактнее */
+#vc-card .ms-pop {
+  max-height: 220px;
+}
+
+/* ===== Virtual Collections layout ===== */
+
+#vc-card .vc-head,
+#vc-card .vc-row {
+  display: grid;
+  grid-template-columns: 1.3fr 0.9fr 1.4fr 40px;
+  gap: 12px;
+  align-items: center;
+}
+
+/* заголовки */
+#vc-card .vc-head {
+  margin: 10px 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+/* form-row НЕ должен влиять на grid */
+#vc-card .vc-row .form-row {
+  margin: 0;
+}
+
+/* инпуты и ms должны тянуться на всю колонку */
+#vc-card .vc-row input,
+#vc-card .vc-row .ms {
+  width: 100%;
+}
+
+/* delete button as input */
+#vc-card .vc-del.tab {
+  height: 38px;
+  width: 38px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+/* VC: single-select list should not look like multi-select */
+#vc-card .ms-list [type="checkbox"],
+#vc-card .ms-list .ms-check,
+#vc-card .ms-list .check,
+#vc-card .ms-list .thumb,
+#vc-card .ms-list .preview,
+#vc-card .ms-list img {
+  display: none !important;
+}
+
+/* compact rows */
+#vc-card .ms-list > * {
+  min-height: 34px;
+}
+
+#vc-card .ms-option,
+#vc-card .ms-item,
+#vc-card .ms-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+}
+
+/* VC single-select: hide any checkbox-ish visuals inside dropdown */
+#vc-card .vc-ms .ms-list input[type="checkbox"],
+#vc-card .vc-ms .ms-list .ms-check,
+#vc-card .vc-ms .ms-list .check,
+#vc-card .vc-ms .ms-list .thumb,
+#vc-card .vc-ms .ms-list img {
+  display: none !important;
+}
+
+/* Make option row look like plain list item */
+#vc-card .vc-ms .ms-list [role="option"],
+#vc-card .vc-ms .ms-list .ms-option,
+#vc-card .vc-ms .ms-list .ms-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  gap: 10px;
+}
+
+/* single-select: список в попапе скроллится */
+.ms-pop {
+  max-height: 320px;          /* можно 260–360 по вкусу */
+  overflow: hidden;           /* важно: скролл не у попапа, а у списка */
+}
+
+.ms-pop .ms-list {
+  max-height: 240px;          /* высота именно списка */
+  overflow-y: auto;
+}
+
+/* если есть длинные значения */
+.ms-item,
+.ms-option,
+.ms-row {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* VC: поповер не должен раздуваться */
+.vc-ms .ms-pop {
+  max-height: 260px;            /* подгони под дизайн */
+  overflow: hidden;              /* скролл будет у списка */
+  display: flex;
+  flex-direction: column;
+}
+
+/* поиск сверху, фиксированной высоты */
+.vc-ms .ms-search {
+  flex: 0 0 auto;
+}
+
+/* список занимает остаток и скроллится */
+.vc-ms .ms-list {
+  flex: 1 1 auto;
+  overflow: auto;
+  min-height: 0;                 /* важно для flex+overflow */
+}
+
+/* опционально: чтобы кликабельные строки не “липли” */
+.vc-ms .ms-opt-single {
+  width: 100%;
+  text-align: left;
+}
+
+/* контейнер со строками */
+#vc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;           /* было больше — 12–16 */
+}
+
+/* только внутри виртуальных коллекций */
+#vc-card .form-row {
+  margin-bottom: 0;
+}
+
+.vc-row {
+  display: grid;
+  grid-template-columns: 1.4fr 0.9fr 1.6fr auto;
+  align-items: center;
+  column-gap: 10px;   /* горизонталь */
+}
+
+.vc-row .vc-del {
+  padding: 4px 8px;
+  line-height: 1;
+}

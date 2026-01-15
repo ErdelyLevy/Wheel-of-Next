@@ -11,7 +11,7 @@ document.getElementById("preset-new-btn")?.addEventListener("click", () => {
   resetPresetEditorForm();
 });
 
-async function fetchMeta() {
+export async function fetchMeta() {
   const r = await fetch("/api/meta", { cache: "no-store" });
   if (!r.ok) throw new Error("meta fetch failed");
   return r.json();
@@ -48,12 +48,31 @@ function buildMultiSelect(msRoot, values, getSelected, setSelected, onChange) {
 
   if (!btn || !pop || !list) return;
 
-  const all = [...values];
+  const all = [...(values || [])];
+
+  // ✅ режим: по умолчанию multi, single только если явно выставлен
+  const isSingle = (msRoot?.dataset?.mode || "").toLowerCase() === "single";
 
   // не даём кликам внутри popover всплывать до document
-  pop.addEventListener("click", (e) => {
-    e.stopPropagation();
-  });
+  pop.addEventListener("click", (e) => e.stopPropagation());
+
+  function close() {
+    pop.classList.add("is-hidden");
+    btn.setAttribute("aria-expanded", "false");
+    document.removeEventListener("keydown", onKeyDown);
+  }
+
+  function open() {
+    pop.classList.remove("is-hidden");
+    btn.setAttribute("aria-expanded", "true");
+    renderList(search?.value || "");
+    search?.focus();
+    document.addEventListener("keydown", onKeyDown);
+  }
+
+  function onKeyDown(e) {
+    if (e.key === "Escape") close();
+  }
 
   // кнопка очистки
   clearBtn?.addEventListener("click", (e) => {
@@ -68,58 +87,70 @@ function buildMultiSelect(msRoot, values, getSelected, setSelected, onChange) {
 
   function renderList(filter = "") {
     list.innerHTML = "";
-    const f = filter.trim().toLowerCase();
-    const selected = getSelected();
+    const f = String(filter || "")
+      .trim()
+      .toLowerCase();
+    const selected = Array.isArray(getSelected?.()) ? getSelected() : [];
 
     for (const v of all) {
-      if (f && !String(v).toLowerCase().includes(f)) continue;
+      const vs = String(v);
+      if (f && !vs.toLowerCase().includes(f)) continue;
 
-      const row = document.createElement("label");
-      row.className = "ms-opt";
+      if (isSingle) {
+        // ✅ SINGLE: без чекбоксов, кликабельная строка
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "ms-opt ms-opt-single";
+        row.setAttribute("role", "option");
 
-      const cb = document.createElement("input");
-      cb.type = "checkbox";
-      cb.checked = selected.includes(v);
+        const isSel = selected.length && String(selected[0]) === vs;
+        row.setAttribute("aria-selected", isSel ? "true" : "false");
+        if (isSel) row.classList.add("is-selected");
 
-      cb.addEventListener("change", () => {
-        let next = getSelected();
-        if (cb.checked) {
-          if (!next.includes(v)) next = [...next, v];
-        } else {
-          next = next.filter((x) => x !== v);
-        }
-        setSelected(next);
-        renderMsLabel(msRoot, next);
-        if (typeof onChange === "function") onChange(next);
-        renderList(search?.value || "");
-      });
+        row.textContent = vs;
 
-      const txt = document.createElement("span");
-      txt.textContent = v;
+        row.addEventListener("click", () => {
+          const next = [v]; // строго одно значение
+          setSelected(next);
+          renderMsLabel(msRoot, next);
+          if (typeof onChange === "function") onChange(next);
 
-      row.appendChild(cb);
-      row.appendChild(txt);
-      list.appendChild(row);
-    }
-  }
+          // обновим список (подсветка)
+          renderList(search?.value || "");
+          // закрываем попап
+          close();
+        });
 
-  function open() {
-    pop.classList.remove("is-hidden");
-    btn.setAttribute("aria-expanded", "true");
-    renderList(search?.value || "");
-    search?.focus();
-    document.addEventListener("keydown", onKeyDown);
-  }
+        list.appendChild(row);
+      } else {
+        // ✅ MULTI: как было (чекбоксы)
+        const row = document.createElement("label");
+        row.className = "ms-opt";
 
-  function close() {
-    pop.classList.add("is-hidden");
-    btn.setAttribute("aria-expanded", "false");
-    document.removeEventListener("keydown", onKeyDown);
-  }
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = selected.includes(v);
 
-  function onKeyDown(e) {
-    if (e.key === "Escape") {
-      close();
+        cb.addEventListener("change", () => {
+          let next = Array.isArray(getSelected?.()) ? getSelected() : [];
+          if (cb.checked) {
+            if (!next.includes(v)) next = [...next, v];
+          } else {
+            next = next.filter((x) => x !== v);
+          }
+          setSelected(next);
+          renderMsLabel(msRoot, next);
+          if (typeof onChange === "function") onChange(next);
+          renderList(search?.value || "");
+        });
+
+        const txt = document.createElement("span");
+        txt.textContent = vs;
+
+        row.appendChild(cb);
+        row.appendChild(txt);
+        list.appendChild(row);
+      }
     }
   }
 
@@ -135,18 +166,8 @@ function buildMultiSelect(msRoot, values, getSelected, setSelected, onChange) {
 
   search?.addEventListener("input", () => renderList(search.value));
 
-  // clear
-  clearBtn?.addEventListener("click", () => {
-    setSelected([]);
-    renderMsLabel(msRoot, []);
-    if (typeof onChange === "function") onChange([]);
-
-    if (search) search.value = "";
-    renderList("");
-  });
-
   // initial label
-  renderMsLabel(msRoot, getSelected());
+  renderMsLabel(msRoot, Array.isArray(getSelected?.()) ? getSelected() : []);
   renderList("");
 }
 
@@ -299,6 +320,23 @@ export async function initPresetDropdowns() {
   syncHidden("preset-media", s.presetDraft.media || []);
   syncHidden("preset-category", s.presetDraft.categories || []);
   renderWeights(s.presetDraft.categories || []);
+}
+
+export function buildSingleSelect(msRoot, options, getValue, setValue) {
+  msRoot.dataset.mode = "single"; // 👈 флаг
+
+  return buildMultiSelect(
+    msRoot,
+    options,
+    () => {
+      const v = String(getValue?.() ?? "").trim();
+      return v ? [v] : [];
+    },
+    (arr) => {
+      const v = Array.isArray(arr) && arr.length ? String(arr[0] ?? "") : "";
+      setValue?.(v);
+    }
+  );
 }
 
 // ----- Editor sync API for catalog -----

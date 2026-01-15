@@ -16,6 +16,7 @@ import {
   ensureDingAudio,
 } from "./spinSound.js";
 import { bindLazyPoster } from "./lazyPoster.js"; // добавь импорт сверху
+import { initVirtualCollectionsUI } from "./virtualCollectionsUI.js";
 
 const LS_ACTIVE_PRESET = "won:activePresetId";
 
@@ -481,6 +482,8 @@ async function boot() {
 
   // каталог/редактор пресетов
   await initPresetCatalog();
+
+  initVirtualCollectionsUI();
 
   initRightListClicks();
   initRightListSearch();

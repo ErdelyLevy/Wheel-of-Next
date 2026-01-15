@@ -101,7 +101,6 @@
         <div class="settings-wrap">
           <div class="settings-grid">
             <!-- Блок 1: вращение -->
-            <!-- Блок 1: вращение -->
             <section class="settings-card">
               <h2>Вращение</h2>
 
@@ -140,6 +139,30 @@
                   Сохранить
                 </button>
                 <span class="toast is-hidden" id="spin-saved">Сохранено</span>
+              </div>
+            </section>
+            <section class="settings-card" id="vc-card">
+              <h2>Виртуальные коллекции</h2>
+
+              <div class="muted vc-hint">
+                Пользовательские сегменты для колеса (например: Marvel Comics,
+                DC Comics). Они не являются Items и участвуют в рандоме как
+                единое целое.
+              </div>
+
+              <div class="vc-head">
+                <div>Название</div>
+                <div>Тип медиа</div>
+                <div>Постер (опц.)</div>
+                <div></div>
+              </div>
+
+              <div id="vc-list" class="vc-list"></div>
+
+              <div class="settings-actions" style="justify-content: flex-end">
+                <button class="tab" type="button" id="vc-add">
+                  + Добавить коллекцию
+                </button>
               </div>
             </section>
 
@@ -248,30 +271,27 @@
                     <button class="tab" id="preset-delete">Удалить</button>
                   </div>
                 </div>
-
-                <!-- Окно 2: каталог -->
-                <div class="preset-pane" id="preset-catalog">
-                  <h3 class="subhead">Каталог пресетов</h3>
-
-                  <div class="search">
-                    <input
-                      id="preset-search"
-                      type="search"
-                      placeholder="Поиск пресета…"
-                      autocomplete="off" />
-                  </div>
-
-                  <ul class="list preset-list" id="preset-list">
-                    <li class="preset-item">
-                      <button
-                        class="preset-btn"
-                        data-preset-id=""
-                        type="button">
-                        Нет данных
-                      </button>
-                    </li>
-                  </ul>
+              </div>
+            </section>
+            <section class="settings-card settings-span-2">
+              <h2 class="subhead">Каталог пресетов</h2>
+              <!-- Окно 2: каталог -->
+              <div class="preset-pane" id="preset-catalog">
+                <div class="search">
+                  <input
+                    id="preset-search"
+                    type="search"
+                    placeholder="Поиск пресета…"
+                    autocomplete="off" />
                 </div>
+
+                <ul class="list preset-list" id="preset-list">
+                  <li class="preset-item">
+                    <button class="preset-btn" data-preset-id="" type="button">
+                      Нет данных
+                    </button>
+                  </li>
+                </ul>
               </div>
             </section>
           </div>
