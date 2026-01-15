@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    container_name: wheelofnext
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    networks:
+      - ryot_default
+
+networks:
+  ryot_default:
+    external: true

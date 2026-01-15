@@ -24,7 +24,6 @@ postcss.config.js
 .stylelintrc.json
 
 Wheel of Next.rar
-node_modules/.package-lock.json
 tools/
 knip.json
 eslint.config.mjs
