@@ -120,7 +120,6 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
       <div class="ms-pop is-hidden">
         <div class="ms-search">
           <input type="search" class="ms-search-input" placeholder="Поиск…" />
-          <button class="tab ms-clear" type="button" title="Очистить">×</button>
         </div>
         <div class="ms-list" role="listbox"></div>
       </div>

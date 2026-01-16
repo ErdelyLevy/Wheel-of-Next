@@ -1,57 +1,7 @@
-/* ---------- Base ---------- */
-
-body {
-  background: radial-gradient(
-      1200px 800px at 50% 40%,
-      rgb(255 60 172 / 10%),
-      transparent 60%
-    ),
-    radial-gradient(
-      900px 600px at 30% 70%,
-      rgb(0 180 255 / 6%),
-      transparent 60%
-    ),
-    linear-gradient(180deg, var(--bg2), var(--bg1));
-  color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell,
-    "Noto Sans", Helvetica, Arial, sans-serif;
-  margin: 0;
-  overflow: hidden;
-}
-
-/* =========================================================
-   Wheel of Next — style.css (clean + strict UI)
-   ========================================================= */
-
-/* ---------- Design tokens ---------- */
-
-:root {
-  --bg1: #0b0b12;
-  --bg2: #0f1020;
-  --panel: rgb(0 0 0 / 45%);
-  --stroke: rgb(255 255 255 / 10%);
-  --text: rgb(255 255 255 / 92%);
-  --muted: rgb(255 255 255 / 70%);
-  --accent: #ff3cac;
-  --r-ui: 10px;
-  --r-hard: 6px;
-  --r-soft: 14px;
-}
-
-/* =========================================================
-   Topbar
-   ========================================================= */
-
 .top-tabs {
   display: flex;
   gap: 8px;
 }
-
-/* =========================================================
-   Tabs & Buttons (STRICT)
-   ========================================================= */
-
-/* базовые кнопки — вертикальное центрирование */
 
 button,
 .tab {
@@ -70,10 +20,6 @@ button,
   text-decoration: none;
 }
 
-/* =========================================================
-   Layout
-   ========================================================= */
-
 .view {
   min-height: calc(100vh - 56px);
 }
@@ -84,36 +30,8 @@ button,
   height: 100%;
 }
 
-/* columns */
-
-.left,
-.right {
-  background: rgb(0 0 0 / 25%);
-  min-height: 0;
-  padding: 16px;
-}
-
 .left {
   border-right: 1px solid rgb(255 255 255 / 6%);
-}
-
-.right {
-  border-left: 1px solid rgb(255 255 255 / 6%);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-/* =========================================================
-   Center (presets + wheel)
-   ========================================================= */
-
-.center {
-  align-items: center;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 20px;
 }
 
 .controls {
@@ -128,40 +46,12 @@ button,
   justify-content: center;
 }
 
-/* =========================================================
-   Spin button (VISUAL ELEMENT — EXCEPTION)
-   ========================================================= */
-
-.spin-center {
-  background: var(--accent);
-  border: none;
-  border-radius: 50%;
-  box-shadow: 0 0 0 6px rgb(0 0 0 / 35%), 0 0 0 8px rgb(255 255 255 / 15%);
-  color: #000;
-  font-size: 14px;
-  font-weight: 900;
-  height: 78px;
-  letter-spacing: 0.6px;
-  line-height: 1.1;
-  position: absolute;
-  text-align: center;
-  width: 78px;
-}
-
-/* =========================================================
-   Result card (LEFT)
-   ========================================================= */
-
 .result-title {
   font-size: 26px;
   font-weight: 900;
   margin: 0 0 10px;
   text-transform: uppercase;
 }
-
-/* =========================================================
-   Right column (List / History)
-   ========================================================= */
 
 .right-head {
   margin-bottom: 8px;
@@ -182,15 +72,9 @@ button,
   padding: 0;
 }
 
-/* =========================================================
-   Helpers
-   ========================================================= */
-
 .is-hidden {
   display: none !important;
 }
-
-/* не ломает layout -> canvas сохраняет размеры */
 
 .is-hidden-visually {
   opacity: 0;
@@ -198,29 +82,10 @@ button,
   visibility: hidden;
 }
 
-/* =========================================================
-   Section headers
-   ========================================================= */
-
-.left > h2,
-.right-head > h2 {
-  border-bottom: 1px solid rgb(255 255 255 / 10%);
-  font-size: 14px;
-  font-weight: 900;
-  letter-spacing: 1.3px;
-  margin: 0 0 16px;
-  padding-bottom: 8px;
-  text-transform: uppercase;
-}
-
-/* навигационные табы — строже */
-
 .tabs .tab,
 .top-tabs .tab {
   border-radius: var(--r-hard);
 }
-
-/* hover / active */
 
 button:hover,
 .tab:hover {
@@ -238,27 +103,6 @@ button:hover,
 
 #view-wheel .app {
   height: calc(100vh - 56px);
-}
-
-/* =========================================================
-   Responsive
-   ========================================================= */
-
-@media (width <= 1040px) {
-  body {
-    overflow: auto;
-  }
-
-  .app {
-    grid-template-columns: 1fr;
-    height: auto;
-  }
-
-  .left,
-  .right {
-    border: none;
-    border-bottom: 1px solid rgb(255 255 255 / 6%);
-  }
 }
 
 .settings-wrap {
@@ -366,15 +210,9 @@ button:hover,
   box-shadow: 0 0 0 3px rgb(255 60 172 / 18%);
 }
 
-/* =========================================================
-   SETTINGS VIEW (matches current HTML)
-   ========================================================= */
-
 #view-settings {
   overflow: auto;
 }
-
-/* thumb */
 
 .range-wrap input[type="range"]::-webkit-slider-thumb {
   appearance: none;
@@ -395,12 +233,6 @@ button:hover,
   width: 16px;
 }
 
-/* =========================================================
-   Scrollbars (match dark neon UI)
-   ========================================================= */
-
-/* WebKit-based browsers */
-
 *::-webkit-scrollbar {
   width: 8px;
 }
@@ -419,8 +251,6 @@ button:hover,
   background: var(--accent);
   box-shadow: 0 0 10px rgb(255 60 172 / 90%);
 }
-
-/* ---------- Range inputs (settings) ---------- */
 
 .range-wrap {
   align-items: center;
@@ -459,20 +289,12 @@ button:hover,
   width: 100%;
 }
 
-/* =========================================================
-   Search inputs (global)
-   ========================================================= */
-
 .search {
   align-items: center;
   display: flex;
   gap: 8px;
   margin-bottom: 10px;
 }
-
-/* =========================================================
-   Multi-select dropdown (checkboxes)
-   ========================================================= */
 
 .ms {
   position: relative;
@@ -558,8 +380,6 @@ button:hover,
   padding: 8px;
 }
 
-/* Weights editor (inside preset editor) */
-
 .weights-form {
   display: flex;
   flex-direction: column;
@@ -611,10 +431,6 @@ button:hover,
   white-space: nowrap;
 }
 
-/* === Кнопки элементов списка и истории === */
-
-/* чтобы текст не центрировался внутри */
-
 .history-text {
   display: flex;
   flex-direction: column;
@@ -622,8 +438,6 @@ button:hover,
   min-width: 0;
   text-align: left;
 }
-
-/* постер фиксированного размера */
 
 .history-poster {
   background: rgb(255 255 255 / 6%);
@@ -641,8 +455,6 @@ button:hover,
   position: relative;
   z-index: 1;
 }
-
-/* кнопки в списках точно кликабельны */
 
 .history-btn {
   background: rgb(0 0 0 / 25%);
@@ -662,8 +474,6 @@ button:hover,
   pointer-events: auto;
 }
 
-/* вложенные элементы не перехватывают событие */
-
 * {
   scrollbar-color: var(--accent) transparent;
   scrollbar-width: thin;
@@ -673,8 +483,6 @@ button:hover,
 .history-btn * {
   pointer-events: none;
 }
-
-/* список справа — такой же вид как история */
 
 .list-item {
   list-style: none;
@@ -748,29 +556,6 @@ button:hover,
   gap: 18px;
 }
 
-/* Название сайта */
-
-.brand {
-  opacity: 0.9;
-  text-transform: uppercase;
-  color: var(--text);
-  font-size: 22px;
-  font-weight: 900;
-  letter-spacing: 0.6px;
-  text-shadow: 0 0 12px rgb(255 60 172 / 25%);
-  white-space: nowrap;
-}
-
-.wheel-area {
-  flex: 1 1 auto;
-  min-height: 0;
-  min-width: 0;
-  align-items: center;
-  display: flex;
-  justify-content: center;
-  position: relative;
-}
-
 .toast {
   background: rgb(20 20 30 / 92%);
   border-radius: 18px;
@@ -797,15 +582,11 @@ button:hover,
   position: relative;
 }
 
-/* Firefox */
-
 .right::before,
 .right::after,
 .search::before {
   pointer-events: none;
 }
-
-/* ===== Glow dot for section headers ===== */
 
 .settings-card h2 {
   line-height: 1.2;
@@ -865,8 +646,6 @@ button:hover,
   background: rgb(255 255 255 / 6%);
 }
 
-/* History item with winner poster */
-
 .list-btn:hover {
   background: rgb(0 0 0 / 35%);
 }
@@ -886,13 +665,9 @@ button:hover,
   transform: translate(-50%, -60%);
 }
 
-/* убираем "пунктир" от клика мышью */
-
 .preset-btn:focus {
   outline: none;
 }
-
-/* но оставляем красивый фокус для клавиатуры */
 
 .preset-btn:focus-visible {
   outline: 2px solid rgb(255 60 172 / 75%);
@@ -925,13 +700,9 @@ button:hover,
   box-shadow: 0 0 0 3px rgb(255 60 172 / 18%);
 }
 
-/* create НЕ активна -> текст акцентный (как ROLL) */
-
 .preset-btn.is-create:not(.is-active) {
   color: var(--accent);
 }
-
-/* create активна -> ведёт себя как обычная активная (текст можно оставить белым) */
 
 .preset-btn.is-create.is-active {
   background: rgb(255 60 172 / 18%);
@@ -939,37 +710,11 @@ button:hover,
   color: #fff;
 }
 
-#panel-list {
-  position: relative;
-}
-
-#full-list {
-  position: relative;
-  z-index: 1;
-  content-visibility: auto;
-  contain-intrinsic-size: 800px;
-}
-
 #panel-list,
 #panel-history,
 .list {
   position: relative;
   z-index: 2;
-}
-
-/* делаем панели списка/истории прокручиваемыми внутри правой колонки */
-
-#panel-list,
-#panel-history {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-#wheel {
-  display: block;
-  height: 100%;
-  width: 100%;
 }
 
 #views {
@@ -1010,8 +755,6 @@ button:hover,
   z-index: 10;
 }
 
-/* оба view занимают одно и то же место */
-
 #views > .view {
   inset: 0;
   position: absolute;
@@ -1045,20 +788,10 @@ button:hover,
   }
 }
 
-/* Убрать стрелки у number input (Chrome, Edge, Safari) */
-
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
   appearance: none;
   margin: 0;
-}
-
-html,
-body {
-  height: 100%;
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
 }
 
 img,
@@ -1068,21 +801,15 @@ video {
   height: auto;
 }
 
-/* контейнер описания */
-
 .desc-wrap {
   position: relative;
 }
-
-/* текст описания */
 
 .desc-text {
   padding-bottom: 2px;
   padding-right: 42px;
   position: relative;
 }
-
-/* сама кнопка "…" */
 
 .desc-more {
   margin-top: 8px;
@@ -1106,24 +833,12 @@ video {
   text-transform: uppercase;
 }
 
-/* карточка = колонка, контент может скроллиться */
-
-/* именно блок с инфой и описанием пусть скроллится */
-
-/* кнопки всегда снизу и не уплывают */
-
 .result-actions {
   border-top: 1px solid rgb(255 255 255 / 8%);
   flex: 0 0 auto;
   margin-top: 10px;
   padding-top: 10px;
 }
-
-/* контейнер постера должен быть позиционирован, чтобы бейдж сидел в углу */
-
-/* базовый бейдж */
-
-/* дефолт */
 
 .badge {
   text-align: center;
@@ -1158,8 +873,6 @@ video {
   position: absolute;
   top: 10px;
 }
-
-/* варианты по media_type */
 
 .badge-movie,
 [class~="badge--movie"] {
@@ -1229,8 +942,6 @@ video {
   margin: 6px 0;
 }
 
-/* "тег" слева */
-
 .info-k {
   white-space: nowrap;
   box-sizing: border-box;
@@ -1251,17 +962,11 @@ video {
   text-transform: uppercase;
 }
 
-/* значение справа */
-
 .info-v {
   font-size: 13px;
   color: rgb(255 255 255 / 86%);
   line-height: 1.35;
 }
-
-/* ---- RESULT POSTER: всегда на всю ширину, без обрезки ---- */
-
-/* 1) Разрешаем карточке результата скроллиться, вместо обрезки */
 
 .result-card {
   background: linear-gradient(180deg, rgb(255 255 255 / 6%), rgb(0 0 0 / 35%));
@@ -1276,8 +981,6 @@ video {
   overflow: auto;
 }
 
-/* 2) Постер НЕ должен сжиматься по высоте */
-
 .result-cover {
   margin-bottom: 10px;
   background: rgb(255 255 255 / 4%);
@@ -1290,8 +993,6 @@ video {
   flex: 0 0 auto;
 }
 
-/* если есть длинные значения */
-
 .ms-item,
 .ms-option,
 .ms-row {
@@ -1299,8 +1000,6 @@ video {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-/* 2 колонки + зоны */
 
 .settings-grid {
   margin: 0 auto;
@@ -1314,17 +1013,15 @@ video {
     "vc      vc";
 }
 
-/* общая сетка для заголовка и строк */
-
 .vc-head,
 .vc-row {
   display: grid;
   grid-template-columns:
-    220px /* название */
-    140px /* тип медиа */
-    1fr /* постер */
-    140px /* источник (лейбл) */
-    1fr /* источник (url) */
+    220px
+    140px
+    1fr
+    140px
+    1fr
     96px;
   gap: 12px;
   align-items: center;
@@ -1336,8 +1033,6 @@ video {
   gap: 10px;
   white-space: nowrap;
 }
-
-/* когда свернуто — небольшой fade снизу/справа */
 
 .desc-wrap::after {
   background: linear-gradient(90deg, rgb(0 0 0 / 0%), rgb(12 12 18 / 95%));
@@ -1351,10 +1046,6 @@ video {
   width: 72px;
 }
 
-/* контейнер постера */
-
-/* сам постер — ВСЕГДА ЦЕЛИКОМ */
-
 .result-cover img {
   background: rgb(0 0 0 / 18%);
   object-position: center;
@@ -1364,8 +1055,6 @@ video {
   width: 100%;
 }
 
-/* 3) Картинка: на всю ширину, высота по пропорциям */
-
 .result-cover > img {
   max-height: none !important;
   display: block;
@@ -1374,13 +1063,9 @@ video {
   width: 100%;
 }
 
-/* Убрать стрелки у number input (Firefox) */
-
 input[type="number"] {
   appearance: textfield;
 }
-
-/* Типы */
 
 .badge[data-type="game"],
 .badge[data-type="video_game"],
@@ -1388,16 +1073,6 @@ input[type="number"] {
   background: linear-gradient(135deg, #00ff9c, #1aff5c);
   box-shadow: 0 0 14px rgb(0 255 156 / 45%);
 }
-
-/* 🎬 MOVIE */
-
-/* 📺 SHOW / TV */
-
-/* 🎌 ANIME */
-
-/* 🎮 GAME */
-
-/* 📚 BOOK */
 
 .badge[data-type="movie"] {
   background: linear-gradient(135deg, #ff3fae, #a63cff);
@@ -1443,19 +1118,9 @@ input[type="number"] {
   animation: badge-glow 1.6s ease-out;
 }
 
-/* строка */
-
-/* тег (ключ) */
-
-/* значение */
-
 .info-row:has(.info-v) {
   align-items: start;
 }
-
-/* общий контейнер инфы */
-
-/* линия перед блоком действий */
 
 .info-row.is-desc {
   grid-template-columns: auto 1fr;
@@ -1465,10 +1130,6 @@ input[type="number"] {
 .desc-text.is-clamped {
   position: relative;
 }
-
-/* общий ряд */
-
-/* описание: value идёт со 2-й строки и на всю ширину */
 
 .desc-more:active {
   transform: translateY(1px);
@@ -1484,33 +1145,23 @@ input[type="number"] {
   display: none;
 }
 
-/* для длинных значений (описание и т.п.) */
-
 .info-row.is-long {
   grid-template-columns: 92px 1fr;
 }
-
-/* инпуты и ms должны тянуться на всю колонку */
 
 .ms-pop .ms-list {
   max-height: 240px;
   overflow-y: auto;
 }
 
-/* перебиваем старое "span-2", чтобы не ломало grid */
-
 .settings-grid .settings-span-2 {
   grid-column: auto !important;
 }
-
-/* чтобы 1fr не распирало grid */
 
 .vc-head > div,
 .vc-row > .vc-cell {
   min-width: 0;
 }
-
-/* и label внутри ms тоже обрезаем */
 
 .vc-row .ms-btn {
   width: 100%;
@@ -1527,14 +1178,10 @@ input[type="number"] {
   opacity: 0;
 }
 
-/* инпуты в VC */
-
 .vc-row input[type="text"],
 .vc-row .ms {
   width: 100%;
 }
-
-/* если ссылка длинная — не ломаем строку */
 
 .vc-row input[type="text"] {
   white-space: nowrap;
@@ -1547,14 +1194,10 @@ input[type="number"] {
   grid-row: 1;
 }
 
-/* когда open — fade не нужен */
-
 .desc-text.is-open + .desc-more {
   margin-top: 8px;
   position: static;
 }
-
-/* Больше воздуха между бейджем "ОПИСАНИЕ" и самим текстом */
 
 .info-row.is-desc .info-v {
   grid-column: 1 / -1;
@@ -1562,13 +1205,9 @@ input[type="number"] {
   margin-top: 10px;
 }
 
-/* если надо ещё сильнее — это внутренний отступ у текста */
-
 .info-row.is-desc .desc-text {
   padding-top: 2px;
 }
-
-/* небольшой fade вниз, чтобы было понятно что там ещё */
 
 .desc-text.is-clamped:not(.is-open)::after {
   background: linear-gradient(to bottom, rgb(0 0 0 / 0%), rgb(10 10 14 / 85%));
@@ -1580,8 +1219,6 @@ input[type="number"] {
   position: absolute;
   right: 0;
 }
-
-/* назначаем зоны */
 
 #preset-card {
   grid-area: presets;
@@ -1595,8 +1232,6 @@ input[type="number"] {
   grid-area: spin;
 }
 
-/* чтобы внутренности не раздували колонки */
-
 #preset-card,
 #catalog-card,
 #spin-card,
@@ -1608,24 +1243,13 @@ input[type="number"] {
   --vc-ctl-pad: 14px;
 
   grid-area: vc;
-  overflow-x: auto;
 }
-
-/* ===== Virtual Collections table ===== */
 
 #vc-card .vc-list {
   display: grid;
   gap: 10px;
   margin-top: 8px;
 }
-
-/* чтобы текст в селекте был как в инпуте */
-
-/* колонка действий фиксированная и кнопки по правому краю */
-
-/* VC table layout: head + rows share same columns */
-
-/* head style (как ты просила) */
 
 #vc-card .vc-head {
   padding: 12px 12px 8px;
@@ -1638,43 +1262,33 @@ input[type="number"] {
   user-select: none;
 }
 
-/* rows */
-
 #vc-card .vc-row {
   padding: 10px 12px;
   border-top: 1px solid rgb(255 255 255 / 6%);
 }
 
-/* cells: no surprises */
-
 #vc-card .vc-cell {
   min-width: 0;
 }
-
-/* 4) чтобы сами контролы совпали с этим паддингом (инпуты + ms кнопка) */
 
 #vc-card .vc-name,
 #vc-card .vc-poster {
   padding-left: var(--vc-ctl-pad);
 }
 
-/* VC table grid: 6 columns */
-
 #vc-card .vc-head,
 #vc-card .vc-row {
   display: grid;
   grid-template-columns:
-    220px /* name */
-    140px /* media */
-    1fr /* poster */
-    140px /* source label */
-    1fr /* source url */
+    220px
+    140px
+    1fr
+    140px
+    1fr
     96px;
   gap: 12px;
   align-items: center;
 }
-
-/* действия в одну линию */
 
 #vc-card .vc-actions {
   display: flex;
@@ -1682,14 +1296,6 @@ input[type="number"] {
   gap: 10px;
   white-space: nowrap;
 }
-
-/* actions fixed and aligned */
-
-/* 1) общий "левый отступ" как у контролов */
-
-/* подгони 12-16px если нужно */
-
-/* 2) заголовки колонок визуально над полями */
 
 #vc-card .vc-head > div {
   padding-left: var(--vc-ctl-pad);
@@ -1700,14 +1306,10 @@ input[type="number"] {
   text-align: center;
 }
 
-/* media select should fit column */
-
 #vc-card .vc-ms,
 #vc-card .vc-ms .ms-btn {
   width: 100%;
 }
-
-/* actions: two buttons in one cell */
 
 #vc-card .vc-actions .tab {
   width: 40px;
@@ -1718,14 +1320,10 @@ input[type="number"] {
   justify-content: center;
 }
 
-/* optional: dirty state */
-
 #vc-card .vc-row.is-dirty {
   background: rgb(255 64 170 / 6%);
   border-radius: 12px;
 }
-
-/* controls fill their column */
 
 #vc-card .vc-name,
 #vc-card .vc-poster,
@@ -1741,16 +1339,10 @@ input[type="number"] {
   padding-left: var(--vc-ctl-pad);
 }
 
-/* важно: чтобы 1fr мог сжиматься и не выталкивал всё */
-
 #vc-card .vc-head > div,
 #vc-card .vc-row > .vc-cell {
   min-width: 0;
 }
-
-/* cells */
-
-/* inputs: вернуть красивый стиль как в остальных формах */
 
 #vc-card .vc-cell input[type="text"] {
   width: 100%;
@@ -1763,15 +1355,11 @@ input[type="number"] {
   outline: none;
 }
 
-/* одинаковая ширина контролов в ячейках */
-
 #vc-card .vc-cell input[type="text"],
 #vc-card .vc-ms,
 #vc-card .vc-ms .ms-btn {
   width: 100%;
 }
-
-/* 3) последняя колонка (действия) — без паддинга, вправо */
 
 #vc-card .vc-head > div:last-child {
   padding-left: 0;
@@ -1779,15 +1367,11 @@ input[type="number"] {
   padding-right: 6px;
 }
 
-/* элементы внутри ячеек занимают ширину колонки */
-
 #vc-card .vc-row input[type="text"],
 #vc-card .vc-row .ms,
 #vc-card .vc-row .ms-btn {
   width: 100%;
 }
-
-/* длинные URL не должны ломать layout */
 
 #vc-card .vc-row input[type="text"],
 #vc-card .vc-row .ms-text {
@@ -1805,210 +1389,16 @@ input[type="number"] {
   box-shadow: 0 0 0 2px rgb(255 64 170 / 18%);
 }
 
-@media (width <= 520px) {
-  /* любая карточка/панель не должна быть шире экрана */
-
-  .card,
-  .panel,
-  .section,
-  .block,
-  .result,
-  .history,
-  .list,
-  .tabs,
-  .tabbar {
-    max-width: 100% !important;
-    min-width: 0 !important;
-  }
-
-  /* если у тебя есть общий контейнер */
-
-  #app,
-  .app,
-  .page,
-  .container,
-  main {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-  }
-
-  /* колесо + его обёртка: убрать фикс ширину/высоту */
-
-  .wheel,
-  .wheel-wrap,
-  .wheel-container,
-  [id="wheelWrap"],
-  [id="wheelContainer"] {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-  }
-
-  canvas,
-  #wheel {
-    width: 100% !important;
-    height: auto !important;
-    display: block;
-  }
-}
-
-/* =========================================================
-   Mobile layout fix (<= 520px)
-   - нормальный скролл
-   - компактный topbar
-   - колесо/карточки без "распирания"
-   ========================================================= */
-
-@media (width <= 520px) {
-  /* 1) на мобилке нельзя держать страницу в absolute-видах */
-  body {
-    overflow: auto; /* перебиваем overflow:hidden из base */
-  }
-
-  #views {
-    min-height: auto;
-  }
-
-  #views > .view {
-    inset: auto;
-    min-height: auto;
-  }
-
-  /* 2) topbar: в 2 строки, если не влазит */
-  .topbar-inner {
-    height: auto;
-    padding: 10px 12px;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  .brand {
-    font-size: 18px;
-    letter-spacing: 0.4px;
-  }
-
-  .top-tabs {
-    width: 100%;
-    justify-content: flex-start;
-  }
-
-  .top-tabs .tab {
-    font-size: 13px;
-    padding: 8px 12px;
-  }
-
-  /* 3) общие паддинги/колонки */
-  .left,
-  .right {
-    padding: 12px;
-  }
-
-  .center {
-    padding: 12px;
-    gap: 10px;
-  }
-
-  /* 4) результат: не фиксируем высоту карточки на мобилке */
-  .result-title {
-    font-size: 20px;
-  }
-
-  .result-card {
-    max-height: none; /* было calc(100vh - 140px) */
-    overflow: visible; /* пусть растёт, скроллит страница */
-  }
-
-  /* 5) колесо: крупнее и стабильнее */
-  .wheel-wrap {
-    width: min(92vmin, 520px);
-  }
-
-  .wheel-wrap #spin-btn {
-    width: 70px;
-    height: 70px;
-    font-size: 13px;
-  }
-
-  /* 6) правые списки: пусть тоже растут, не конфликтуют со скроллом */
-  #panel-list,
-  #panel-history {
-    overflow: visible;
-  }
-
-  /* 7) мелкие сетки в настройках */
-  .form-row {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-
-  .settings-actions {
-    justify-content: flex-start;
-    flex-wrap: wrap;
-  }
-}
-
-@media (width <= 520px) {
-  /* 1 колонка вместо 3 */
-  .app {
-    grid-template-columns: 1fr !important;
-  }
-
-  /* порядок блоков (если нужно) */
-  .left {
-    order: 1;
-  }
-
-  .center {
-    order: 2;
-  }
-
-  .right {
-    order: 3;
-  }
-
-  /* колесо — главный элемент, пусть будет крупнее */
-  .wheel-wrap {
-    width: min(92vmin, 520px) !important;
-    margin-inline: auto;
-  }
-}
-
-@media (width <= 520px) {
-  .left {
-    min-height: auto;
-    height: auto;
-  }
-
-  .left .result-card {
-    max-height: none;
-    overflow: visible;
-  }
-}
-
-/* колсо под мобилки */
-
-.wheel-area {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-}
-
-.wheel-wrap {
-  position: relative;
-  width: min(92vw, 420px); /* мобилка / десктоп */
-  aspect-ratio: 1 / 1; /* ВСЕГДА круг */
-}
-
-#wheel {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
 .spin-center {
+  background: var(--accent);
+  border: none;
+  box-shadow: 0 0 0 6px rgb(0 0 0 / 35%), 0 0 0 8px rgb(255 255 255 / 15%);
+  color: #000;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  line-height: 1.1;
+  text-align: center;
   position: absolute;
   left: 50%;
   top: 50%;
@@ -2019,120 +1409,33 @@ input[type="number"] {
   border-radius: 50%;
 }
 
-.wheel-wrap {
-  position: relative;
-  width: min(92vw, 520px);
-  aspect-ratio: 1 / 1;
-  margin: 0 auto;
-}
-
-#wheel {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
 #spin-btn {
   position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
   z-index: 5;
-}
-
-.wheel-wrap {
-  position: relative;
-  width: min(92vw, 520px);
-  aspect-ratio: 1 / 1;
-  margin: 0 auto;
-}
-
-#wheel {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-#spin-btn {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 5;
-}
-
-.wheel-wrap {
-  position: relative;
-  width: min(92vw, 520px);
-  aspect-ratio: 1 / 1;
-}
-
-#wheel {
-  width: 100%;
-  height: 100%;
-  display: block;
 }
 
 .wheel-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  width: 100%;
   align-items: center;
   justify-content: center;
 }
 
-.wheel-wrap {
-  position: relative;
-  width: min(92vmin, 520px) !important;
-  aspect-ratio: 1 / 1 !important;
-  flex: none !important; /* ✅ убираем 0 0 auto */
-  height: auto !important;
-  margin-inline: auto;
-}
-
 #wheel {
+  position: absolute;
+  inset: 0;
   width: 100% !important;
   height: 100% !important;
   display: block;
 }
 
-/* === no horizontal scroll, but allow vertical === */
-html,
-body {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden; /* ✅ запрет X */
-}
-
-body {
-  overflow-y: auto; /* ✅ разрешаем Y */
-}
-
-/* чтобы дети в grid/flex не распирали ширину */
-.app,
-.left,
-.center,
-.right {
-  min-width: 0;
-}
-
-/* правая колонка должна скроллиться по Y, а не резать контент */
-.right {
-  overflow: hidden auto; /* ✅ запрет X */ /* ✅ скролл Y */
-  min-height: 0;
-}
-
-/* === FORCE: no horizontal scroll, but allow vertical === */
-html,
-body {
-  width: 100%;
-  max-width: 100%;
-  overflow: hidden auto !important; /* <-- важно */
-  height: auto !important;
-}
-
-/* если #views / .view фиксируют экран, разрешаем им расти */
 #views,
 .view {
   height: auto !important;
@@ -2140,25 +1443,6 @@ body {
   overflow: visible !important;
 }
 
-/* правая колонка: только вертикальный скролл, горизонтальный запрещён */
-.right {
-  overflow: hidden auto !important;
-  min-height: 0;
-}
-
-/* 1) Скролл — у страницы */
-html,
-body {
-  overflow: hidden auto !important;
-  height: auto !important;
-}
-
-/* 2) Никакого внутреннего скролла у right */
-.right {
-  overflow: visible !important; /* было auto */
-}
-
-/* 3) Главное: контейнеры не должны быть "экранной высоты" */
 #views,
 .view,
 .app {
@@ -2166,117 +1450,11 @@ body {
   overflow: visible !important;
 }
 
-/* 4) Чтобы колонки не распирали ширину */
 .app,
 .left,
 .center,
 .right {
   min-width: 0;
-}
-
-@media (width <= 520px) {
-  /* страница должна скроллиться */
-  body {
-    overflow: hidden auto !important;
-  }
-
-  /* ВАЖНО: вернуть views в поток */
-  #views {
-    position: static !important;
-  }
-
-  #views > .view {
-    position: static !important;
-    inset: auto !important;
-  }
-
-  /* скрытый таб должен реально исчезать, иначе будет давать лишнюю высоту */
-  .is-hidden-visually {
-    display: none !important;
-  }
-}
-
-@media (width <= 520px) {
-  #panel-list,
-  #panel-history {
-    overflow: visible !important;
-  }
-}
-
-@media (width <= 520px) {
-  .left .left-head h2,
-  .right .right-head h2 {
-    cursor: pointer;
-    user-select: none;
-  }
-
-  /* свернуто */
-  .left.is-collapsed .left-body {
-    display: none !important;
-  }
-
-  /* right: скрываем всё, кроме right-head */
-  .right.is-collapsed > :not(.right-head) {
-    display: none !important;
-  }
-
-  /* индикатор */
-  .left .left-head h2::after,
-  .right .right-head h2::after {
-    content: "▾";
-    float: right;
-    opacity: 0.7;
-  }
-
-  .left.is-collapsed .left-head h2::after,
-  .right.is-collapsed .right-head h2::after {
-    content: "▸";
-  }
-}
-
-/* унифицируем шапки left/right */
-.left-head,
-.right-head {
-  position: relative;
-  z-index: 1;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-/* чтобы h2 в обеих колонках выглядел одинаково */
-.left-head h2,
-.right-head h2 {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text);
-}
-
-/* такая же "точка" как у тебя в заголовках */
-.left-head h2::before,
-.right-head h2::before {
-  content: "";
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--accent);
-  box-shadow: 0 0 10px rgb(255 60 172 / 60%);
-  flex: 0 0 auto;
-}
-
-/* чтобы стрелка (collapse) не ломала layout */
-@media (width <= 520px) {
-  .left .left-head h2::after,
-  .right .right-head h2::after {
-    margin-left: auto;
-  }
 }
 
 .left,
@@ -2301,23 +1479,23 @@ body {
 }
 
 @media (width <= 1040px) {
+  body {
+    overflow: auto;
+  }
+
+  .app {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
   .left,
   .right {
     border: none;
     border-bottom: 1px solid rgb(255 255 255 / 6%);
-    overflow: visible; /* ⬅️ КЛЮЧЕВО */
+    overflow: visible;
   }
 }
 
-.left-head h2,
-.right-head h2 {
-  line-height: 1.2;
-  position: relative;
-
-  /* padding-left: 22px;  <-- НЕ нужно, если используешь flex+::before точку */
-}
-
-/* точка — только через .left-head/.right-head */
 .left-head h2::before,
 .right-head h2::before {
   content: "";
@@ -2329,80 +1507,48 @@ body {
   flex: 0 0 auto;
 }
 
-@media (width <= 520px) {
-  .right::before,
-  .right::after {
-    content: none !important;
-    display: none !important;
-  }
-}
-
-.left-head,
-.right-head {
-  margin: -16px -16px 8px; /* компенсируем padding aside */
-  padding: 12px 16px;
-  background: rgb(0 0 0 / 18%);
-  border-bottom: 1px solid rgb(255 255 255 / 6%);
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
-}
-
-@media (width <= 520px) {
-  .left-head,
-  .right-head {
-    margin: -12px -12px 8px;
-    padding: 12px;
-  }
-}
-
-@media (width <= 520px) {
-  .right {
-    overflow: visible !important;
-  }
-}
-
-/* === FIX: одинаковые шапки left/right (и убрать подчёркивание у right h2) === */
-
-/* 1) отключаем старый "underline" на h2 (он бил только по right) */
 .left > h2,
 .right-head > h2 {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 1.3px;
+  margin: 0 0 16px;
+  text-transform: uppercase;
   border-bottom: 0 !important;
   padding-bottom: 0 !important;
   margin-bottom: 0 !important;
 }
 
-/* 2) если хочешь шапку-полоску — делаем её ТОЛЬКО на контейнере,
-      но без второго "фона-слоя" */
 .left-head,
 .right-head {
-  margin: 0 0 8px !important; /* убираем отрицательные margin */
+  position: relative;
+  z-index: 1;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  margin: 0 0 8px !important;
   padding: 12px !important;
   background: transparent !important;
   border-bottom: 1px solid rgb(255 255 255 / 6%);
   border-radius: 0 !important;
 }
 
-/* 3) визуально одинаковый h2 */
 .left-head h2,
 .right-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text);
+  line-height: 1.2;
+  position: relative;
   margin: 0 !important;
-}
-
-/* 4) на мобилке оставляем кликабельность и стрелку как было */
-@media (width <= 520px) {
-  .left-head,
-  .right-head {
-    padding: 12px 0 !important;
-  }
-}
-
-@media (width <= 520px) {
-  .right::before,
-  .right::after,
-  .search::before {
-    content: none !important;
-    display: none !important;
-  }
 }
 
 .center {
@@ -2411,348 +1557,296 @@ body {
   flex-direction: column;
   gap: 12px;
   padding: 20px;
-  max-height: 100vh; /* но не выше экрана */
-}
-
-.wheel-wrap {
-  width: 100% !important;
-  max-width: 100% !important;
-  aspect-ratio: 1 / 1 !important; /* оставляем квадрат */
-  margin: 0 !important; /* иначе auto может мешать */
-}
-
-@media (width <= 520px) {
-  .app {
-    min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
-  }
-}
-
-@media (width <= 520px) {
-  .center {
-    margin-block: auto;
-  }
+  max-height: 100vh;
 }
 
 :root {
+  --bg1: #0b0b12;
+  --bg2: #0f1020;
+  --panel: rgb(0 0 0 / 45%);
+  --stroke: rgb(255 255 255 / 10%);
+  --text: rgb(255 255 255 / 92%);
+  --muted: rgb(255 255 255 / 70%);
+  --accent: #ff3cac;
+  --r-ui: 10px;
+  --r-hard: 6px;
+  --r-soft: 14px;
   --header-h: 56px;
 }
 
-@media (width <= 520px) {
-  /* контейнер под обе view: ровно оставшаяся высота экрана */
-  #views {
-    position: relative !important;
-    height: calc(100dvh - var(--header-h)) !important;
-    min-height: 0 !important;
-    overflow: hidden !important; /* чтобы скрытая view не влияла и не торчала */
-  }
-
-  /* обе view лежат друг на друге, размер = #views */
-  .view {
-    position: absolute !important;
-    inset: 0 !important; /* top/right/bottom/left = 0 */
-    height: 100% !important;
-    min-height: 0 !important;
-  }
-
-  /* app внутри активной view занимает всю высоту */
-  .view .app {
-    height: 100% !important;
-    min-height: 0 !important;
-  }
-}
-
-@media (width <= 520px) {
-  /* не даём странице прокручиваться даже на 1px */
-  html,
-  body {
-    height: 100%;
-    overflow: hidden;
-  }
-
-  /* гарантируем, что #views не может стать выше экрана */
-  #views {
-    min-height: 0 !important; /* важно: перебить старое min-height: 100vh */
-    height: calc(100dvh - var(--header-h)) !important;
-    overflow: hidden !important;
-  }
-
-  /* и внутри тоже не даём вылезать */
-  .view,
-  .view .app {
-    overflow: hidden !important;
-    min-height: 0 !important;
-  }
-}
-
-@media (width <= 520px) {
-  #views {
-    height: calc(100dvh - var(--header-h)) !important;
-    min-height: 0 !important; /* перебить min-height: 100vh */
-    overflow: hidden !important;
-
-    /* убирает margin-collapsing, часто даёт +N пикселей scrollHeight */
-    display: flow-root !important;
-  }
-
-  .view {
-    min-height: 0 !important;
-    height: 100% !important;
-    overflow: hidden !important;
-  }
-
-  .view .app {
-    min-height: 0 !important;
-    height: 100% !important;
-    overflow: hidden !important;
-  }
-}
-
-/* правая колонка: без скролла, раскладка сверху вниз */
 .right {
+  border-left: 1px solid rgb(255 255 255 / 6%);
   display: flex;
   flex-direction: column;
   overflow: hidden !important;
   min-height: 0;
 }
 
-/* панели справа должны уметь сжиматься */
 #panel-list,
 #panel-history {
+  flex: 1 1 auto;
+  overflow-y: auto;
   min-height: 0;
 }
 
-/* если panel-list активен — он заполняет доступную высоту */
 #panel-list {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-}
-
-/* сам список — единственный скроллящийся элемент */
-#full-list {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto; /* или overflow-y:auto; overflow-x:hidden; */
 }
 
 .panel.is-hidden {
   display: none !important;
 }
 
-/* ПК: приложение без скролла страницы */
-html,
-body {
-  height: 100%;
-  overflow: hidden !important;
-}
-
-/* Мобилка: разрешаем скролл страницы */
-@media (width <= 520px) {
-  html,
-  body {
-    overflow: auto !important;
-  }
-}
-
-@media (width <= 520px) {
-  #full-list {
-    overflow: visible !important;
-  }
-}
-
 #full-list {
+  position: relative;
+  z-index: 1;
+  content-visibility: auto;
+  contain-intrinsic-size: 800px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
   overflow-y: auto;
 }
 
-@media (width > 520px) {
-  /* страница не скроллится */
-  html,
-  body {
-    height: 100%;
-    overflow: hidden !important;
-  }
-
-  /* рабочая область под хедером */
-  #views {
-    height: calc(100vh - 56px) !important;
-    overflow: hidden !important;
-  }
-
-  .view,
-  .app {
-    height: 100% !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-  }
-
-  /* правая колонка -> flex-колонка */
-  .right {
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-    min-height: 0 !important;
-  }
-
-  /* панель списка заполняет остаток */
-  #panel-list {
-    display: flex !important;
-    flex-direction: column !important;
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-  }
-
-  /* и только список скроллится */
-  #full-list {
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    overflow: hidden auto !important;
-  }
+.wheel-wrap {
+  position: relative;
+  flex: none !important;
+  height: auto !important;
+  margin-inline: auto;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  aspect-ratio: 1 / 1;
 }
 
-@media (width > 520px) {
-  /* правая колонка уже нормальной высоты */
-  .right {
-    display: flex !important;
-    flex-direction: column !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-  }
-
-  /* ВОТ ЗДЕСЬ ПРОБЛЕМА: right-body должен уметь сжиматься */
-  .right-body {
-    flex: 1 1 auto !important;
-    min-height: 0 !important; /* критично */
-    overflow: hidden !important; /* чтобы скролл был не тут */
-  }
-
-  /* панель со списком заполняет right-body */
-  #panel-list {
-    display: flex !important;
-    flex-direction: column !important;
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-  }
-
-  /* скролл только у списка */
-  #full-list {
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    overflow: hidden auto !important;
-  }
+.brand {
+  opacity: 0.9;
+  text-transform: uppercase;
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  text-shadow: 0 0 12px rgb(255 60 172 / 25%);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-@media (width > 520px) {
-  .right {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  /* КЛЮЧ: right-body должен распределять высоту */
-  .right-body {
-    display: flex; /* <-- добавили */
-    flex-direction: column; /* <-- добавили */
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: hidden; /* right-body не скроллится */
-  }
-
-  /* панель (list/history) занимает всё место right-body */
-  #panel-list,
-  #panel-history {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: hidden auto;
-  }
-
-  /* и ТОЛЬКО список скроллится */
-  #full-list {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: hidden auto;
-  }
+#top-tabs {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 @media (width <= 520px) {
-  /* На мобилке страница обычная: views не фиксируем по высоте */
-  #views {
-    height: auto !important;
-    min-height: calc(100dvh - var(--header-h, 56px));
-    overflow: visible !important;
-    position: static !important;
+  .card,
+  .panel,
+  .section,
+  .block,
+  .result,
+  .history,
+  .list,
+  .tabs,
+  .tabbar {
+    max-width: 100% !important;
+    min-width: 0 !important;
   }
 
-  /* view не слоем, а обычным блоком */
-  #views > .view {
-    position: static !important;
-    inset: auto !important;
+  #app,
+  .app,
+  .page,
+  .container,
+  main {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .wheel,
+  .wheel-wrap,
+  .wheel-container,
+  [id="wheelWrap"],
+  [id="wheelContainer"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  canvas,
+  #wheel {
+    width: 100% !important;
     height: auto !important;
+    display: block;
+  }
+
+  .top-tabs {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .top-tabs .tab {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+  .left,
+  .right {
+    padding: 12px;
+  }
+
+  .result-title {
+    font-size: 20px;
+  }
+
+  .result-card {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .wheel-wrap #spin-btn {
+    width: 70px;
+    height: 70px;
+    font-size: 13px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .settings-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .wheel-wrap {
+    width: min(92vmin, 520px) !important;
+    margin-inline: auto;
+  }
+
+  .left .result-card {
+    max-height: none;
+    overflow: visible;
+  }
+
+  body {
+    overflow: hidden auto !important;
+  }
+
+  .is-hidden-visually {
+    display: none !important;
+  }
+
+  #panel-list,
+  #panel-history {
     overflow: visible !important;
   }
 
-  /* app внутри тоже по контенту */
-  #views > .view > .app {
-    height: auto !important;
+  .left .left-head h2,
+  .right .right-head h2 {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .left.is-collapsed .left-body {
+    display: none !important;
+  }
+
+  .right.is-collapsed > :not(.right-head) {
+    display: none !important;
+  }
+
+  .left.is-collapsed .left-head h2::after,
+  .right.is-collapsed .right-head h2::after {
+    content: "▸";
+  }
+
+  .left .left-head h2::after,
+  .right .right-head h2::after {
+    content: "▾";
+    float: right;
+    opacity: 0.7;
+    margin-left: auto;
+  }
+
+  .right::before,
+  .right::after {
+    content: none !important;
+    display: none !important;
+  }
+
+  .left-head,
+  .right-head {
+    margin: -12px -12px 8px;
+    padding: 12px 0 !important;
+  }
+
+  .right::before,
+  .right::after,
+  .search::before {
+    content: none !important;
+    display: none !important;
+  }
+
+  .app {
+    grid-template-columns: 1fr !important;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .center {
+    padding: 12px;
+    gap: 10px;
+    order: 2;
+    margin-block: auto;
+  }
+
+  .view,
+  .view .app {
+    overflow: hidden !important;
     min-height: 0 !important;
+  }
+
+  .view {
+    position: absolute !important;
+    inset: 0 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .view .app {
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  #full-list {
     overflow: visible !important;
   }
 
-  /* скрытая view не должна занимать место */
   #view-settings.is-hidden-visually,
   .view.is-hidden-visually {
     display: none !important;
   }
-}
 
-@media (width <= 520px) {
-  /* Обычное состояние — right в потоке, страница скроллится */
-  .right {
-    position: static;
-    width: 100%;
-  }
-
-  /* Свернутое состояние — right приклеен к низу */
-  .right.is-collapsed {
-    position: fixed;
-    left: 0;
-    bottom: 0;
-    width: 100%;
-    z-index: 1000;
-
-    /* чтобы не было "хвоста" под ним */
-    margin: 0;
-  }
-}
-
-@media (width <= 520px) {
   main.center {
     padding-bottom: calc(12px + var(--right-collapsed-h, 83px));
   }
-}
 
-@media (width <= 520px) {
   .app.is-left-open .right.is-collapsed {
     position: static;
   }
 
   .app.is-left-open main.center {
-    padding-bottom: 12px; /* обычное */
-  }
-}
-
-@media (width <= 520px) {
-  /* базово: всё в потоке (скролл страницы возможен) */
-  .right {
-    position: static;
+    padding-bottom: 12px;
   }
 
-  /* оба collapsed -> right фиксируем снизу */
   .app.m-both-collapsed .right {
     position: fixed;
     left: 0;
@@ -2761,89 +1855,15 @@ body {
     z-index: 1000;
   }
 
-  /* если left открыт -> right НЕ должен быть fixed (даже если collapsed) */
   .app.m-left-open .right {
     position: static;
     z-index: auto;
   }
 
-  /* чтобы контент не прятался под фиксированным right */
   .app.m-both-collapsed main.center {
     padding-bottom: calc(12px + var(--right-collapsed-h, 83px));
   }
-}
 
-@media (width > 520px) {
-  .center {
-    margin-inline: auto;
-  }
-}
-
-@media (width > 520px) {
-  .wheel-wrap {
-    width: 100% !important;
-    max-width: 100% !important;
-    max-height: 100% !important;
-    aspect-ratio: 1 / 1 !important;
-    height: auto !important;
-  }
-
-  /* если вылезает по высоте — заставляем считать размер от высоты */
-  .center {
-    align-items: center; /* у тебя уже есть */
-  }
-}
-
-.wheel-wrap {
-  aspect-ratio: 1 / 1;
-}
-
-@media (width > 520px) {
-  .center {
-    justify-self: stretch !important; /* ключ */
-    width: 100% !important; /* на всякий */
-    margin-inline: 0 !important; /* чтобы не мешало */
-  }
-}
-
-@media (width > 520px) {
-  :root {
-    --header-h: 56px;
-  }
-
-  #views {
-    height: calc(100vh - var(--header-h)) !important;
-    overflow: hidden;
-  }
-
-  /* чтобы гриды/флексы не раздували высоту */
-  #views .view,
-  #views .app {
-    height: 100% !important;
-    min-height: 0 !important;
-  }
-}
-
-@media (width > 520px) {
-  #view-wheel .app {
-    height: calc(100vh - 57px) !important;
-  }
-
-  /* цепочка, чтобы дети не раздували */
-  #view-wheel .left,
-  #view-wheel .center,
-  #view-wheel .right {
-    min-height: 0 !important;
-  }
-}
-
-@media (width <= 520px) {
-  #view-wheel {
-    position: relative;
-  }
-}
-
-@media (width <= 520px) {
   #view-wheel .right.is-collapsed {
     position: absolute;
     left: 0;
@@ -2851,16 +1871,11 @@ body {
     bottom: 0;
     z-index: 10;
   }
-}
 
-@media (width <= 520px) {
   #view-wheel .center {
     padding-bottom: calc(12px + var(--right-collapsed-h, 83px));
   }
-}
 
-@media (width <= 520px) {
-  /* по умолчанию right в потоке */
   #view-wheel .right {
     position: static;
     left: auto;
@@ -2868,16 +1883,6 @@ body {
     bottom: auto;
   }
 
-  /* приклеиваем ТОЛЬКО когда обе панели свернуты */
-  .app.m-both-collapsed #view-wheel .right.is-collapsed {
-    position: absolute; /* к низу view */
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 10;
-  }
-
-  /* если left открыт — right НИКОГДА не должен быть приклеен */
   .app.m-left-open #view-wheel .right {
     position: static !important;
     left: auto !important;
@@ -2886,30 +1891,10 @@ body {
     z-index: auto !important;
   }
 
-  /* отступ под приклеенный right только в режиме обеих collapsed */
-  .app.m-both-collapsed #view-wheel .center {
-    padding-bottom: calc(12px + var(--right-collapsed-h, 83px));
-  }
-
-  /* и наоборот: когда left открыт — убираем этот отступ */
   .app.m-left-open #view-wheel .center {
-    padding-bottom: 12px !important; /* или твой базовый padding */
-  }
-}
-
-@media (width <= 520px) {
-  #view-wheel {
-    position: relative;
-  }
-}
-
-@media (width <= 520px) {
-  /* якорь для absolute */
-  #view-wheel {
-    position: relative;
+    padding-bottom: 12px !important;
   }
 
-  /* 1) Запрещаем fixed для collapsed right на мобилке */
   .right.is-collapsed {
     position: static !important;
     left: auto !important;
@@ -2920,59 +1905,25 @@ body {
     margin: 0 !important;
   }
 
-  /* 2) Приклеиваем ТОЛЬКО когда обе панели collapsed */
-  .app.m-both-collapsed #view-wheel .right.is-collapsed {
-    position: absolute !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    width: 100% !important;
-    z-index: 10 !important;
-  }
-
-  /* 3) Отступ под панель только в этом режиме */
   .app.m-both-collapsed #view-wheel .center {
     padding-bottom: calc(12px + var(--right-collapsed-h, 83px)) !important;
   }
 
-  /* Когда left открыт (или right открыт) — отступ не нужен */
   .app.m-left-open #view-wheel .center,
   .app.m-right-open #view-wheel .center {
     padding-bottom: 12px !important;
   }
-}
 
-@media (width <= 520px) {
-  /* мобильный layout: рабочая область под хедером */
-  #views {
-    position: relative !important;
-    height: calc(100dvh - var(--header-h, 56px)) !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-  }
-
-  /* активный view растягиваем на всю высоту #views */
   #views > .view {
+    position: static !important;
+    inset: auto !important;
     height: 100% !important;
     min-height: 0 !important;
     overflow: hidden !important;
   }
 
-  /* app тоже занимает всю высоту view */
   #views > .view > .app {
-    height: 100% !important;
-    min-height: 0 !important;
-  }
-}
-
-@media (width <= 520px) {
-  #view-wheel {
-    position: relative;
-  }
-
-  .app.m-both-collapsed {
-    display: flex !important;
-    flex-direction: column !important;
+    overflow: visible !important;
     height: 100% !important;
     min-height: 0 !important;
   }
@@ -2982,7 +1933,6 @@ body {
     min-height: 0 !important;
   }
 
-  /* right приклеиваем к низу VIEW, не экрана */
   .app.m-both-collapsed #view-wheel .right.is-collapsed {
     position: absolute !important;
     left: 0 !important;
@@ -2991,11 +1941,9 @@ body {
     width: 100% !important;
     z-index: 10 !important;
   }
-}
 
-@media (width <= 520px) {
-  /* БАЗА: на мобилке по умолчанию обычная страница (скролл) */
   #views {
+    display: flow-root !important;
     height: auto !important;
     min-height: 0 !important;
     overflow: visible !important;
@@ -3009,16 +1957,17 @@ body {
     overflow: visible !important;
   }
 
-  /* ЭКРАННЫЙ РЕЖИМ ТОЛЬКО когда обе панели collapsed */
   .app.m-both-collapsed {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
     height: 100% !important;
   }
 
   .app.m-both-collapsed ~ * {
-    /* ничего, просто чтобы не было случайных пересечений */
   }
 
-  .app.m-both-collapsed #views, /* на случай если .app не внутри #views */
+  .app.m-both-collapsed #views,
   #views:has(.app.m-both-collapsed) {
     position: relative !important;
     height: calc(100dvh - var(--header-h, 56px)) !important;
@@ -3038,15 +1987,13 @@ body {
     overflow: hidden !important;
     min-height: 0 !important;
   }
-}
 
-@media (width <= 520px) {
   .left {
+    order: 1;
+    height: auto;
     min-height: 0;
   }
-}
 
-@media (width <= 520px) {
   #views:has(.app.m-both-collapsed) {
     overflow: hidden !important;
   }
@@ -3055,22 +2002,18 @@ body {
   html:has(.app.m-both-collapsed) {
     overflow: hidden !important;
   }
-}
 
-@media (width <= 520px) {
-  /* дефолт: страница скроллится */
   html,
   body {
+    height: 100%;
     overflow: auto;
   }
 
-  /* экранный режим (оба collapsed) — НИКАКОГО скролла страницы */
   html.m-screen,
   html.m-screen body {
     overflow: hidden !important;
   }
 
-  /* рабочая область под header в экранном режиме */
   html.m-screen #views {
     position: relative !important;
     height: calc(100dvh - var(--header-h, 56px)) !important;
@@ -3084,19 +2027,18 @@ body {
     min-height: 0 !important;
     overflow: hidden !important;
   }
-}
 
-@media (width <= 520px) {
   #view-wheel {
     position: relative;
   }
 
-  /* по умолчанию right в потоке */
   .right {
+    order: 3;
+    overflow: visible !important;
+    width: 100%;
     position: static;
   }
 
-  /* в экранном режиме (оба collapsed) — приклеиваем */
   html.m-screen #view-wheel .right.is-collapsed {
     position: absolute !important;
     left: 0 !important;
@@ -3106,70 +2048,16 @@ body {
     z-index: 10 !important;
   }
 
-  /* отступ под панель — только в экранном режиме */
-  html.m-screen #view-wheel .center {
-    padding-bottom: calc(12px + var(--right-collapsed-h, 83px)) !important;
-  }
-}
-
-@media (width <= 520px) {
   html.m-screen #view-wheel .center {
     padding-bottom: calc(
       12px + min(var(--right-collapsed-h, 83px), 120px)
     ) !important;
   }
-}
 
-@media (width <= 520px) {
   .topbar-inner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: nowrap; /* ❗ убираем перенос */
-    gap: 8px;
-    padding: 8px 12px;
-  }
-}
-
-.brand {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-#top-tabs {
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0; /* ❗ не сжиматься */
-}
-
-@media (width <= 520px) {
-  .topbar-inner {
-    display: flex;
-    align-items: center;
+    height: auto;
     justify-content: space-between;
     flex-wrap: nowrap;
-    gap: 8px;
-    padding: 8px 12px;
-  }
-
-  .brand {
-    flex: 1 1 auto; /* 👈 занимает доступное место */
-    min-width: 0; /* 👈 важно для обрезки текста */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  #top-tabs {
-    display: flex;
-    gap: 6px;
-    flex-shrink: 0; /* 👈 кнопки не сжимаются */
-  }
-}
-
-@media (width <= 520px) {
-  .topbar-inner {
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) auto !important;
     align-items: center !important;
@@ -3178,6 +2066,9 @@ body {
   }
 
   .brand {
+    font-size: 18px;
+    letter-spacing: 0.4px;
+    flex: 1 1 auto;
     min-width: 0 !important;
     white-space: nowrap;
     overflow: hidden;
@@ -3185,18 +2076,19 @@ body {
   }
 
   #top-tabs {
-    min-width: 0; /* важно */
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+    min-width: 0;
     justify-self: end;
-    overflow: hidden; /* чтобы не раздувалось */
+    overflow: hidden;
   }
 
   #top-tabs button,
   #top-tabs .btn {
-    padding: 6px 10px !important; /* слегка компактнее на мобилке */
+    padding: 6px 10px !important;
   }
-}
 
-@media (width <= 520px) {
   #views #view-settings .settings-grid {
     display: flex !important;
     flex-direction: column !important;
@@ -3222,37 +2114,24 @@ body {
   #views #view-settings #vc-card {
     order: 4 !important;
   }
-}
 
-@media (width <= 520px) {
-  /* когда открыт settings-view — разрешаем скролл страницы */
   html:has(#view-settings:not(.is-hidden-visually)),
   html:has(#view-settings:not(.is-hidden-visually)) body {
     overflow: hidden auto !important;
     height: auto !important;
   }
 
-  /* и снимаем обрезание контейнеров */
   html:has(#view-settings:not(.is-hidden-visually)) #views,
   html:has(#view-settings:not(.is-hidden-visually)) #view-settings {
     overflow: visible !important;
     height: auto !important;
     min-height: 0 !important;
   }
-}
 
-@media (width <= 520px) {
-  /* убираем горизонтальный скролл у VC */
-  #vc-card {
-    overflow-x: hidden;
-  }
-
-  /* шапку можно скрыть (она табличная и ломает мобилку) */
   #vc-card .vc-head {
     display: none !important;
   }
 
-  /* каждая строка VC: 2 колонки */
   #vc-card .vc-row {
     display: grid !important;
     grid-template-columns: 1fr 120px !important;
@@ -3260,22 +2139,18 @@ body {
     align-items: center !important;
   }
 
-  /* действия (кнопки) — на отдельную строку */
   #vc-card .vc-actions {
     grid-column: 1 / -1 !important;
     justify-content: flex-end !important;
     gap: 8px !important;
   }
 
-  /* инпуты не должны раздувать сетку */
   #vc-card input,
   #vc-card select {
     width: 100% !important;
     min-width: 0 !important;
   }
-}
 
-@media (width <= 520px) {
   #vc-card input {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -3288,16 +2163,36 @@ aside.is-collapsed h2::before {
   filter: none !important;
 }
 
-/* Лечим фон */
-
 html,
 body {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  overflow: hidden !important;
   background: transparent !important;
 }
 
 body {
+  background: radial-gradient(
+      1200px 800px at 50% 40%,
+      rgb(255 60 172 / 10%),
+      transparent 60%
+    ),
+    radial-gradient(
+      900px 600px at 30% 70%,
+      rgb(0 180 255 / 6%),
+      transparent 60%
+    ),
+    linear-gradient(180deg, var(--bg2), var(--bg1));
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell,
+    "Noto Sans", Helvetica, Arial, sans-serif;
+  margin: 0;
+  overflow: hidden;
+  overflow-y: auto;
   position: relative;
-  isolation: isolate; /* чтобы -1 слой стабильно был под всем */
+  isolation: isolate;
 }
 
 body::before {
@@ -3319,7 +2214,6 @@ body::before {
     linear-gradient(180deg, var(--bg2), var(--bg1));
 }
 
-/* Во время вращения блокируем только пресеты и переключение view */
 html.is-spinning .tab[data-preset-id],
 html.is-spinning .tab[data-view] {
   pointer-events: none;
@@ -3327,9 +2221,75 @@ html.is-spinning .tab[data-view] {
   cursor: not-allowed;
 }
 
-/* ПК: list и history должны вести себя одинаково */
 @media (width > 520px) {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden !important;
+  }
+
+  .view,
+  .app {
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  #panel-list {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+
+  #full-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden auto;
+  }
+
+  .wheel-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    aspect-ratio: 1 / 1 !important;
+    height: auto !important;
+  }
+
+  .center {
+    align-items: center;
+    justify-self: stretch !important;
+    width: 100% !important;
+    margin-inline: 0 !important;
+  }
+
+  :root {
+    --header-h: 56px;
+  }
+
+  #views {
+    height: calc(100vh - var(--header-h)) !important;
+    overflow: hidden;
+  }
+
+  #views .view,
+  #views .app {
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+
+  #view-wheel .app {
+    height: calc(100vh - 57px) !important;
+  }
+
+  #view-wheel .left,
+  #view-wheel .center,
+  #view-wheel .right {
+    min-height: 0 !important;
+  }
+
   .right {
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -3340,7 +2300,7 @@ html.is-spinning .tab[data-view] {
     flex-direction: column;
     flex: 1 1 auto;
     min-height: 0;
-    overflow: hidden; /* чтобы скролл был внутри панели */
+    overflow: hidden;
   }
 
   #panel-list,
@@ -3349,8 +2309,6 @@ html.is-spinning .tab[data-view] {
     flex-direction: column !important;
     flex: 1 1 auto !important;
     min-height: 0 !important;
-
-    /* важно: панель занимает всё доступное место */
     height: auto !important;
     max-height: none !important;
     overflow: hidden auto !important;
@@ -3360,4 +2318,54 @@ html.is-spinning .tab[data-view] {
 #panel-list.is-hidden,
 #panel-history.is-hidden {
   display: none !important;
+}
+
+@media (width <= 520px) {
+  /* Разрешаем скролл всей странице */
+  html,
+  body {
+    overflow-y: auto !important;
+    height: auto !important;
+  }
+
+  /* Убираем "зажатый" layout */
+  #views,
+  #views > .view,
+  #views > .view > .app {
+    height: auto !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+}
+
+@media (width <= 520px) {
+  #wheel,
+  canvas {
+    width: min(92vw, 92svh) !important;
+    aspect-ratio: 1 / 1;
+    height: auto !important;
+    display: block;
+  }
+}
+
+.ms-pop {
+  width: min(92vw, 520px); /* или твой лимит */
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.ms-search {
+  width: 100%;
+  max-width: 100%;
+}
+
+.ms-search > * {
+  min-width: 0; /* ключевая строка для flex */
+}
+
+.ms-search input,
+.ms-search .ms-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
 }
