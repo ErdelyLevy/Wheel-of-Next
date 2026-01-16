@@ -2668,8 +2668,7 @@ body {
     flex-direction: column;
     flex: 1 1 auto;
     min-height: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden auto;
   }
 
   /* и ТОЛЬКО список скроллится */
@@ -3126,10 +3125,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-
     flex-wrap: nowrap; /* ❗ убираем перенос */
     gap: 8px;
-
     padding: 8px 12px;
   }
 }
@@ -3199,7 +3196,7 @@ body {
   }
 }
 
-@media (max-width: 520px) {
+@media (width <= 520px) {
   #views #view-settings .settings-grid {
     display: flex !important;
     flex-direction: column !important;
@@ -3227,12 +3224,11 @@ body {
   }
 }
 
-@media (max-width: 520px) {
+@media (width <= 520px) {
   /* когда открыт settings-view — разрешаем скролл страницы */
   html:has(#view-settings:not(.is-hidden-visually)),
   html:has(#view-settings:not(.is-hidden-visually)) body {
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
+    overflow: hidden auto !important;
     height: auto !important;
   }
 
@@ -3245,7 +3241,7 @@ body {
   }
 }
 
-@media (max-width: 520px) {
+@media (width <= 520px) {
   /* убираем горизонтальный скролл у VC */
   #vc-card {
     overflow-x: hidden;
@@ -3279,7 +3275,7 @@ body {
   }
 }
 
-@media (max-width: 520px) {
+@media (width <= 520px) {
   #vc-card input {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -3287,7 +3283,7 @@ body {
 }
 
 aside.is-collapsed h2::before {
-  background: rgba(255, 255, 255, 0.35);
+  background: rgb(255 255 255 / 35%);
   box-shadow: none !important;
   filter: none !important;
 }
@@ -3357,9 +3353,7 @@ html.is-spinning .tab[data-view] {
     /* важно: панель занимает всё доступное место */
     height: auto !important;
     max-height: none !important;
-
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
+    overflow: hidden auto !important;
   }
 }
 
