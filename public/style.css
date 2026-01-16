@@ -374,14 +374,6 @@ button:hover,
   overflow: auto;
 }
 
-/* settings on mobile */
-
-@media (width <= 980px) {
-  .settings-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* thumb */
 
 .range-wrap input[type="range"]::-webkit-slider-thumb {
@@ -3203,5 +3195,92 @@ body {
   #top-tabs button,
   #top-tabs .btn {
     padding: 6px 10px !important; /* слегка компактнее на мобилке */
+  }
+}
+
+@media (max-width: 520px) {
+  #views #view-settings .settings-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 18px !important;
+  }
+
+  #views #view-settings .settings-grid > * {
+    order: 100 !important;
+  }
+
+  #views #view-settings #spin-card {
+    order: 1 !important;
+  }
+
+  #views #view-settings #catalog-card {
+    order: 2 !important;
+  }
+
+  #views #view-settings #preset-card {
+    order: 3 !important;
+  }
+
+  #views #view-settings #vc-card {
+    order: 4 !important;
+  }
+}
+
+@media (max-width: 520px) {
+  /* когда открыт settings-view — разрешаем скролл страницы */
+  html:has(#view-settings:not(.is-hidden-visually)),
+  html:has(#view-settings:not(.is-hidden-visually)) body {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    height: auto !important;
+  }
+
+  /* и снимаем обрезание контейнеров */
+  html:has(#view-settings:not(.is-hidden-visually)) #views,
+  html:has(#view-settings:not(.is-hidden-visually)) #view-settings {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+}
+
+@media (max-width: 520px) {
+  /* убираем горизонтальный скролл у VC */
+  #vc-card {
+    overflow-x: hidden;
+  }
+
+  /* шапку можно скрыть (она табличная и ломает мобилку) */
+  #vc-card .vc-head {
+    display: none !important;
+  }
+
+  /* каждая строка VC: 2 колонки */
+  #vc-card .vc-row {
+    display: grid !important;
+    grid-template-columns: 1fr 120px !important;
+    gap: 10px !important;
+    align-items: center !important;
+  }
+
+  /* действия (кнопки) — на отдельную строку */
+  #vc-card .vc-actions {
+    grid-column: 1 / -1 !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+  }
+
+  /* инпуты не должны раздувать сетку */
+  #vc-card input,
+  #vc-card select {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
+@media (max-width: 520px) {
+  #vc-card input {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }

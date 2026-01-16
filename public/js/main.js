@@ -500,7 +500,12 @@ function initMobileSidebarsCollapsible() {
     app.classList.toggle("m-right-open", !rightCollapsed);
     app.classList.toggle("m-both-collapsed", both);
 
-    document.documentElement.classList.toggle("m-screen", both);
+    // ✅ m-screen включаем ТОЛЬКО если активен view-wheel
+    const viewWheel = document.getElementById("view-wheel");
+    const wheelActive =
+      viewWheel && !viewWheel.classList.contains("is-hidden-visually");
+
+    document.documentElement.classList.toggle("m-screen", both && wheelActive);
   };
 
   const applyAfterLayout = () => {
