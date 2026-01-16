@@ -1,38 +1,4 @@
-/* =========================================================
-   Wheel of Next — style.css (clean + strict UI)
-   ========================================================= */
-
-/* ---------- Design tokens ---------- */
-:root {
-  --bg1: #0b0b12;
-  --bg2: #0f1020;
-  --panel: rgb(0 0 0 / 45%);
-  --stroke: rgb(255 255 255 / 10%);
-  --text: rgb(255 255 255 / 92%);
-  --muted: rgb(255 255 255 / 70%);
-  --accent: #ff3cac;
-
-  /* radius system */
-  --r-ui: 10px;
-
-  /* обычные UI-кнопки */
-  --r-hard: 6px;
-
-  /* строгие элементы */
-  --r-soft: 14px;
-
-  /* карточки / панели */
-}
-
 /* ---------- Base ---------- */
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  height: 100%;
-}
 
 body {
   background: radial-gradient(
@@ -54,33 +20,27 @@ body {
 }
 
 /* =========================================================
-   Topbar
+   Wheel of Next — style.css (clean + strict UI)
    ========================================================= */
 
-.topbar {
-  backdrop-filter: blur(10px);
-  background: rgb(0 0 0 / 35%);
-  border-bottom: 1px solid rgb(255 255 255 / 6%);
-  position: sticky;
-  top: 0;
-  z-index: 20;
+/* ---------- Design tokens ---------- */
+
+:root {
+  --bg1: #0b0b12;
+  --bg2: #0f1020;
+  --panel: rgb(0 0 0 / 45%);
+  --stroke: rgb(255 255 255 / 10%);
+  --text: rgb(255 255 255 / 92%);
+  --muted: rgb(255 255 255 / 70%);
+  --accent: #ff3cac;
+  --r-ui: 10px;
+  --r-hard: 6px;
+  --r-soft: 14px;
 }
 
-.topbar-inner {
-  align-items: center;
-  display: flex;
-  height: 56px;
-  justify-content: space-between;
-  padding: 0 16px;
-}
-
-.brand {
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.6px;
-  opacity: 0.9;
-  text-transform: uppercase;
-}
+/* =========================================================
+   Topbar
+   ========================================================= */
 
 .top-tabs {
   display: flex;
@@ -92,6 +52,7 @@ body {
    ========================================================= */
 
 /* базовые кнопки — вертикальное центрирование */
+
 button,
 .tab {
   align-items: center;
@@ -106,24 +67,7 @@ button,
   justify-content: center;
   line-height: 1;
   padding: 8px 12px;
-  text-decoration: none; /* ссылки-кнопки без подчеркивания */
-}
-
-/* навигационные табы — строже */
-.tabs .tab,
-.top-tabs .tab {
-  border-radius: var(--r-hard);
-}
-
-/* hover / active */
-button:hover,
-.tab:hover {
-  background: rgb(255 255 255 / 6%);
-}
-
-.tab.active {
-  background: rgb(255 60 172 / 18%);
-  border-color: rgb(255 60 172 / 35%);
+  text-decoration: none;
 }
 
 /* =========================================================
@@ -134,10 +78,6 @@ button:hover,
   min-height: calc(100vh - 56px);
 }
 
-#view-wheel .app {
-  height: calc(100vh - 56px);
-}
-
 .app {
   display: grid;
   grid-template-columns: 320px 1fr 320px;
@@ -145,10 +85,11 @@ button:hover,
 }
 
 /* columns */
+
 .left,
 .right {
   background: rgb(0 0 0 / 25%);
-  min-height: 0; /* важно для внутренних скроллов */
+  min-height: 0;
   padding: 16px;
 }
 
@@ -160,22 +101,7 @@ button:hover,
   border-left: 1px solid rgb(255 255 255 / 6%);
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* контейнер для внутренних scroll-областей */
-}
-
-/* =========================================================
-   Section headers
-   ========================================================= */
-
-.left > h2,
-.right-head > h2 {
-  border-bottom: 1px solid rgb(255 255 255 / 10%);
-  font-size: 14px;
-  font-weight: 900;
-  letter-spacing: 1.3px;
-  margin: 0 0 16px;
-  padding-bottom: 8px;
-  text-transform: uppercase;
+  overflow: hidden;
 }
 
 /* =========================================================
@@ -207,7 +133,6 @@ button:hover,
    ========================================================= */
 
 .spin-center {
-  /* IMPORTANT */
   background: var(--accent);
   border: none;
   border-radius: 50%;
@@ -223,10 +148,6 @@ button:hover,
   width: 78px;
 }
 
-.spin-center:hover {
-  filter: brightness(1.08);
-}
-
 /* =========================================================
    Result card (LEFT)
    ========================================================= */
@@ -236,42 +157,6 @@ button:hover,
   font-weight: 900;
   margin: 0 0 10px;
   text-transform: uppercase;
-}
-
-.result-cover {
-  border: 1px solid rgb(255 255 255 / 8%);
-  border-radius: var(--r-soft);
-  margin-bottom: 10px;
-  overflow: hidden;
-  position: relative;
-}
-
-.result-cover img {
-  display: block;
-  height: auto;
-  width: 100%;
-}
-
-.badge {
-  align-items: center;
-  background: #3d193b; /* плотный фон, как просили */
-  border: 1px solid #ff3cac; /* неоновая окантовка акцентом */
-  border-radius: var(--r-hard);
-
-  /* лёгкое неоновое свечение вокруг бейджа */
-  box-shadow: 0 0 6px rgb(255 60 172 / 60%), 0 0 14px rgb(255 60 172 / 40%);
-  color: var(--text);
-  display: inline-flex;
-  font-size: 11px;
-  font-weight: 800;
-  justify-content: center;
-  letter-spacing: 0.6px;
-  padding: 6px 12px;
-  position: absolute;
-  right: 8px;
-  text-align: center;
-  text-transform: uppercase;
-  top: 8px;
 }
 
 /* =========================================================
@@ -285,12 +170,6 @@ button:hover,
 .right-tabs {
   display: flex;
   gap: 8px;
-}
-
-.search {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
 }
 
 .list {
@@ -311,10 +190,53 @@ button:hover,
 }
 
 /* не ломает layout -> canvas сохраняет размеры */
+
 .is-hidden-visually {
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
+}
+
+/* =========================================================
+   Section headers
+   ========================================================= */
+
+.left > h2,
+.right-head > h2 {
+  border-bottom: 1px solid rgb(255 255 255 / 10%);
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 1.3px;
+  margin: 0 0 16px;
+  padding-bottom: 8px;
+  text-transform: uppercase;
+}
+
+/* навигационные табы — строже */
+
+.tabs .tab,
+.top-tabs .tab {
+  border-radius: var(--r-hard);
+}
+
+/* hover / active */
+
+button:hover,
+.tab:hover {
+  background: rgb(255 255 255 / 6%);
+}
+
+.tab.active {
+  background: rgb(255 60 172 / 18%);
+  border-color: rgb(255 60 172 / 35%);
+}
+
+.spin-center:hover {
+  filter: brightness(1.08);
+}
+
+#view-wheel .app {
+  height: calc(100vh - 56px);
 }
 
 /* =========================================================
@@ -338,24 +260,8 @@ button:hover,
   }
 }
 
-/* =========================================================
-   SETTINGS VIEW (matches current HTML)
-   ========================================================= */
-
-#view-settings {
-  overflow: auto;
-}
-
 .settings-wrap {
   padding: 18px;
-}
-
-.settings-grid {
-  display: grid;
-  gap: 16px;
-  grid-template-columns: 1fr 1fr;
-  margin: 0 auto;
-  max-width: 1200px;
 }
 
 .settings-card {
@@ -364,16 +270,6 @@ button:hover,
   border-radius: var(--r-soft);
   box-shadow: 0 12px 30px rgb(0 0 0 / 25%);
   padding: 14px;
-}
-
-.settings-card > h2 {
-  border-bottom: 1px solid rgb(255 255 255 / 8%);
-  font-size: 14px;
-  font-weight: 900;
-  letter-spacing: 1.3px;
-  margin: 0 0 12px;
-  padding-bottom: 8px;
-  text-transform: uppercase;
 }
 
 .subhead {
@@ -401,8 +297,27 @@ button:hover,
   padding: 8px 0;
 }
 
-.form-row:last-child {
-  border-bottom: none;
+.settings-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.sep {
+  border: none;
+  border-top: 1px solid rgb(255 255 255 / 8%);
+  margin: 14px 0;
+}
+
+.settings-card > h2 {
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 1.3px;
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  text-transform: uppercase;
 }
 
 .form-row label {
@@ -421,49 +336,53 @@ button:hover,
   padding: 0 12px;
 }
 
+.ms-opt span {
+  font-size: 12px;
+  font-weight: 800;
+  opacity: 0.9;
+}
+
+.form-row:last-child {
+  border-bottom: none;
+}
+
+.ms-opt input {
+  margin: 0;
+}
+
+.weight-row input {
+  background: rgb(0 0 0 / 35%);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: var(--r-hard);
+  color: var(--text);
+  height: 32px;
+  outline: none;
+  padding: 0 10px;
+}
+
 .form-row input:focus {
   border-color: rgb(255 60 172 / 55%);
   box-shadow: 0 0 0 3px rgb(255 60 172 / 18%);
 }
 
-.settings-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  margin-top: 12px;
-}
+/* =========================================================
+   SETTINGS VIEW (matches current HTML)
+   ========================================================= */
 
-.sep {
-  border: none;
-  border-top: 1px solid rgb(255 255 255 / 8%);
-  margin: 14px 0;
+#view-settings {
+  overflow: auto;
 }
 
 /* settings on mobile */
+
 @media (width <= 980px) {
   .settings-grid {
     grid-template-columns: 1fr;
   }
 }
 
-/* ---------- Range inputs (settings) ---------- */
-
-.range-wrap {
-  align-items: center;
-  display: flex;
-  gap: 12px;
-}
-
-.range-wrap input[type="range"] {
-  appearance: none;
-  background: rgb(255 255 255 / 25%);
-  border-radius: 4px;
-  flex: 1;
-  height: 4px;
-  outline: none;
-}
-
 /* thumb */
+
 .range-wrap input[type="range"]::-webkit-slider-thumb {
   appearance: none;
   background: var(--accent);
@@ -481,6 +400,39 @@ button:hover,
   cursor: pointer;
   height: 16px;
   width: 16px;
+}
+
+/* =========================================================
+   Scrollbars (match dark neon UI)
+   ========================================================= */
+
+/* WebKit-based browsers */
+
+*::-webkit-scrollbar {
+  width: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 999px;
+  box-shadow: 0 0 8px rgb(255 60 172 / 60%);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+  box-shadow: 0 0 10px rgb(255 60 172 / 90%);
+}
+
+/* ---------- Range inputs (settings) ---------- */
+
+.range-wrap {
+  align-items: center;
+  display: flex;
+  gap: 12px;
 }
 
 .range-value {
@@ -514,15 +466,6 @@ button:hover,
   width: 100%;
 }
 
-.preset-btn:hover {
-  background: rgb(255 255 255 / 6%);
-}
-
-.preset-btn.is-active {
-  background: rgb(255 60 172 / 18%);
-  border-color: rgb(255 60 172 / 35%);
-}
-
 /* =========================================================
    Search inputs (global)
    ========================================================= */
@@ -532,27 +475,6 @@ button:hover,
   display: flex;
   gap: 8px;
   margin-bottom: 10px;
-}
-
-.search input[type="search"],
-.search input[type="text"] {
-  background: rgb(0 0 0 / 35%);
-  border: 1px solid rgb(255 255 255 / 12%);
-  border-radius: var(--r-hard);
-  color: var(--text);
-  flex: 1;
-  height: 34px;
-  outline: none;
-  padding: 0 12px;
-}
-
-.search input::placeholder {
-  color: rgb(255 255 255 / 45%);
-}
-
-.search input:focus {
-  border-color: rgb(255 60 172 / 55%);
-  box-shadow: 0 0 0 3px rgb(255 60 172 / 18%);
 }
 
 /* =========================================================
@@ -643,21 +565,8 @@ button:hover,
   padding: 8px;
 }
 
-.ms-opt:hover {
-  background: rgb(255 255 255 / 6%);
-}
-
-.ms-opt input {
-  margin: 0;
-}
-
-.ms-opt span {
-  font-size: 12px;
-  font-weight: 800;
-  opacity: 0.9;
-}
-
 /* Weights editor (inside preset editor) */
+
 .weights-form {
   display: flex;
   flex-direction: column;
@@ -676,25 +585,6 @@ button:hover,
   padding: 8px 10px;
 }
 
-.weight-row .name {
-  font-size: 12px;
-  font-weight: 900;
-  opacity: 0.9;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.weight-row input {
-  background: rgb(0 0 0 / 35%);
-  border: 1px solid rgb(255 255 255 / 12%);
-  border-radius: var(--r-hard);
-  color: var(--text);
-  height: 32px;
-  outline: none;
-  padding: 0 10px;
-}
-
 .is-invalid {
   border-color: rgb(255 120 120 / 55%) !important;
   box-shadow: 0 0 0 3px rgb(255 120 120 / 14%) !important;
@@ -709,23 +599,6 @@ button:hover,
 
 .history-item {
   list-style: none;
-}
-
-.history-btn {
-  background: rgb(0 0 0 / 25%);
-  border: 1px solid rgb(255 255 255 / 8%);
-  border-radius: var(--r-hard);
-  color: var(--text);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px;
-  text-align: left;
-  width: 100%;
-}
-
-.history-btn:hover {
-  background: rgb(255 255 255 / 6%);
 }
 
 .history-title {
@@ -745,80 +618,29 @@ button:hover,
   white-space: nowrap;
 }
 
-/* History item with winner poster */
-.history-btn {
-  align-items: center;
-  display: flex;
+/* === Кнопки элементов списка и истории === */
 
-  /* переопределяем на строку */
-  flex-direction: row;
-  gap: 10px;
-}
-
-.history-poster {
-  background: rgb(255 255 255 / 6%);
-  border: 1px solid rgb(255 255 255 / 10%);
-  border-radius: 6px;
-  flex: 0 0 auto;
-  height: 50px;
-  object-fit: cover;
-  width: 34px;
-}
+/* чтобы текст не центрировался внутри */
 
 .history-text {
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-width: 0;
-}
-
-.list-btn:hover {
-  background: rgb(0 0 0 / 35%);
-}
-
-/* === Кнопки элементов списка и истории === */
-.history-btn {
-  align-items: center;
-  gap: 12px;
-  justify-content: flex-start; /* ← главное */
-  padding: 10px;
-  text-align: left;
-  width: 100%;
-}
-
-/* чтобы текст не центрировался внутри */
-.history-text {
   text-align: left;
 }
 
 /* постер фиксированного размера */
+
 .history-poster {
+  background: rgb(255 255 255 / 6%);
+  border: 1px solid rgb(255 255 255 / 10%);
+  flex: 0 0 auto;
   border-radius: 6px;
   flex-shrink: 0;
   height: 54px;
   object-fit: cover;
   width: 36px;
-}
-
-#panel-list {
-  position: relative;
-}
-
-#panel-list .search {
-  position: relative;
-  z-index: 5;
-}
-
-#full-list {
-  position: relative;
-  z-index: 1;
-  content-visibility: auto;
-  contain-intrinsic-size: 800px; /* чтобы скроллбар не прыгал */
-}
-
-#full-list .history-btn {
-  text-align: left;
-  width: 100%;
 }
 
 .right-head,
@@ -827,73 +649,40 @@ button:hover,
   z-index: 1;
 }
 
-#panel-list,
-#panel-history,
-.list {
-  position: relative;
-  z-index: 2;
-}
-
-/* делаем панели списка/истории прокручиваемыми внутри правой колонки */
-#panel-list,
-#panel-history {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-/* =========================================================
-   Scrollbars (match dark neon UI)
-   ========================================================= */
-
-/* WebKit-based browsers */
-*::-webkit-scrollbar {
-  width: 8px;
-}
-
-*::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-*::-webkit-scrollbar-thumb {
-  background: var(--accent);
-  border-radius: 999px;
-  box-shadow: 0 0 8px rgb(255 60 172 / 60%);
-}
-
-*::-webkit-scrollbar-thumb:hover {
-  background: var(--accent);
-  box-shadow: 0 0 10px rgb(255 60 172 / 90%);
-}
-
-/* Firefox */
-* {
-  scrollbar-color: var(--accent) transparent;
-  scrollbar-width: thin;
-}
-
-.right::before,
-.right::after,
-.search::before {
-  pointer-events: none;
-}
+/* кнопки в списках точно кликабельны */
 
 .history-btn {
+  background: rgb(0 0 0 / 25%);
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: var(--r-hard);
+  color: var(--text);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-start;
+  padding: 10px;
+  text-align: left;
+  width: 100%;
   position: relative;
   z-index: 3;
-}
-
-/* кнопки в списках точно кликабельны */
-.history-btn {
   pointer-events: auto;
 }
 
 /* вложенные элементы не перехватывают событие */
+
+* {
+  scrollbar-color: var(--accent) transparent;
+  scrollbar-width: thin;
+  box-sizing: border-box;
+}
+
 .history-btn * {
   pointer-events: none;
 }
 
 /* список справа — такой же вид как история */
+
 .list-item {
   list-style: none;
 }
@@ -912,11 +701,6 @@ button:hover,
   padding: 10px;
   text-align: left;
   width: 100%;
-}
-
-.list-btn:hover,
-.history-btn:hover {
-  border-color: rgb(255 255 255 / 18%);
 }
 
 .list-poster,
@@ -948,111 +732,13 @@ button:hover,
   opacity: 0.75;
 }
 
-.wheel-area {
-  align-items: center;
-  display: flex;
-  flex: 1 1 auto;
-  justify-content: center;
-  min-height: 0;
-
-  /* важно для flex-колонок/рядов, чтобы центр не “схлопывался” */
-  min-width: 0;
-  position: relative;
-}
-
-.wheel-wrap {
-  aspect-ratio: 1 / 1;
-
-  /* ✅ запретить flex’у сжимать колесо */
-  flex: 0 0 auto;
-
-  /* ✅ стабильно квадратный размер, не зависит от контента */
-  width: min(72vmin, 720px);
-}
-
-#wheel {
-  display: block;
-  height: 100%;
-  width: 100%;
-}
-
-.wheel-wrap {
-  aspect-ratio: 1 / 1;
-  flex: 0 0 auto;
-  position: relative;
-  width: min(72vmin, 720px);
-}
-
-#wheel {
-  display: block;
-  height: 100%;
-  width: 100%;
-}
-
-.wheel-wrap #spin-btn.spin-center {
-  background: var(--accent);
-  border: none;
-  display: grid;
-  padding: 0;
-  place-items: center;
-}
-
 /* Центрируем кнопку внутри контейнера колеса */
+
 .wheel-wrap {
-  position: relative; /* обязательно */
-}
-
-.wheel-wrap #spin-btn {
-  background: var(--accent);
-  border: none;
-  border-radius: 50%;
-  box-shadow: 0 0 0 6px rgb(0 0 0 / 35%), 0 0 0 8px rgb(255 255 255 / 15%);
-  color: #000;
-  cursor: pointer;
-  display: grid;
-  font-size: 14px;
-  font-weight: 900;
-  height: 78px;
-  inset: 50% auto auto 50%;
-  letter-spacing: 0.6px;
-  line-height: 1.1;
-  padding: 0;
-  place-items: center;
-  position: absolute;
-  text-align: center;
-  transform: translate(-50%, -50%);
-
-  /* сброс возможных старых правил "в угол" */
-
-  /* внешний вид как раньше */
-  width: 78px;
-  z-index: 10;
-}
-
-.wheel-wrap #spin-btn:hover {
-  filter: brightness(1.08);
-}
-
-.toast {
-  background: rgb(20 20 30 / 92%);
-  border-radius: 14px;
-  box-shadow: 0 0 0 2px rgb(255 255 255 / 8%), 0 10px 30px rgb(0 0 0 / 45%);
-  color: #fff;
-  font-size: 16px;
-  font-weight: 700;
-  left: 50%;
-  opacity: 0;
-  padding: 14px 22px;
-  pointer-events: none;
-  position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  transition: opacity 0.25s ease, transform 0.25s ease;
-}
-
-.toast.is-on {
-  opacity: 1;
-  transform: translate(-50%, -60%);
+  aspect-ratio: 1 / 1;
+  flex: 0 0 auto;
+  width: min(72vmin, 720px);
+  position: relative;
 }
 
 .toast-winner {
@@ -1060,100 +746,41 @@ button:hover,
   font-weight: 900;
 }
 
-/* ===== Glow dot for section headers ===== */
-
-.left h2,
-.right h2 {
-  padding-left: 22px;
-  position: relative;
-}
-
-.left h2::before,
-.right h2::before {
-  background: var(--accent);
-  border-radius: 50%;
-  box-shadow: 0 0 6px rgb(255 60 172 / 90%), 0 0 14px rgb(255 60 172 / 60%),
-    0 0 26px rgb(255 60 172 / 35%);
-  content: "";
-  height: 10px;
-  left: 0;
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 10px;
-}
-
-.left h2,
-.right h2 {
-  line-height: 1.2; /* фиксируем линию текста */
-  padding-left: 22px;
-  position: relative;
-}
-
-.left h2::before,
-.right h2::before {
-  background: var(--accent);
-  border-radius: 50%;
-  box-shadow: 0 0 6px rgb(255 60 172 / 90%), 0 0 14px rgb(255 60 172 / 60%),
-    0 0 26px rgb(255 60 172 / 35%);
-  content: "";
-  height: 10px;
-  left: 0;
-  position: absolute;
-  top: 0.6em; /* ⬅️ ключевой момент */
-  transform: translateY(-50%);
-  width: 10px;
-}
-
-.settings-card h2 {
-  line-height: 1.2;
-  padding-left: 22px;
-  position: relative;
-}
-
-.settings-card h2::before {
-  background: var(--accent);
-  border-radius: 50%;
-  box-shadow: 0 0 6px rgb(255 60 172 / 90%), 0 0 14px rgb(255 60 172 / 60%),
-    0 0 26px rgb(255 60 172 / 35%);
-  content: "";
-  height: 10px;
-  left: 0;
-  position: absolute;
-  top: 0.6em;
-  transform: translateY(-50%);
-  width: 10px;
-}
-
 .topbar {
+  backdrop-filter: blur(10px);
+  background: rgb(0 0 0 / 35%);
+  border-bottom: 1px solid rgb(255 255 255 / 6%);
+  top: 0;
   position: relative;
   z-index: 10;
 }
 
 .topbar-inner {
-  align-items: center; /* 🔑 вертикальное выравнивание */
+  height: 56px;
+  justify-content: space-between;
+  padding: 0 16px;
+  align-items: center;
   display: flex;
   gap: 18px;
 }
 
 /* Название сайта */
+
 .brand {
+  opacity: 0.9;
+  text-transform: uppercase;
   color: var(--text);
-  font-size: 22px; /* ⬅️ больше, чем заголовки панелей */
+  font-size: 22px;
   font-weight: 900;
   letter-spacing: 0.6px;
-
-  /* лёгкий акцент */
   text-shadow: 0 0 12px rgb(255 60 172 / 25%);
   white-space: nowrap;
 }
 
-.top-tabs .tab {
-  font-size: 14px;
-  padding: 8px 14px;
-}
-
 .wheel-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
   align-items: center;
   display: flex;
   justify-content: center;
@@ -1176,61 +803,36 @@ button:hover,
   top: 50%;
   transform: translate(-50%, -50%);
   transition: opacity 0.25s ease, transform 0.25s ease;
-  z-index: 20; /* ✅ важно */
-}
-
-.toast.is-on {
-  opacity: 1;
-  transform: translate(-50%, -60%);
-}
-
-/* create НЕ активна -> текст акцентный (как ROLL) */
-.preset-btn.is-create:not(.is-active) {
-  color: var(--accent);
-}
-
-/* create активна -> ведёт себя как обычная активная (текст можно оставить белым) */
-.preset-btn.is-create.is-active {
-  background: rgb(255 60 172 / 18%);
-  border-color: rgb(255 60 172 / 35%);
-  color: #fff; /* или как у .preset-btn.is-active */
-}
-
-/* убираем "пунктир" от клика мышью */
-.preset-btn:focus {
-  outline: none;
-}
-
-/* но оставляем красивый фокус для клавиатуры */
-.preset-btn:focus-visible {
-  outline: 2px solid rgb(255 60 172 / 75%);
-  outline-offset: 2px;
-}
-
-#views {
-  /* важно: чтобы было куда "вклеиться" absolute-слоям */
-  min-height: calc(100vh - 56px); /* подгони под высоту topbar */
-  position: relative;
-}
-
-/* оба view занимают одно и то же место */
-#views > .view {
-  inset: 0;
-  position: absolute;
-}
-
-.result-card {
-  background: linear-gradient(180deg, rgb(255 255 255 / 6%), rgb(0 0 0 / 35%));
-  border: 1px solid rgb(255 255 255 / 8%);
-  border-radius: 14px;
-  box-shadow: 0 10px 30px rgb(0 0 0 / 45%), inset 0 1px 0 rgb(255 255 255 / 6%);
-  padding: 14px;
+  z-index: 20;
 }
 
 .result-poster {
   border-radius: 10px;
   box-shadow: 0 12px 30px rgb(0 0 0 / 60%);
   overflow: hidden;
+  position: relative;
+}
+
+/* Firefox */
+
+.right::before,
+.right::after,
+.search::before {
+  pointer-events: none;
+}
+
+/* ===== Glow dot for section headers ===== */
+
+.left h2,
+.right h2 {
+  line-height: 1.2;
+  padding-left: 22px;
+  position: relative;
+}
+
+.settings-card h2 {
+  line-height: 1.2;
+  padding-left: 22px;
   position: relative;
 }
 
@@ -1242,55 +844,230 @@ button:hover,
   position: absolute;
 }
 
-.badge {
-  align-items: center;
-  backdrop-filter: blur(6px);
-  background: rgb(255 255 255 / 8%);
-  border: 1px solid rgb(255 255 255 / 18%);
-  border-radius: 999px;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 12%), 0 0 10px rgb(0 0 0 / 40%);
+.search input::placeholder {
+  color: rgb(255 255 255 / 45%);
+}
+
+.left h2::before,
+.right h2::before {
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgb(255 60 172 / 90%), 0 0 14px rgb(255 60 172 / 60%),
+    0 0 26px rgb(255 60 172 / 35%);
+  content: "";
+  height: 10px;
+  left: 0;
+  position: absolute;
+  top: 0.6em;
+  transform: translateY(-50%);
+  width: 10px;
+}
+
+.settings-card h2::before {
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgb(255 60 172 / 90%), 0 0 14px rgb(255 60 172 / 60%),
+    0 0 26px rgb(255 60 172 / 35%);
+  content: "";
+  height: 10px;
+  left: 0;
+  position: absolute;
+  top: 0.6em;
+  transform: translateY(-50%);
+  width: 10px;
+}
+
+.preset-btn:hover {
+  background: rgb(255 255 255 / 6%);
+}
+
+.preset-btn.is-active {
+  background: rgb(255 60 172 / 18%);
+  border-color: rgb(255 60 172 / 35%);
+}
+
+.ms-opt:hover {
+  background: rgb(255 255 255 / 6%);
+}
+
+.weight-row .name {
+  font-size: 12px;
+  font-weight: 900;
+  opacity: 0.9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-btn:hover {
+  background: rgb(255 255 255 / 6%);
+}
+
+/* History item with winner poster */
+
+.list-btn:hover {
+  background: rgb(0 0 0 / 35%);
+}
+
+.list-btn:hover,
+.history-btn:hover {
+  border-color: rgb(255 255 255 / 18%);
+}
+
+.top-tabs .tab {
+  font-size: 14px;
+  padding: 8px 14px;
+}
+
+.toast.is-on {
+  opacity: 1;
+  transform: translate(-50%, -60%);
+}
+
+/* убираем "пунктир" от клика мышью */
+
+.preset-btn:focus {
+  outline: none;
+}
+
+/* но оставляем красивый фокус для клавиатуры */
+
+.preset-btn:focus-visible {
+  outline: 2px solid rgb(255 60 172 / 75%);
+  outline-offset: 2px;
+}
+
+.range-wrap input[type="range"] {
+  appearance: none;
+  background: rgb(255 255 255 / 25%);
+  border-radius: 4px;
+  flex: 1;
+  height: 4px;
+  outline: none;
+}
+
+.search input[type="search"],
+.search input[type="text"] {
+  background: rgb(0 0 0 / 35%);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: var(--r-hard);
+  color: var(--text);
+  flex: 1;
+  height: 34px;
+  outline: none;
+  padding: 0 12px;
+}
+
+.search input:focus {
+  border-color: rgb(255 60 172 / 55%);
+  box-shadow: 0 0 0 3px rgb(255 60 172 / 18%);
+}
+
+/* create НЕ активна -> текст акцентный (как ROLL) */
+
+.preset-btn.is-create:not(.is-active) {
+  color: var(--accent);
+}
+
+/* create активна -> ведёт себя как обычная активная (текст можно оставить белым) */
+
+.preset-btn.is-create.is-active {
+  background: rgb(255 60 172 / 18%);
+  border-color: rgb(255 60 172 / 35%);
   color: #fff;
-  display: inline-flex;
-  font-size: 11px;
-  font-weight: 600;
-  gap: 6px;
-  letter-spacing: 0.08em;
-  padding: 4px 10px;
-  pointer-events: none;
-  text-transform: uppercase;
-  user-select: none;
 }
 
-.badge[data-type="movie"] {
-  background: linear-gradient(135deg, #ff4fd8, #b84cff);
-  box-shadow: 0 0 14px rgb(255 79 216 / 55%);
-}
-
-.badge[data-type="anime"] {
-  background: linear-gradient(135deg, #00f0ff, #7b5cff);
-  box-shadow: 0 0 14px rgb(0 240 255 / 45%);
-}
-
-.badge[data-type="game"] {
-  background: linear-gradient(135deg, #00ff9c, #1aff5c);
-  box-shadow: 0 0 14px rgb(0 255 156 / 45%);
-}
-
-.result-poster {
+#panel-list {
   position: relative;
 }
 
-.result-poster .badge {
-  left: 10px;
+#full-list {
+  position: relative;
+  z-index: 1;
+  content-visibility: auto;
+  contain-intrinsic-size: 800px;
+}
+
+#panel-list,
+#panel-history,
+.list {
+  position: relative;
+  z-index: 2;
+}
+
+/* делаем панели списка/истории прокручиваемыми внутри правой колонки */
+
+#panel-list,
+#panel-history {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+#wheel {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+#views {
+  min-height: calc(100vh - 56px);
+  position: relative;
+}
+
+#panel-list .search {
+  position: relative;
+  z-index: 5;
+}
+
+#full-list .history-btn {
+  text-align: left;
+  width: 100%;
+}
+
+.wheel-wrap #spin-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: 50%;
+  box-shadow: 0 0 0 6px rgb(0 0 0 / 35%), 0 0 0 8px rgb(255 255 255 / 15%);
+  color: #000;
+  cursor: pointer;
+  display: grid;
+  font-size: 14px;
+  font-weight: 900;
+  height: 78px;
+  inset: 50% auto auto 50%;
+  letter-spacing: 0.6px;
+  line-height: 1.1;
+  padding: 0;
+  place-items: center;
   position: absolute;
-  top: 10px;
+  text-align: center;
+  transform: translate(-50%, -50%);
+  width: 78px;
+  z-index: 10;
 }
 
-.result-card.is-win .badge {
-  animation: badgeGlow 1.6s ease-out;
+/* оба view занимают одно и то же место */
+
+#views > .view {
+  inset: 0;
+  position: absolute;
 }
 
-@keyframes badgeGlow {
+.wheel-wrap #spin-btn.spin-center {
+  background: var(--accent);
+  border: none;
+  display: grid;
+  padding: 0;
+  place-items: center;
+}
+
+.wheel-wrap #spin-btn:hover {
+  filter: brightness(1.08);
+}
+
+@keyframes badge-glow {
   0% {
     opacity: 0;
     transform: scale(0.9);
@@ -1306,34 +1083,342 @@ button:hover,
   }
 }
 
+/* Убрать стрелки у number input (Chrome, Edge, Safari) */
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+img,
+canvas,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* контейнер описания */
+
+.desc-wrap {
+  position: relative;
+}
+
+/* текст описания */
+
+.desc-text {
+  padding-bottom: 2px;
+  padding-right: 42px;
+  position: relative;
+}
+
+/* сама кнопка "…" */
+
+.desc-more {
+  margin-top: 8px;
+  align-items: center;
+  background: rgb(255 255 255 / 5%);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 10px;
+  bottom: 6px;
+  color: rgb(255 255 255 / 90%);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  height: 26px;
+  justify-content: center;
+  letter-spacing: 0.08em;
+  min-width: 34px;
+  padding: 0 10px;
+  position: absolute;
+  right: 6px;
+  text-transform: uppercase;
+}
+
+/* карточка = колонка, контент может скроллиться */
+
+/* именно блок с инфой и описанием пусть скроллится */
+
+/* кнопки всегда снизу и не уплывают */
+
+.result-actions {
+  border-top: 1px solid rgb(255 255 255 / 8%);
+  flex: 0 0 auto;
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+/* контейнер постера должен быть позиционирован, чтобы бейдж сидел в углу */
+
+/* базовый бейдж */
+
+/* дефолт */
+
 .badge {
+  text-align: center;
+  gap: 6px;
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 75%), 0 0 4px rgb(0 0 0 / 60%);
+  user-select: none;
+  line-height: 1;
+  white-space: nowrap;
   align-items: center;
   backdrop-filter: blur(6px);
-  background: rgb(255 255 255 / 8%);
-  border: 1px solid rgb(255 255 255 / 18%);
+  border: 1px solid rgb(255 255 255 / 14%);
   border-radius: 999px;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 12%), 0 0 10px rgb(0 0 0 / 40%);
-  color: #fff;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 35%);
+  color: rgb(255 255 255 / 95%);
   display: inline-flex;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 800;
+  height: 22px;
+  justify-content: center;
   letter-spacing: 0.08em;
-  padding: 4px 10px;
-  pointer-events: none;
+  padding: 0 10px;
+  position: absolute;
+  right: 10px;
   text-transform: uppercase;
-  user-select: none;
+  top: 10px;
+  background: rgb(255 60 172 / 45%);
+}
+
+.result-poster .badge {
+  left: 10px;
+  position: absolute;
+  top: 10px;
+}
+
+/* варианты по media_type */
+
+.badge-movie,
+[class~="badge--movie"] {
+  background: linear-gradient(
+    90deg,
+    rgb(255 60 172 / 80%),
+    rgb(255 140 70 / 75%)
+  );
+}
+
+.badge-anime,
+[class~="badge--anime"] {
+  background: linear-gradient(
+    90deg,
+    rgb(120 90 255 / 85%),
+    rgb(255 60 172 / 75%)
+  );
+}
+
+.badge-show,
+[class~="badge--show"] {
+  background: linear-gradient(
+    90deg,
+    rgb(0 200 255 / 70%),
+    rgb(120 90 255 / 75%)
+  );
+}
+
+.badge-video-game,
+[class~="badge--video_game"] {
+  background: linear-gradient(
+    90deg,
+    rgb(0 230 170 / 75%),
+    rgb(0 160 255 / 70%)
+  );
+}
+
+.badge-book,
+[class~="badge--book"] {
+  background: linear-gradient(
+    90deg,
+    rgb(255 200 80 / 80%),
+    rgb(255 120 120 / 70%)
+  );
+}
+
+.result-info {
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 6px;
+  display: grid;
+  row-gap: 8px;
+  border-top: 1px solid rgb(255 255 255 / 8%);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.info-row {
+  gap: 10px 12px;
+  align-items: start;
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  margin: 6px 0;
+}
+
+/* "тег" слева */
+
+.info-k {
+  white-space: nowrap;
+  box-sizing: border-box;
+  line-height: 1;
+  min-height: 22px;
+  align-items: center;
+  background: rgb(255 60 172 / 14%);
+  border: 1px solid rgb(255 60 172 / 22%);
+  border-radius: 999px;
+  color: rgb(255 120 200 / 95%);
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 800;
+  height: 22px;
+  justify-content: center;
+  letter-spacing: 0.08em;
+  padding: 0 10px;
+  text-transform: uppercase;
+}
+
+/* значение справа */
+
+.info-v {
+  font-size: 13px;
+  color: rgb(255 255 255 / 86%);
+  line-height: 1.35;
+}
+
+/* ---- RESULT POSTER: всегда на всю ширину, без обрезки ---- */
+
+/* 1) Разрешаем карточке результата скроллиться, вместо обрезки */
+
+.result-card {
+  background: linear-gradient(180deg, rgb(255 255 255 / 6%), rgb(0 0 0 / 35%));
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 45%), inset 0 1px 0 rgb(255 255 255 / 6%);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 140px);
+  min-height: 0;
+  overflow: auto;
+}
+
+/* 2) Постер НЕ должен сжиматься по высоте */
+
+.result-cover {
+  margin-bottom: 10px;
+  background: rgb(255 255 255 / 4%);
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 14px;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: auto;
+  flex: 0 0 auto;
+}
+
+/* если есть длинные значения */
+
+.ms-item,
+.ms-option,
+.ms-row {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 2 колонки + зоны */
+
+.settings-grid {
+  margin: 0 auto;
+  max-width: 1200px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  grid-template-areas:
+    "presets catalog"
+    "presets spin"
+    "vc      vc";
+}
+
+/* общая сетка для заголовка и строк */
+
+.vc-head,
+.vc-row {
+  display: grid;
+  grid-template-columns:
+    220px /* название */
+    140px /* тип медиа */
+    1fr /* постер */
+    140px /* источник (лейбл) */
+    1fr /* источник (url) */
+    96px;
+  gap: 12px;
+  align-items: center;
+}
+
+.vc-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+/* когда свернуто — небольшой fade снизу/справа */
+
+.desc-wrap::after {
+  background: linear-gradient(90deg, rgb(0 0 0 / 0%), rgb(12 12 18 / 95%));
+  bottom: 0;
+  content: "";
+  height: 36px;
+  opacity: 1;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  width: 72px;
+}
+
+/* контейнер постера */
+
+/* сам постер — ВСЕГДА ЦЕЛИКОМ */
+
+.result-cover img {
+  background: rgb(0 0 0 / 18%);
+  object-position: center;
+  display: block;
+  height: auto;
+  object-fit: unset;
+  width: 100%;
+}
+
+/* 3) Картинка: на всю ширину, высота по пропорциям */
+
+.result-cover > img {
+  max-height: none !important;
+  display: block;
+  height: auto !important;
+  object-fit: unset !important;
+  width: 100%;
+}
+
+/* Убрать стрелки у number input (Firefox) */
+
+input[type="number"] {
+  appearance: textfield;
 }
 
 /* Типы */
-.badge[data-type="movie"] {
-  background: linear-gradient(135deg, #ff4fd8, #b84cff);
-  box-shadow: 0 0 14px rgb(255 79 216 / 55%);
-}
-
-.badge[data-type="anime"] {
-  background: linear-gradient(135deg, #00f0ff, #7b5cff);
-  box-shadow: 0 0 14px rgb(0 240 255 / 45%);
-}
 
 .badge[data-type="game"],
 .badge[data-type="video_game"],
@@ -1342,75 +1427,15 @@ button:hover,
   box-shadow: 0 0 14px rgb(0 255 156 / 45%);
 }
 
-.badge {
-  align-items: center;
-  backdrop-filter: blur(6px);
-  background: rgb(255 255 255 / 8%);
-  border: 1px solid rgb(255 255 255 / 18%);
-  border-radius: 999px;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 12%), 0 0 10px rgb(0 0 0 / 45%);
-  color: #fff;
-  display: inline-flex;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  padding: 4px 10px;
-  pointer-events: none;
-  text-transform: uppercase;
-  user-select: none;
-}
-
 /* 🎬 MOVIE */
-.badge[data-type="movie"] {
-  background: linear-gradient(135deg, #ff4fd8, #b84cff);
-  box-shadow: 0 0 14px rgb(255 79 216 / 55%);
-}
 
 /* 📺 SHOW / TV */
-.badge[data-type="show"] {
-  background: linear-gradient(135deg, #ffb347, #ff6a00);
-  box-shadow: 0 0 14px rgb(255 179 71 / 50%);
-}
 
 /* 🎌 ANIME */
-.badge[data-type="anime"] {
-  background: linear-gradient(135deg, #00f0ff, #7b5cff);
-  box-shadow: 0 0 14px rgb(0 240 255 / 45%);
-}
 
 /* 🎮 GAME */
-.badge[data-type="game"] {
-  background: linear-gradient(135deg, #00ff9c, #1aff5c);
-  box-shadow: 0 0 14px rgb(0 255 156 / 45%);
-}
 
 /* 📚 BOOK */
-.badge[data-type="book"] {
-  background: linear-gradient(135deg, #8bc6ec, #9599e2);
-  box-shadow: 0 0 14px rgb(139 198 236 / 45%);
-}
-
-.badge {
-  align-items: center;
-  backdrop-filter: blur(6px);
-
-  /* ⬇️ ключевая часть */
-  background: rgb(0 0 0 / 55%);
-  border: 1px solid rgb(255 255 255 / 25%);
-  border-radius: 999px;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 12%), 0 0 10px rgb(0 0 0 / 45%);
-  color: #fff;
-  display: inline-flex;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  padding: 4px 10px;
-  pointer-events: none;
-  position: relative;
-  text-shadow: 0 1px 2px rgb(0 0 0 / 75%), 0 0 4px rgb(0 0 0 / 60%);
-  text-transform: uppercase;
-  user-select: none;
-}
 
 .badge[data-type="movie"] {
   background: linear-gradient(135deg, #ff3fae, #a63cff);
@@ -1437,141 +1462,122 @@ button:hover,
   box-shadow: 0 0 14px rgb(90 141 238 / 45%);
 }
 
-.result-cover {
-  position: relative; /* якорь для бейджа */
-}
-
 .result-cover .badge {
-  display: inline-block;
-  left: 10px;
+  left: auto;
+  max-width: 70%;
+  padding: 4px 10px;
   position: absolute;
+  right: 10px;
   top: 10px;
+  white-space: nowrap;
   width: auto;
-
-  /* ⛔ ничего не трогаем во внешнем виде */
-}
-
-.result-cover {
-  position: relative;
-}
-
-.result-cover .badge {
   align-items: center;
   display: inline-flex;
   justify-content: center;
-  left: auto;
-  max-width: 70%; /* защита от длинных текстов */
-  padding: 4px 10px; /* компактнее по горизонтали */
-  position: absolute;
-  right: 10px; /* 👉 переносим в правый угол */
-  top: 10px; /* сохраняем вертикаль */
-  white-space: nowrap;
-  width: auto; /* ⛔ убираем растяжение */
+  line-height: 1.2;
 }
 
-.result-cover .badge {
-  align-items: center; /* ✅ вертикальное центрирование */
-  display: inline-flex;
-  justify-content: center; /* горизонтальное (на всякий случай) */
-}
-
-.result-cover .badge {
-  line-height: 1.2; /* ⛔ убираем влияние line-height */
-}
-
-.result-info {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.result-card.is-win .badge {
+  animation: badge-glow 1.6s ease-out;
 }
 
 /* строка */
-.info-row {
-  align-items: start;
-  column-gap: 12px;
-  display: grid;
-  grid-template-columns: auto 1fr;
-}
 
 /* тег (ключ) */
-.info-k {
-  background: rgb(255 79 163 / 14%);
-  border-radius: 6px;
-  color: #ff4fa3;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  padding: 4px 8px;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
 
 /* значение */
-.info-v {
-  color: rgb(255 255 255 / 88%);
-  font-size: 13px;
-  line-height: 1.45;
-}
 
 .info-row:has(.info-v) {
   align-items: start;
 }
 
 /* общий контейнер инфы */
-.result-info {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 12px; /* чтобы до кнопок был воздух */
-}
 
 /* линия перед блоком действий */
-.result-actions {
-  border-top: 1px solid rgb(255 255 255 / 12%);
-  margin-top: 10px;
-  padding-top: 12px;
-}
-
-.info-row {
-  align-items: start;
-  column-gap: 12px;
-  display: grid;
-  grid-template-columns: 92px 1fr; /* ← подбери ширину под твою верстку */
-}
-
-.info-k {
-  align-items: center;
-  box-sizing: border-box;
-  display: inline-flex;
-  justify-content: flex-start;
-  min-height: 22px;
-}
-
-.info-k {
-  align-items: center; /* вертикальный центр */
-  background: rgb(255 60 172 / 18%);
-  border-radius: 999px;
-  box-sizing: border-box;
-  color: #ff5bbd;
-  display: inline-flex;
-  font-size: 11px;
-  font-weight: 600;
-  justify-content: center; /* горизонтальный центр */
-  line-height: 1;
-  min-height: 22px;
-  padding: 2px 8px;
-}
-
-.info-row {
-  align-items: start;
-  display: grid;
-  gap: 10px;
-  grid-template-columns: auto 1fr;
-}
 
 .info-row.is-desc {
   grid-template-columns: auto 1fr;
   grid-template-rows: auto auto;
+}
+
+.desc-text.is-clamped {
+  position: relative;
+}
+
+/* общий ряд */
+
+/* описание: value идёт со 2-й строки и на всю ширину */
+
+.desc-more:active {
+  transform: translateY(1px);
+}
+
+.desc-more:hover {
+  background: rgb(255 255 255 / 10%);
+  border-color: rgb(255 60 172 / 55%);
+  box-shadow: 0 0 0 2px rgb(255 60 172 / 15%);
+}
+
+.desc-more.is-hidden {
+  display: none;
+}
+
+/* для длинных значений (описание и т.п.) */
+
+.info-row.is-long {
+  grid-template-columns: 92px 1fr;
+}
+
+/* инпуты и ms должны тянуться на всю колонку */
+
+.ms-pop .ms-list {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+/* перебиваем старое "span-2", чтобы не ломало grid */
+
+.settings-grid .settings-span-2 {
+  grid-column: auto !important;
+}
+
+/* чтобы 1fr не распирало grid */
+
+.vc-head > div,
+.vc-row > .vc-cell {
+  min-width: 0;
+}
+
+/* и label внутри ms тоже обрезаем */
+
+.vc-row .ms-btn {
+  width: 100%;
+}
+
+.vc-row .ms-text {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.desc-wrap.is-open::after {
+  opacity: 0;
+}
+
+/* инпуты в VC */
+
+.vc-row input[type="text"],
+.vc-row .ms {
+  width: 100%;
+}
+
+/* если ссылка длинная — не ломаем строку */
+
+.vc-row input[type="text"] {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .info-row.is-desc .info-k {
@@ -1579,17 +1585,29 @@ button:hover,
   grid-row: 1;
 }
 
-.info-row.is-desc .info-v {
-  grid-column: 1 / -1; /* ✅ значение под всем рядом */
-  grid-row: 2;
-  margin-top: 6px;
+/* когда open — fade не нужен */
+
+.desc-text.is-open + .desc-more {
+  margin-top: 8px;
+  position: static;
 }
 
-.desc-text.is-clamped {
-  position: relative;
+/* Больше воздуха между бейджем "ОПИСАНИЕ" и самим текстом */
+
+.info-row.is-desc .info-v {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  margin-top: 10px;
+}
+
+/* если надо ещё сильнее — это внутренний отступ у текста */
+
+.info-row.is-desc .desc-text {
+  padding-top: 2px;
 }
 
 /* небольшой fade вниз, чтобы было понятно что там ещё */
+
 .desc-text.is-clamped:not(.is-open)::after {
   background: linear-gradient(to bottom, rgb(0 0 0 / 0%), rgb(10 10 14 / 85%));
   bottom: 0;
@@ -1601,610 +1619,8 @@ button:hover,
   right: 0;
 }
 
-.desc-more {
-  align-items: center;
-  background: rgb(255 255 255 / 6%);
-  border: 1px solid rgb(255 255 255 / 10%);
-  border-radius: 999px;
-  color: rgb(255 255 255 / 82%);
-  cursor: pointer;
-  display: inline-flex;
-  height: 22px;
-  justify-content: center;
-  margin-top: 6px;
-  padding: 0 10px;
-}
-
-.desc-more:hover {
-  background: rgb(255 255 255 / 10%);
-}
-
-/* общий ряд */
-.info-row {
-  align-items: start;
-  display: grid;
-  gap: 0 10px; /* ✅ убираем лишние вертикальные зазоры */
-  grid-template-columns: auto 1fr;
-}
-
-/* описание: value идёт со 2-й строки и на всю ширину */
-.info-row.is-desc .info-v {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  margin-top: 2px; /* ✅ было 6px — делаем аккуратно */
-}
-
-.desc-more {
-  align-items: center;
-  background: rgb(255 255 255 / 5%);
-  border: 1px solid rgb(255 255 255 / 10%);
-  border-radius: 10px;
-  color: rgb(255 255 255 / 85%);
-  cursor: pointer;
-  display: inline-flex;
-  font-size: 12px;
-  font-weight: 700;
-  height: 26px;
-  justify-content: center;
-  letter-spacing: 0.06em;
-  margin-top: 8px;
-  padding: 0 12px;
-  text-transform: uppercase;
-}
-
-.desc-more:hover {
-  border-color: rgb(255 60 172 / 55%);
-  box-shadow: 0 0 0 2px rgb(255 60 172 / 15%);
-}
-
-.desc-more:active {
-  transform: translateY(1px);
-}
-
-.desc-text {
-  padding-bottom: 2px;
-}
-
-/* контейнер описания */
-.desc-wrap {
-  position: relative;
-}
-
-/* текст описания */
-.desc-text {
-  padding-right: 42px; /* ✅ место под кнопку */
-  position: relative;
-}
-
-/* когда свернуто — небольшой fade снизу/справа */
-.desc-wrap::after {
-  background: linear-gradient(90deg, rgb(0 0 0 / 0%), rgb(12 12 18 / 95%));
-  bottom: 0;
-  content: "";
-  height: 36px;
-  opacity: 1;
-  pointer-events: none;
-  position: absolute;
-  right: 0;
-  width: 72px;
-}
-
-.desc-wrap.is-open::after {
-  opacity: 0;
-}
-
-/* когда open — fade не нужен */
-.desc-text.is-open + .desc-more {
-  margin-top: 8px;
-  position: static; /* кнопка становится обычной */
-}
-
-/* сама кнопка "…" */
-.desc-more {
-  align-items: center;
-  background: rgb(255 255 255 / 5%);
-  border: 1px solid rgb(255 255 255 / 12%);
-  border-radius: 10px;
-  bottom: 6px;
-  color: rgb(255 255 255 / 90%);
-  cursor: pointer;
-  display: inline-flex;
-  font-size: 12px;
-  font-weight: 800;
-  height: 26px;
-  justify-content: center;
-  letter-spacing: 0.08em;
-  min-width: 34px;
-  padding: 0 10px;
-  position: absolute;
-  right: 6px;
-  text-transform: uppercase;
-}
-
-.desc-more:hover {
-  border-color: rgb(255 60 172 / 55%);
-  box-shadow: 0 0 0 2px rgb(255 60 172 / 15%);
-}
-
-.desc-more.is-hidden {
-  display: none;
-}
-
-/* Больше воздуха между бейджем "ОПИСАНИЕ" и самим текстом */
-.info-row.is-desc .info-v {
-  margin-top: 10px; /* было 0/мало — увеличиваем */
-}
-
-/* если надо ещё сильнее — это внутренний отступ у текста */
-.info-row.is-desc .desc-text {
-  padding-top: 2px; /* лёгкий сдвиг вниз */
-}
-
-/* карточка = колонка, контент может скроллиться */
-.result-card {
-  display: flex;
-  flex-direction: column;
-  max-height: calc(100vh - 140px); /* подбери под свою шапку/отступы */
-  overflow: hidden; /* важно: скролл отдаём внутреннему блоку */
-}
-
-/* именно блок с инфой и описанием пусть скроллится */
-.result-info {
-  flex: 1 1 auto; /* занимает всё доступное место */
-  min-height: 0; /* критично для flex+overflow (иначе не скроллится) */
-  overflow: auto;
-  padding-right: 6px; /* чтобы скроллбар не наезжал на текст */
-}
-
-/* кнопки всегда снизу и не уплывают */
-.result-actions {
-  border-top: 1px solid rgb(255 255 255 / 8%);
-  flex: 0 0 auto;
-  margin-top: 10px;
-  padding-top: 10px;
-}
-
-.result-info {
-  display: grid;
-  row-gap: 8px;
-}
-
-.info-row {
-  align-items: start;
-  column-gap: 12px;
-  display: grid;
-  grid-template-columns: 96px 1fr; /* ← КЛЮЧЕВОЕ МЕСТО */
-}
-
-.info-k {
-  color: rgb(255 255 255 / 55%);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.info-v {
-  color: rgb(255 255 255 / 92%);
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.badge {
-  align-items: center; /* ✅ вертикальное центрирование */
-  border-radius: 999px;
-  display: inline-flex;
-  font-size: 11px;
-  font-weight: 600;
-  height: 22px; /* фиксированная высота пузыря */
-  justify-content: center; /* ✅ горизонтальное центрирование */
-  line-height: 1; /* ❗ важно — убираем baseline-смещение */
-  padding: 0 10px;
-  white-space: nowrap;
-}
-
-/* контейнер постера должен быть позиционирован, чтобы бейдж сидел в углу */
-.result-cover {
-  position: relative;
-}
-
-/* базовый бейдж */
-.badge {
-  align-items: center;
-  backdrop-filter: blur(6px);
-  border: 1px solid rgb(255 255 255 / 14%);
-  border-radius: 999px;
-  box-shadow: 0 6px 18px rgb(0 0 0 / 35%);
-  color: rgb(255 255 255 / 95%);
-  display: inline-flex;
-  font-size: 11px;
-  font-weight: 800;
-  height: 22px;
-  justify-content: center;
-  letter-spacing: 0.08em;
-  padding: 0 10px;
-  position: absolute;
-  right: 10px;
-  text-transform: uppercase;
-  top: 10px;
-}
-
-/* дефолт */
-.badge {
-  background: rgb(255 60 172 / 45%);
-}
-
-/* варианты по media_type */
-.badge--movie {
-  background: linear-gradient(
-    90deg,
-    rgb(255 60 172 / 80%),
-    rgb(255 140 70 / 75%)
-  );
-}
-
-.badge--anime {
-  background: linear-gradient(
-    90deg,
-    rgb(120 90 255 / 85%),
-    rgb(255 60 172 / 75%)
-  );
-}
-
-.badge--show {
-  background: linear-gradient(
-    90deg,
-    rgb(0 200 255 / 70%),
-    rgb(120 90 255 / 75%)
-  );
-}
-
-.badge--video_game {
-  background: linear-gradient(
-    90deg,
-    rgb(0 230 170 / 75%),
-    rgb(0 160 255 / 70%)
-  );
-}
-
-.badge--book {
-  background: linear-gradient(
-    90deg,
-    rgb(255 200 80 / 80%),
-    rgb(255 120 120 / 70%)
-  );
-}
-
-.result-info {
-  border-top: 1px solid rgb(255 255 255 / 8%); /* разделитель от постера */
-  margin-top: 12px;
-  padding-top: 12px;
-}
-
-.info-row {
-  align-items: start;
-  display: grid;
-  gap: 10px;
-  grid-template-columns: 92px 1fr; /* фикс ширина тега, как ты хотел */
-  margin: 6px 0;
-}
-
-/* "тег" слева */
-.info-k {
-  align-items: center;
-  background: rgb(255 60 172 / 14%); /* мягкий розовый фон */
-  border: 1px solid rgb(255 60 172 / 22%); /* обводка */
-  border-radius: 999px;
-  color: rgb(255 120 200 / 95%); /* фирменный розовый */
-  display: inline-flex;
-  font-size: 10px;
-  font-weight: 800;
-  height: 22px;
-  justify-content: center;
-  letter-spacing: 0.08em;
-  padding: 0 10px;
-  text-transform: uppercase;
-}
-
-/* значение справа */
-.info-v {
-  color: rgb(255 255 255 / 86%);
-  line-height: 1.35;
-}
-
-/* для длинных значений (описание и т.п.) */
-.info-row.is-long {
-  grid-template-columns: 92px 1fr;
-}
-
-/* контейнер постера */
-.result-cover {
-  background: rgb(255 255 255 / 4%);
-  border: 1px solid rgb(255 255 255 / 8%);
-  border-radius: 14px;
-  overflow: hidden; /* можно оставить, чтобы бейдж не вылезал */
-  position: relative;
-  width: 100%;
-}
-
-/* сам постер — ВСЕГДА ЦЕЛИКОМ */
-.result-cover img {
-  background: rgb(0 0 0 / 18%); /* чтобы поля выглядели нормально */
-  display: block;
-  height: 100%;
-  object-fit: contain; /* ✅ ключевое */
-  object-position: center;
-  width: 100%;
-}
-
-.result-cover {
-  overflow: hidden;
-  width: 100%;
-}
-
-.result-cover img {
-  display: block;
-  height: auto; /* 🔥 сохраняет пропорции */
-  object-fit: unset;
-  width: 100%; /* 🔥 заполняет всю ширину */
-}
-
-/* ---- RESULT POSTER: всегда на всю ширину, без обрезки ---- */
-.result-cover {
-  height: auto; /* на всякий */
-}
-
-.result-cover > img {
-  display: block;
-  height: auto !important; /* перебиваем height:100% */
-  max-height: none !important; /* если где-то ограничивали */
-  object-fit: fill !important; /* чтобы вообще не влиял fit */
-  width: 100%;
-}
-
-/* 1) Разрешаем карточке результата скроллиться, вместо обрезки */
-.result-card {
-  min-height: 0; /* важно для flex-скролла */
-  overflow: auto; /* было hidden */
-}
-
-/* 2) Постер НЕ должен сжиматься по высоте */
-.result-cover {
-  flex: 0 0 auto; /* не shrink */
-}
-
-/* 3) Картинка: на всю ширину, высота по пропорциям */
-.result-cover > img {
-  display: block;
-  height: auto !important;
-  object-fit: unset !important;
-  width: 100%;
-}
-
-/* инпуты и ms должны тянуться на всю колонку */
-
-.ms-pop .ms-list {
-  max-height: 240px; /* высота именно списка */
-  overflow-y: auto;
-}
-
-/* если есть длинные значения */
-.ms-item,
-.ms-option,
-.ms-row {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ===== Virtual Collections table ===== */
-
-#vc-card .vc-head,
-#vc-card .vc-row {
-  display: grid;
-  gap: 12px;
-  align-items: center;
-}
-
-#vc-card .vc-head {
-  padding: 12px 12px 8px;
-  margin: 12px 0 8px;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.8px;
-  opacity: 0.9;
-  text-transform: uppercase;
-  user-select: none;
-}
-
-#vc-card .vc-list {
-  display: grid;
-  gap: 10px;
-  margin-top: 8px;
-}
-
-#vc-card .vc-row {
-  padding: 10px 12px;
-  border-top: 1px solid rgb(255, 255, 255, 6%);
-}
-
-/* cells */
-#vc-card .vc-cell {
-  min-width: 0; /* важно для grid: чтобы поля не раздували колонку */
-}
-
-/* inputs: вернуть красивый стиль как в остальных формах */
-#vc-card .vc-cell input[type="text"] {
-  width: 100%;
-  height: 36px;
-  padding: 0 12px;
-  border-radius: 10px;
-  border: 1px solid rgb(255, 255, 255, 10%);
-  background: rgb(0, 0, 0, 18%);
-  color: inherit;
-  outline: none;
-}
-
-#vc-card .vc-cell input[type="text"]::placeholder {
-  opacity: 0.55;
-}
-
-#vc-card .vc-cell input[type="text"]:focus {
-  border-color: rgb(255, 64, 170, 55%);
-  box-shadow: 0 0 0 2px rgb(255, 64, 170, 18%);
-}
-
-/* media select should fit column */
-#vc-card .vc-ms,
-#vc-card .vc-ms .ms-btn {
-  width: 100%;
-}
-
-/* actions: two buttons in one cell */
-#vc-card .vc-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-#vc-card .vc-actions .tab {
-  width: 40px;
-  height: 36px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* optional: dirty state */
-#vc-card .vc-row.is-dirty {
-  background: rgb(255, 64, 170, 6%);
-  border-radius: 12px;
-}
-
-/* одинаковая ширина контролов в ячейках */
-#vc-card .vc-cell input[type="text"],
-#vc-card .vc-ms,
-#vc-card .vc-ms .ms-btn {
-  width: 100%;
-}
-
-/* чтобы текст в селекте был как в инпуте */
-#vc-card .vc-ms .ms-btn {
-  height: 36px;
-  padding: 0 12px;
-  border-radius: 10px;
-}
-
-/* колонка действий фиксированная и кнопки по правому краю */
-#vc-card .vc-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-/* VC table layout: head + rows share same columns */
-#vc-card .vc-head,
-#vc-card .vc-row {
-  display: grid;
-  gap: 12px;
-  align-items: center;
-}
-
-/* head style (как ты просила) */
-#vc-card .vc-head {
-  padding: 12px 12px 8px;
-  margin: 12px 0 8px;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.8px;
-  opacity: 0.9;
-  text-transform: uppercase;
-  user-select: none;
-}
-
-/* rows */
-#vc-card .vc-row {
-  padding: 10px 12px;
-  border-top: 1px solid rgb(255, 255, 255, 6%);
-}
-
-/* cells: no surprises */
-#vc-card .vc-cell {
-  min-width: 0; /* важно для инпутов в grid, чтобы не распирали колонку */
-}
-
-/* controls fill their column */
-#vc-card .vc-name,
-#vc-card .vc-poster,
-#vc-card .vc-ms,
-#vc-card .vc-ms .ms-btn {
-  width: 100%;
-}
-
-/* actions fixed and aligned */
-#vc-card .vc-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-/* 1) общий "левый отступ" как у контролов */
-#vc-card {
-  --vc-ctl-pad: 14px;
-} /* подгони 12-16px если нужно */
-
-/* 2) заголовки колонок визуально над полями */
-#vc-card .vc-head > div {
-  padding-left: var(--vc-ctl-pad);
-  text-align: left;
-}
-
-/* 3) последняя колонка (действия) — без паддинга, вправо */
-#vc-card .vc-head > div:last-child {
-  padding-left: 0;
-  text-align: right;
-  padding-right: 6px; /* чуть к кнопкам */
-}
-
-/* 4) чтобы сами контролы совпали с этим паддингом (инпуты + ms кнопка) */
-#vc-card .vc-name,
-#vc-card .vc-poster {
-  padding-left: var(--vc-ctl-pad);
-}
-
-#vc-card .vc-ms .ms-btn {
-  padding-left: var(--vc-ctl-pad);
-}
-
-/* Убрать стрелки у number input (Chrome, Edge, Safari) */
-input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button {
-  appearance: none;
-  margin: 0;
-}
-
-/* Убрать стрелки у number input (Firefox) */
-input[type="number"] {
-  appearance: textfield;
-}
-
-#preset-weights input[type="number"] {
-  text-align: center;
-}
-
-/* 2 колонки + зоны */
-.settings-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px;
-  grid-template-areas:
-    "presets catalog"
-    "presets spin"
-    "vc      vc";
-}
-
 /* назначаем зоны */
+
 #preset-card {
   grid-area: presets;
 }
@@ -2217,16 +1633,8 @@ input[type="number"] {
   grid-area: spin;
 }
 
-#vc-card {
-  grid-area: vc;
-}
-
-/* перебиваем старое "span-2", чтобы не ломало grid */
-.settings-grid .settings-span-2 {
-  grid-column: auto !important;
-}
-
 /* чтобы внутренности не раздували колонки */
+
 #preset-card,
 #catalog-card,
 #spin-card,
@@ -2235,64 +1643,61 @@ input[type="number"] {
 }
 
 #vc-card {
+  --vc-ctl-pad: 14px;
+
+  grid-area: vc;
   overflow-x: auto;
 }
 
-/* общая сетка для заголовка и строк */
-.vc-head,
-.vc-row {
-  display: grid;
-  grid-template-columns:
-    220px /* название */
-    140px /* тип медиа */
-    1fr /* постер */
-    140px /* источник (лейбл) */
-    1fr /* источник (url) */
-    96px; /* действия */
+/* ===== Virtual Collections table ===== */
 
-  gap: 12px;
-  align-items: center;
+#vc-card .vc-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
 }
 
-/* чтобы 1fr не распирало grid */
-.vc-head > div,
-.vc-row > .vc-cell {
+/* чтобы текст в селекте был как в инпуте */
+
+/* колонка действий фиксированная и кнопки по правому краю */
+
+/* VC table layout: head + rows share same columns */
+
+/* head style (как ты просила) */
+
+#vc-card .vc-head {
+  padding: 12px 12px 8px;
+  margin: 12px 0 8px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  opacity: 0.9;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+/* rows */
+
+#vc-card .vc-row {
+  padding: 10px 12px;
+  border-top: 1px solid rgb(255 255 255 / 6%);
+}
+
+/* cells: no surprises */
+
+#vc-card .vc-cell {
   min-width: 0;
 }
 
-/* инпуты в VC */
-.vc-row input[type="text"],
-.vc-row .ms {
-  width: 100%;
-}
+/* 4) чтобы сами контролы совпали с этим паддингом (инпуты + ms кнопка) */
 
-/* если ссылка длинная — не ломаем строку */
-.vc-row input[type="text"] {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* и label внутри ms тоже обрезаем */
-.vc-row .ms-btn {
-  width: 100%;
-}
-
-.vc-row .ms-text {
-  display: block;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.vc-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  white-space: nowrap;
+#vc-card .vc-name,
+#vc-card .vc-poster {
+  padding-left: var(--vc-ctl-pad);
 }
 
 /* VC table grid: 6 columns */
+
 #vc-card .vc-head,
 #vc-card .vc-row {
   display: grid;
@@ -2302,34 +1707,13 @@ input[type="number"] {
     1fr /* poster */
     140px /* source label */
     1fr /* source url */
-    96px; /* actions */
-
+    96px;
   gap: 12px;
   align-items: center;
 }
 
-/* важно: чтобы 1fr мог сжиматься и не выталкивал всё */
-#vc-card .vc-head > div,
-#vc-card .vc-row > .vc-cell {
-  min-width: 0;
-}
-
-/* элементы внутри ячеек занимают ширину колонки */
-#vc-card .vc-row input[type="text"],
-#vc-card .vc-row .ms,
-#vc-card .vc-row .ms-btn {
-  width: 100%;
-}
-
-/* длинные URL не должны ломать layout */
-#vc-card .vc-row input[type="text"],
-#vc-card .vc-row .ms-text {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
 /* действия в одну линию */
+
 #vc-card .vc-actions {
   display: flex;
   justify-content: flex-end;
@@ -2337,26 +1721,131 @@ input[type="number"] {
   white-space: nowrap;
 }
 
-* {
-  box-sizing: border-box;
+/* actions fixed and aligned */
+
+/* 1) общий "левый отступ" как у контролов */
+
+/* подгони 12-16px если нужно */
+
+/* 2) заголовки колонок визуально над полями */
+
+#vc-card .vc-head > div {
+  padding-left: var(--vc-ctl-pad);
+  text-align: left;
 }
 
-html,
-body {
+#preset-weights input[type="number"] {
+  text-align: center;
+}
+
+/* media select should fit column */
+
+#vc-card .vc-ms,
+#vc-card .vc-ms .ms-btn {
   width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
 }
 
-img,
-canvas,
-video {
-  max-width: 100%;
-  height: auto;
+/* actions: two buttons in one cell */
+
+#vc-card .vc-actions .tab {
+  width: 40px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* optional: dirty state */
+
+#vc-card .vc-row.is-dirty {
+  background: rgb(255 64 170 / 6%);
+  border-radius: 12px;
+}
+
+/* controls fill their column */
+
+#vc-card .vc-name,
+#vc-card .vc-poster,
+#vc-card .vc-ms,
+#vc-card .vc-ms .ms-btn {
+  width: 100%;
+}
+
+#vc-card .vc-ms .ms-btn {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  padding-left: var(--vc-ctl-pad);
+}
+
+/* важно: чтобы 1fr мог сжиматься и не выталкивал всё */
+
+#vc-card .vc-head > div,
+#vc-card .vc-row > .vc-cell {
+  min-width: 0;
+}
+
+/* cells */
+
+/* inputs: вернуть красивый стиль как в остальных формах */
+
+#vc-card .vc-cell input[type="text"] {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  background: rgb(0 0 0 / 18%);
+  color: inherit;
+  outline: none;
+}
+
+/* одинаковая ширина контролов в ячейках */
+
+#vc-card .vc-cell input[type="text"],
+#vc-card .vc-ms,
+#vc-card .vc-ms .ms-btn {
+  width: 100%;
+}
+
+/* 3) последняя колонка (действия) — без паддинга, вправо */
+
+#vc-card .vc-head > div:last-child {
+  padding-left: 0;
+  text-align: right;
+  padding-right: 6px;
+}
+
+/* элементы внутри ячеек занимают ширину колонки */
+
+#vc-card .vc-row input[type="text"],
+#vc-card .vc-row .ms,
+#vc-card .vc-row .ms-btn {
+  width: 100%;
+}
+
+/* длинные URL не должны ломать layout */
+
+#vc-card .vc-row input[type="text"],
+#vc-card .vc-row .ms-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+#vc-card .vc-cell input[type="text"]::placeholder {
+  opacity: 0.55;
+}
+
+#vc-card .vc-cell input[type="text"]:focus {
+  border-color: rgb(255 64 170 / 55%);
+  box-shadow: 0 0 0 2px rgb(255 64 170 / 18%);
 }
 
 @media (width <= 520px) {
   /* любая карточка/панель не должна быть шире экрана */
+
   .card,
   .panel,
   .section,
@@ -2371,6 +1860,7 @@ video {
   }
 
   /* если у тебя есть общий контейнер */
+
   #app,
   .app,
   .page,
@@ -2382,11 +1872,12 @@ video {
   }
 
   /* колесо + его обёртка: убрать фикс ширину/высоту */
+
   .wheel,
   .wheel-wrap,
   .wheel-container,
-  #wheelWrap,
-  #wheelContainer {
+  [id="wheelWrap"],
+  [id="wheelContainer"] {
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;

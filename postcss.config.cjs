@@ -1,16 +1,16 @@
 module.exports = {
   plugins: [
-    require("postcss-sorting")({
-      order: [
-        "custom-properties",
-        "dollar-variables",
-        "declarations",
-        "rules",
-        "at-rules"
-      ],
-      "properties-order": "alphabetical",
-      "rules-order": "alphabetical",
-      "unspecified-properties-position": "bottom"
-    })
-  ]
+    {
+      postcssPlugin: "blank-lines",
+      Once(root) {
+        root.walk((node) => {
+          if (node.type === "comment" || node.type === "rule") {
+            if (node.raws.before && !node.raws.before.startsWith("\n\n")) {
+              node.raws.before = "\n\n" + node.raws.before.replace(/^\n+/, "");
+            }
+          }
+        });
+      },
+    },
+  ],
 };
