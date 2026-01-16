@@ -11,6 +11,7 @@ import { getState, subscribe } from "./state.js";
 import { spinToWinner } from "./wheelSpin.js";
 import { bindLazyPoster } from "./posterFallback.js"; // добавь импорт сверху
 import { initVirtualCollectionsUI } from "./virtualCollectionsUI.js";
+import { setState } from "./state.js";
 
 const LS_ACTIVE_PRESET = "won:activePresetId";
 const WHEEL_BASE = window.location.pathname.startsWith("/wheel/")
@@ -53,7 +54,7 @@ function escapeHtml(str) {
   });
 }
 
-function showToast(text, ms = 1600, opts = {}) {
+export function showToast(text, ms = 1600, opts = {}) {
   const el = document.getElementById("toast");
   if (!el) return;
 

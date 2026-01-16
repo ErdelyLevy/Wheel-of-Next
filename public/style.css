@@ -3321,3 +3321,11 @@ body::before {
     ),
     linear-gradient(180deg, var(--bg2), var(--bg1));
 }
+
+/* Во время вращения блокируем только пресеты и переключение view */
+html.is-spinning .tab[data-preset-id],
+html.is-spinning .tab[data-view] {
+  pointer-events: none;
+  opacity: 0.55;
+  cursor: not-allowed;
+}

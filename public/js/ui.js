@@ -1,5 +1,7 @@
 // js/ui.js
 import { getState, setView, setRightPanel, setSpin } from "./state.js";
+showToast;
+import { showToast } from "./main.js";
 
 function $(id) {
   return document.getElementById(id);

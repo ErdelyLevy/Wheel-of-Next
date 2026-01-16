@@ -89,6 +89,7 @@ export function spinToWinner({
     startSpinSound({ durationSec: durMs / 1000, speed });
 
     canvas.__spinning = true;
+    document.documentElement.classList.add("is-spinning");
 
     function tick(now) {
       const t = Math.min(1, (now - t0) / durMs);
@@ -102,7 +103,7 @@ export function spinToWinner({
         requestAnimationFrame(tick);
       } else {
         canvas.__spinning = false;
-
+        document.documentElement.classList.remove("is-spinning");
         if (window.requestWheelRedraw) window.requestWheelRedraw();
         resolve();
       }
