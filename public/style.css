@@ -3127,3 +3127,81 @@ body {
     ) !important;
   }
 }
+
+@media (width <= 520px) {
+  .topbar-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    flex-wrap: nowrap; /* ❗ убираем перенос */
+    gap: 8px;
+
+    padding: 8px 12px;
+  }
+}
+
+.brand {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#top-tabs {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0; /* ❗ не сжиматься */
+}
+
+@media (width <= 520px) {
+  .topbar-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+
+  .brand {
+    flex: 1 1 auto; /* 👈 занимает доступное место */
+    min-width: 0; /* 👈 важно для обрезки текста */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #top-tabs {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0; /* 👈 кнопки не сжимаются */
+  }
+}
+
+@media (width <= 520px) {
+  .topbar-inner {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 8px 12px !important;
+  }
+
+  .brand {
+    min-width: 0 !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #top-tabs {
+    min-width: 0; /* важно */
+    justify-self: end;
+    overflow: hidden; /* чтобы не раздувалось */
+  }
+
+  #top-tabs button,
+  #top-tabs .btn {
+    padding: 6px 10px !important; /* слегка компактнее на мобилке */
+  }
+}
