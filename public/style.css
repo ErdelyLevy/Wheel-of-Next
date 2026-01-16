@@ -2616,8 +2616,7 @@ body {
   #full-list {
     flex: 1 1 auto !important;
     min-height: 0 !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
+    overflow: hidden auto !important;
   }
 }
 
@@ -2649,8 +2648,7 @@ body {
   #full-list {
     flex: 1 1 auto !important;
     min-height: 0 !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
+    overflow: hidden auto !important;
   }
 }
 
@@ -2685,8 +2683,7 @@ body {
   #full-list {
     flex: 1 1 auto;
     min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden auto;
   }
 }
 
@@ -2751,6 +2748,7 @@ body {
   .app.is-left-open .right.is-collapsed {
     position: static;
   }
+
   .app.is-left-open main.center {
     padding-bottom: 12px; /* обычное */
   }
@@ -2859,7 +2857,6 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-
     z-index: 10;
   }
 }
@@ -3012,6 +3009,7 @@ body {
     overflow: visible !important;
     position: static !important;
   }
+
   #views > .view,
   #views > .view > .app {
     height: auto !important;
