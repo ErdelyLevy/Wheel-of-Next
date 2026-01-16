@@ -311,6 +311,12 @@ function initRollButton() {
       const durationSec = Number(s.spin?.duration || 20);
       const speed = Number(s.spin?.speed || 1);
 
+      console.log("[roll] durationSec/speed", {
+        durationSec,
+        speed,
+        spin: s.spin,
+      });
+
       // 3) крутим
       await spinToWinner({
         canvas,
@@ -541,6 +547,20 @@ function initMobileSidebarsCollapsible() {
   );
 }
 
+function syncSpinInputsFromState() {
+  const s = getState();
+  const dur = document.getElementById("spin-duration");
+  const spd = document.getElementById("spin-speed");
+
+  if (dur && s.spin?.duration != null) {
+    dur.value = s.spin.duration;
+  }
+
+  if (spd && s.spin?.speed != null) {
+    spd.value = s.spin.speed;
+  }
+}
+
 /** --- boot --- */
 async function boot() {
   initMobileSidebarsCollapsible();
@@ -583,6 +603,13 @@ async function boot() {
   if (active) {
     await applyPresetToWheelPage(active);
   }
+  const spin = {
+    duration: Number(localStorage.getItem("won:spinDuration")) || 20,
+    speed: Number(localStorage.getItem("won:spinSpeed")) || 1,
+  };
+
+  setState({ spin });
+  requestAnimationFrame(syncSpinInputsFromState);
 }
 
 boot().catch((e) => console.error("[boot] failed:", e));

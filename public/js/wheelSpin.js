@@ -74,8 +74,10 @@ export function spinToWinner({
     const from = Number(canvas.__rotation || 0);
 
     const baseTurns = 4;
-    const extraTurns = Math.max(0, Math.round(Number(speed || 1) * 2));
-    const turns = baseTurns + extraTurns;
+    const sp = Math.max(0.1, Number(speed || 1)); // защита от 0 и NaN
+    const turns = baseTurns + (sp - 1) * 3; // плавное влияние speed
+
+    const durMs = Math.max(300, Number(durationSec || 10) * 1000);
 
     const two = Math.PI * 2;
     let to = targetBase + turns * two;
@@ -83,7 +85,6 @@ export function spinToWinner({
     while (to <= from + two) to += two;
 
     const t0 = performance.now();
-    const durMs = Math.max(300, Number(durationSec || 10) * 1000);
 
     startSpinSound({ durationSec: durMs / 1000, speed });
 

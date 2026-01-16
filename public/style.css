@@ -3290,3 +3290,34 @@ aside.is-collapsed h2::before {
   box-shadow: none !important;
   filter: none !important;
 }
+
+/* Лечим фон */
+
+html,
+body {
+  background: transparent !important;
+}
+
+body {
+  position: relative;
+  isolation: isolate; /* чтобы -1 слой стабильно был под всем */
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+      1200px 800px at 50% 40%,
+      rgb(255 60 172 / 10%),
+      transparent 60%
+    ),
+    radial-gradient(
+      900px 600px at 30% 70%,
+      rgb(0 180 255 / 6%),
+      transparent 60%
+    ),
+    linear-gradient(180deg, var(--bg2), var(--bg1));
+}
