@@ -462,7 +462,7 @@ window.addEventListener("resize", () =>
 function initMobileSidebarsCollapsible() {
   if (window.__mobSidebarsInited) return;
   window.__mobSidebarsInited = true;
-  const mq = window.matchMedia("(max-width: 520px)");
+  const mq = window.matchMedia("(max-width: 1024px)");
   const app = document.querySelector(".app");
   const left = document.querySelector("aside.left");
   const right = document.querySelector("aside.right");

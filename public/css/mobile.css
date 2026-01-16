@@ -1,0 +1,538 @@
+@media (width <= 1024px) {
+  body {
+    overflow: hidden auto !important;
+  }
+
+  .app {
+    height: auto;
+    grid-template-columns: 1fr !important;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .left,
+  .right {
+    border: none;
+    border-bottom: 1px solid rgb(255 255 255 / 6%);
+    overflow: visible;
+    padding: 12px;
+  }
+
+  .card,
+  .panel,
+  .section,
+  .block,
+  .result,
+  .history,
+  .list,
+  .tabs,
+  .tabbar {
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  #app,
+  .app,
+  .page,
+  .container,
+  main {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .wheel,
+  .wheel-wrap,
+  .wheel-container,
+  [id="wheelWrap"],
+  [id="wheelContainer"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  canvas,
+  #wheel {
+    width: min(92vw, 92svh) !important;
+    aspect-ratio: 1 / 1;
+    height: auto !important;
+    display: block;
+  }
+
+  .top-tabs {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .top-tabs .tab {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+  .result-title {
+    font-size: 20px;
+  }
+
+  .result-card {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .wheel-wrap #spin-btn {
+    width: 70px;
+    height: 70px;
+    font-size: 13px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .settings-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .wheel-wrap {
+    width: min(92vmin, 520px) !important;
+    margin-inline: auto;
+  }
+
+  .left .result-card {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .is-hidden-visually {
+    display: none !important;
+  }
+
+  #panel-list,
+  #panel-history {
+    overflow: visible !important;
+  }
+
+  .left .left-head h2,
+  .right .right-head h2 {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .left.is-collapsed .left-body {
+    display: none !important;
+  }
+
+  .right.is-collapsed > :not(.right-head) {
+    display: none !important;
+  }
+
+  .left .left-head h2::after,
+  .right .right-head h2::after {
+    content: "▾";
+    float: right;
+    opacity: 0.7;
+    margin-left: auto;
+  }
+
+  .left.is-collapsed .left-head h2::after,
+  .right.is-collapsed .right-head h2::after {
+    content: "▸";
+  }
+
+  .right::before,
+  .right::after {
+    content: none !important;
+    display: none !important;
+  }
+
+  .left-head,
+  .right-head {
+    margin: -12px -12px 8px;
+    padding: 12px 0 !important;
+  }
+
+  .right::before,
+  .right::after,
+  .search::before {
+    content: none !important;
+    display: none !important;
+  }
+
+  .center {
+    padding: 12px;
+    gap: 10px;
+    order: 2;
+    margin-block: auto;
+  }
+
+  .view,
+  .view .app {
+    overflow: hidden !important;
+    min-height: 0 !important;
+  }
+
+  .view {
+    position: absolute !important;
+    inset: 0 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .view .app {
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  #full-list {
+    overflow: visible !important;
+  }
+
+  #view-settings.is-hidden-visually,
+  .view.is-hidden-visually {
+    display: none !important;
+  }
+
+  main.center {
+    padding-bottom: calc(12px + var(--right-collapsed-h, 83px));
+  }
+
+  .right.is-collapsed {
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: auto !important;
+    z-index: auto !important;
+    margin: 0 !important;
+  }
+
+  .app.is-left-open .right.is-collapsed {
+    position: static;
+  }
+
+  .app.is-left-open main.center {
+    padding-bottom: 12px;
+  }
+
+  .right {
+    order: 3;
+    overflow: visible !important;
+    width: 100%;
+    position: static;
+  }
+
+  .app.m-both-collapsed .right {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+  }
+
+  .app.m-left-open .right {
+    position: static;
+    z-index: auto;
+  }
+
+  .app.m-both-collapsed main.center {
+    padding-bottom: calc(12px + var(--right-collapsed-h, 83px));
+  }
+
+  #view-wheel .right.is-collapsed {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+  }
+
+  .app.m-both-collapsed .center {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+
+  #view-wheel .center {
+    padding-bottom: calc(12px + var(--right-collapsed-h, 83px));
+  }
+
+  #view-wheel .right {
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
+  }
+
+  .app.m-left-open #view-wheel .right {
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    z-index: auto !important;
+  }
+
+  html.m-screen #view-wheel .right.is-collapsed {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    z-index: 10 !important;
+  }
+
+  html.m-screen #view-wheel .center {
+    padding-bottom: calc(
+      12px + min(var(--right-collapsed-h, 83px), 120px)
+    ) !important;
+  }
+
+  .app.m-left-open #view-wheel .center {
+    padding-bottom: 12px !important;
+  }
+
+  .app.m-both-collapsed #view-wheel .center {
+    padding-bottom: calc(12px + var(--right-collapsed-h, 83px)) !important;
+  }
+
+  .app.m-left-open #view-wheel .center,
+  .app.m-right-open #view-wheel .center {
+    padding-bottom: 12px !important;
+  }
+
+  #views > .view {
+    position: static !important;
+    inset: auto !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  #views > .view > .app {
+    overflow: visible !important;
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+
+  .app.m-both-collapsed #view-wheel .right.is-collapsed {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    z-index: 10 !important;
+  }
+
+  #views {
+    display: flow-root !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+
+  #views > .view,
+  #views > .view > .app {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .app.m-both-collapsed {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    height: 100% !important;
+  }
+
+  /* Убираем "зажатый" layout */
+  #views,
+  #views > .view,
+  #views > .view > .app {
+    height: auto !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+
+  html.m-screen #views {
+    position: relative !important;
+    height: calc(100dvh - var(--header-h, 56px)) !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .app.m-both-collapsed #views,
+  #views:has(.app.m-both-collapsed) {
+    position: relative !important;
+    height: calc(100dvh - var(--header-h, 56px)) !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  html.m-screen #views > .view,
+  html.m-screen #views > .view > .app {
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  #views:has(.app.m-both-collapsed) > .view {
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  #views:has(.app.m-both-collapsed) > .view > .app {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    min-height: 0 !important;
+  }
+
+  .left {
+    order: 1;
+    height: auto;
+    min-height: 0;
+  }
+
+  #views:has(.app.m-both-collapsed) {
+    overflow: hidden !important;
+  }
+
+  html,
+  body {
+    overflow: auto;
+    overflow-y: auto !important;
+    height: auto !important;
+  }
+
+  html.m-screen,
+  html.m-screen body {
+    overflow: hidden !important;
+  }
+
+  body:has(.app.m-both-collapsed),
+  html:has(.app.m-both-collapsed) {
+    overflow: hidden !important;
+  }
+
+  #view-wheel {
+    position: relative;
+  }
+
+  .topbar-inner {
+    height: auto;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 8px 12px !important;
+  }
+
+  .brand {
+    font-size: 18px;
+    letter-spacing: 0.4px;
+    flex: 1 1 auto;
+    min-width: 0 !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #top-tabs {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+    min-width: 0;
+    justify-self: end;
+    overflow: hidden;
+  }
+
+  #top-tabs button,
+  #top-tabs .btn {
+    padding: 6px 10px !important;
+  }
+
+  #views #view-settings .settings-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 18px !important;
+  }
+
+  #views #view-settings .settings-grid > * {
+    order: 100 !important;
+  }
+
+  #views #view-settings #spin-card {
+    order: 1 !important;
+  }
+
+  #views #view-settings #catalog-card {
+    order: 2 !important;
+  }
+
+  #views #view-settings #preset-card {
+    order: 3 !important;
+  }
+
+  #views #view-settings #vc-card {
+    order: 4 !important;
+  }
+
+  html:has(#view-settings:not(.is-hidden-visually)),
+  html:has(#view-settings:not(.is-hidden-visually)) body {
+    overflow: hidden auto !important;
+    height: auto !important;
+  }
+
+  html:has(#view-settings:not(.is-hidden-visually)) #views,
+  html:has(#view-settings:not(.is-hidden-visually)) #view-settings {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  #vc-card .vc-head {
+    display: none !important;
+  }
+
+  #vc-card .vc-row {
+    display: grid !important;
+    grid-template-columns: 1fr 120px !important;
+    gap: 10px !important;
+    align-items: center !important;
+  }
+
+  #vc-card .vc-actions {
+    grid-column: 1 / -1 !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+  }
+
+  #vc-card input,
+  #vc-card select {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  #vc-card input {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #wheel {
+    width: min(92vw, 92svh);
+    aspect-ratio: 1 / 1;
+    height: auto;
+  }
+
+  canvas {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 1 / 1;
+  }
+}
