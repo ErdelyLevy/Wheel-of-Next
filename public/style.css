@@ -3284,3 +3284,9 @@ body {
     text-overflow: ellipsis;
   }
 }
+
+aside.is-collapsed h2::before {
+  background: rgba(255, 255, 255, 0.35);
+  box-shadow: none !important;
+  filter: none !important;
+}
