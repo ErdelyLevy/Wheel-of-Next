@@ -2025,7 +2025,7 @@ button:hover,
 
 #vc-card .vc-row {
   padding: 10px 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgb(255, 255, 255, 6%);
 }
 
 /* cells */
@@ -2039,8 +2039,8 @@ button:hover,
   height: 36px;
   padding: 0 12px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgb(255, 255, 255, 10%);
+  background: rgb(0, 0, 0, 18%);
   color: inherit;
   outline: none;
 }
@@ -2050,8 +2050,8 @@ button:hover,
 }
 
 #vc-card .vc-cell input[type="text"]:focus {
-  border-color: rgba(255, 64, 170, 0.55);
-  box-shadow: 0 0 0 2px rgba(255, 64, 170, 0.18);
+  border-color: rgb(255, 64, 170, 55%);
+  box-shadow: 0 0 0 2px rgb(255, 64, 170, 18%);
 }
 
 /* media select should fit column */
@@ -2078,7 +2078,7 @@ button:hover,
 
 /* optional: dirty state */
 #vc-card .vc-row.is-dirty {
-  background: rgba(255, 64, 170, 0.06);
+  background: rgb(255, 64, 170, 6%);
   border-radius: 12px;
 }
 
@@ -2126,7 +2126,7 @@ button:hover,
 /* rows */
 #vc-card .vc-row {
   padding: 10px 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgb(255, 255, 255, 6%);
 }
 
 /* cells: no surprises */
@@ -2180,13 +2180,13 @@ button:hover,
 /* Убрать стрелки у number input (Chrome, Edge, Safari) */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
+  appearance: none;
   margin: 0;
 }
 
 /* Убрать стрелки у number input (Firefox) */
 input[type="number"] {
-  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 #preset-weights input[type="number"] {
@@ -2198,7 +2198,6 @@ input[type="number"] {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 18px;
-
   grid-template-areas:
     "presets catalog"
     "presets spin"
@@ -2209,12 +2208,15 @@ input[type="number"] {
 #preset-card {
   grid-area: presets;
 }
+
 #catalog-card {
   grid-area: catalog;
 }
+
 #spin-card {
   grid-area: spin;
 }
+
 #vc-card {
   grid-area: vc;
 }
@@ -2247,6 +2249,7 @@ input[type="number"] {
     140px /* источник (лейбл) */
     1fr /* источник (url) */
     96px; /* действия */
+
   gap: 12px;
   align-items: center;
 }
@@ -2300,6 +2303,7 @@ input[type="number"] {
     140px /* source label */
     1fr /* source url */
     96px; /* actions */
+
   gap: 12px;
   align-items: center;
 }
@@ -2331,4 +2335,67 @@ input[type="number"] {
   justify-content: flex-end;
   gap: 10px;
   white-space: nowrap;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+img,
+canvas,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+@media (width <= 520px) {
+  /* любая карточка/панель не должна быть шире экрана */
+  .card,
+  .panel,
+  .section,
+  .block,
+  .result,
+  .history,
+  .list,
+  .tabs,
+  .tabbar {
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* если у тебя есть общий контейнер */
+  #app,
+  .app,
+  .page,
+  .container,
+  main {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* колесо + его обёртка: убрать фикс ширину/высоту */
+  .wheel,
+  .wheel-wrap,
+  .wheel-container,
+  #wheelWrap,
+  #wheelContainer {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  canvas,
+  #wheel {
+    width: 100% !important;
+    height: auto !important;
+    display: block;
+  }
 }
