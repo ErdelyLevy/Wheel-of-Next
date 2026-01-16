@@ -170,6 +170,7 @@ button,
 .right-tabs {
   display: flex;
   gap: 8px;
+  margin-bottom: 10px;
 }
 
 .list {
@@ -732,15 +733,6 @@ button:hover,
   opacity: 0.75;
 }
 
-/* Центрируем кнопку внутри контейнера колеса */
-
-.wheel-wrap {
-  aspect-ratio: 1 / 1;
-  flex: 0 0 auto;
-  width: min(72vmin, 720px);
-  position: relative;
-}
-
 .toast-winner {
   color: var(--accent);
   font-weight: 900;
@@ -823,13 +815,6 @@ button:hover,
 
 /* ===== Glow dot for section headers ===== */
 
-.left h2,
-.right h2 {
-  line-height: 1.2;
-  padding-left: 22px;
-  position: relative;
-}
-
 .settings-card h2 {
   line-height: 1.2;
   padding-left: 22px;
@@ -846,21 +831,6 @@ button:hover,
 
 .search input::placeholder {
   color: rgb(255 255 255 / 45%);
-}
-
-.left h2::before,
-.right h2::before {
-  background: var(--accent);
-  border-radius: 50%;
-  box-shadow: 0 0 6px rgb(255 60 172 / 90%), 0 0 14px rgb(255 60 172 / 60%),
-    0 0 26px rgb(255 60 172 / 35%);
-  content: "";
-  height: 10px;
-  left: 0;
-  position: absolute;
-  top: 0.6em;
-  transform: translateY(-50%);
-  width: 10px;
 }
 
 .settings-card h2::before {
@@ -1888,5 +1858,1274 @@ input[type="number"] {
     width: 100% !important;
     height: auto !important;
     display: block;
+  }
+}
+
+/* =========================================================
+   Mobile layout fix (<= 520px)
+   - нормальный скролл
+   - компактный topbar
+   - колесо/карточки без "распирания"
+   ========================================================= */
+
+@media (width <= 520px) {
+  /* 1) на мобилке нельзя держать страницу в absolute-видах */
+  body {
+    overflow: auto; /* перебиваем overflow:hidden из base */
+  }
+
+  #views {
+    min-height: auto;
+  }
+
+  #views > .view {
+    inset: auto;
+    min-height: auto;
+  }
+
+  /* 2) topbar: в 2 строки, если не влазит */
+  .topbar-inner {
+    height: auto;
+    padding: 10px 12px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .brand {
+    font-size: 18px;
+    letter-spacing: 0.4px;
+  }
+
+  .top-tabs {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .top-tabs .tab {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+  /* 3) общие паддинги/колонки */
+  .left,
+  .right {
+    padding: 12px;
+  }
+
+  .center {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  /* 4) результат: не фиксируем высоту карточки на мобилке */
+  .result-title {
+    font-size: 20px;
+  }
+
+  .result-card {
+    max-height: none; /* было calc(100vh - 140px) */
+    overflow: visible; /* пусть растёт, скроллит страница */
+  }
+
+  /* 5) колесо: крупнее и стабильнее */
+  .wheel-wrap {
+    width: min(92vmin, 520px);
+  }
+
+  .wheel-wrap #spin-btn {
+    width: 70px;
+    height: 70px;
+    font-size: 13px;
+  }
+
+  /* 6) правые списки: пусть тоже растут, не конфликтуют со скроллом */
+  #panel-list,
+  #panel-history {
+    overflow: visible;
+  }
+
+  /* 7) мелкие сетки в настройках */
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .settings-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
+@media (width <= 520px) {
+  /* 1 колонка вместо 3 */
+  .app {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* порядок блоков (если нужно) */
+  .left {
+    order: 1;
+  }
+
+  .center {
+    order: 2;
+  }
+
+  .right {
+    order: 3;
+  }
+
+  /* колесо — главный элемент, пусть будет крупнее */
+  .wheel-wrap {
+    width: min(92vmin, 520px) !important;
+    margin-inline: auto;
+  }
+}
+
+@media (width <= 520px) {
+  .left {
+    min-height: auto;
+    height: auto;
+  }
+
+  .left .result-card {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+/* колсо под мобилки */
+
+.wheel-area {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.wheel-wrap {
+  position: relative;
+  width: min(92vw, 420px); /* мобилка / десктоп */
+  aspect-ratio: 1 / 1; /* ВСЕГДА круг */
+}
+
+#wheel {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.spin-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+}
+
+.wheel-wrap {
+  position: relative;
+  width: min(92vw, 520px);
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+}
+
+#wheel {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#spin-btn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+}
+
+.wheel-wrap {
+  position: relative;
+  width: min(92vw, 520px);
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+}
+
+#wheel {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#spin-btn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+}
+
+.wheel-wrap {
+  position: relative;
+  width: min(92vw, 520px);
+  aspect-ratio: 1 / 1;
+}
+
+#wheel {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.wheel-area {
+  align-items: center;
+  justify-content: center;
+}
+
+.wheel-wrap {
+  position: relative;
+  width: min(92vmin, 520px) !important;
+  aspect-ratio: 1 / 1 !important;
+  flex: none !important; /* ✅ убираем 0 0 auto */
+  height: auto !important;
+  margin-inline: auto;
+}
+
+#wheel {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+/* === no horizontal scroll, but allow vertical === */
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden; /* ✅ запрет X */
+}
+
+body {
+  overflow-y: auto; /* ✅ разрешаем Y */
+}
+
+/* чтобы дети в grid/flex не распирали ширину */
+.app,
+.left,
+.center,
+.right {
+  min-width: 0;
+}
+
+/* правая колонка должна скроллиться по Y, а не резать контент */
+.right {
+  overflow: hidden auto; /* ✅ запрет X */ /* ✅ скролл Y */
+  min-height: 0;
+}
+
+/* === FORCE: no horizontal scroll, but allow vertical === */
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden auto !important; /* <-- важно */
+  height: auto !important;
+}
+
+/* если #views / .view фиксируют экран, разрешаем им расти */
+#views,
+.view {
+  height: auto !important;
+  min-height: 100vh;
+  overflow: visible !important;
+}
+
+/* правая колонка: только вертикальный скролл, горизонтальный запрещён */
+.right {
+  overflow: hidden auto !important;
+  min-height: 0;
+}
+
+/* 1) Скролл — у страницы */
+html,
+body {
+  overflow: hidden auto !important;
+  height: auto !important;
+}
+
+/* 2) Никакого внутреннего скролла у right */
+.right {
+  overflow: visible !important; /* было auto */
+}
+
+/* 3) Главное: контейнеры не должны быть "экранной высоты" */
+#views,
+.view,
+.app {
+  height: auto !important;
+  overflow: visible !important;
+}
+
+/* 4) Чтобы колонки не распирали ширину */
+.app,
+.left,
+.center,
+.right {
+  min-width: 0;
+}
+
+@media (width <= 520px) {
+  /* страница должна скроллиться */
+  body {
+    overflow: hidden auto !important;
+  }
+
+  /* ВАЖНО: вернуть views в поток */
+  #views {
+    position: static !important;
+  }
+
+  #views > .view {
+    position: static !important;
+    inset: auto !important;
+  }
+
+  /* скрытый таб должен реально исчезать, иначе будет давать лишнюю высоту */
+  .is-hidden-visually {
+    display: none !important;
+  }
+}
+
+@media (width <= 520px) {
+  #panel-list,
+  #panel-history {
+    overflow: visible !important;
+  }
+}
+
+@media (width <= 520px) {
+  .left .left-head h2,
+  .right .right-head h2 {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  /* свернуто */
+  .left.is-collapsed .left-body {
+    display: none !important;
+  }
+
+  /* right: скрываем всё, кроме right-head */
+  .right.is-collapsed > :not(.right-head) {
+    display: none !important;
+  }
+
+  /* индикатор */
+  .left .left-head h2::after,
+  .right .right-head h2::after {
+    content: "▾";
+    float: right;
+    opacity: 0.7;
+  }
+
+  .left.is-collapsed .left-head h2::after,
+  .right.is-collapsed .right-head h2::after {
+    content: "▸";
+  }
+}
+
+/* унифицируем шапки left/right */
+.left-head,
+.right-head {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* чтобы h2 в обеих колонках выглядел одинаково */
+.left-head h2,
+.right-head h2 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+/* такая же "точка" как у тебя в заголовках */
+.left-head h2::before,
+.right-head h2::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 10px rgb(255 60 172 / 60%);
+  flex: 0 0 auto;
+}
+
+/* чтобы стрелка (collapse) не ломала layout */
+@media (width <= 520px) {
+  .left .left-head h2::after,
+  .right .right-head h2::after {
+    margin-left: auto;
+  }
+}
+
+.left,
+.right {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgb(0 0 0 / 25%);
+  padding: 16px;
+  min-height: 0;
+}
+
+@media (width >= 1041px) {
+  .left {
+    border-right: 1px solid rgb(255 255 255 / 6%);
+  }
+
+  .right {
+    border-left: 1px solid rgb(255 255 255 / 6%);
+    overflow: hidden auto;
+  }
+}
+
+@media (width <= 1040px) {
+  .left,
+  .right {
+    border: none;
+    border-bottom: 1px solid rgb(255 255 255 / 6%);
+    overflow: visible; /* ⬅️ КЛЮЧЕВО */
+  }
+}
+
+.left-head h2,
+.right-head h2 {
+  line-height: 1.2;
+  position: relative;
+
+  /* padding-left: 22px;  <-- НЕ нужно, если используешь flex+::before точку */
+}
+
+/* точка — только через .left-head/.right-head */
+.left-head h2::before,
+.right-head h2::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 10px rgb(255 60 172 / 60%);
+  flex: 0 0 auto;
+}
+
+@media (width <= 520px) {
+  .right::before,
+  .right::after {
+    content: none !important;
+    display: none !important;
+  }
+}
+
+.left-head,
+.right-head {
+  margin: -16px -16px 8px; /* компенсируем padding aside */
+  padding: 12px 16px;
+  background: rgb(0 0 0 / 18%);
+  border-bottom: 1px solid rgb(255 255 255 / 6%);
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
+@media (width <= 520px) {
+  .left-head,
+  .right-head {
+    margin: -12px -12px 8px;
+    padding: 12px;
+  }
+}
+
+@media (width <= 520px) {
+  .right {
+    overflow: visible !important;
+  }
+}
+
+/* === FIX: одинаковые шапки left/right (и убрать подчёркивание у right h2) === */
+
+/* 1) отключаем старый "underline" на h2 (он бил только по right) */
+.left > h2,
+.right-head > h2 {
+  border-bottom: 0 !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* 2) если хочешь шапку-полоску — делаем её ТОЛЬКО на контейнере,
+      но без второго "фона-слоя" */
+.left-head,
+.right-head {
+  margin: 0 0 8px !important; /* убираем отрицательные margin */
+  padding: 12px !important;
+  background: transparent !important;
+  border-bottom: 1px solid rgb(255 255 255 / 6%);
+  border-radius: 0 !important;
+}
+
+/* 3) визуально одинаковый h2 */
+.left-head h2,
+.right-head h2 {
+  margin: 0 !important;
+}
+
+/* 4) на мобилке оставляем кликабельность и стрелку как было */
+@media (width <= 520px) {
+  .left-head,
+  .right-head {
+    padding: 12px 0 !important;
+  }
+}
+
+@media (width <= 520px) {
+  .right::before,
+  .right::after,
+  .search::before {
+    content: none !important;
+    display: none !important;
+  }
+}
+
+.center {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  max-height: 100vh; /* но не выше экрана */
+}
+
+.wheel-wrap {
+  width: 100% !important;
+  max-width: 100% !important;
+  aspect-ratio: 1 / 1 !important; /* оставляем квадрат */
+  margin: 0 !important; /* иначе auto может мешать */
+}
+
+@media (width <= 520px) {
+  .app {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+@media (width <= 520px) {
+  .center {
+    margin-block: auto;
+  }
+}
+
+:root {
+  --header-h: 56px;
+}
+
+@media (width <= 520px) {
+  /* контейнер под обе view: ровно оставшаяся высота экрана */
+  #views {
+    position: relative !important;
+    height: calc(100dvh - var(--header-h)) !important;
+    min-height: 0 !important;
+    overflow: hidden !important; /* чтобы скрытая view не влияла и не торчала */
+  }
+
+  /* обе view лежат друг на друге, размер = #views */
+  .view {
+    position: absolute !important;
+    inset: 0 !important; /* top/right/bottom/left = 0 */
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+
+  /* app внутри активной view занимает всю высоту */
+  .view .app {
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+}
+
+@media (width <= 520px) {
+  /* не даём странице прокручиваться даже на 1px */
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* гарантируем, что #views не может стать выше экрана */
+  #views {
+    min-height: 0 !important; /* важно: перебить старое min-height: 100vh */
+    height: calc(100dvh - var(--header-h)) !important;
+    overflow: hidden !important;
+  }
+
+  /* и внутри тоже не даём вылезать */
+  .view,
+  .view .app {
+    overflow: hidden !important;
+    min-height: 0 !important;
+  }
+}
+
+@media (width <= 520px) {
+  #views {
+    height: calc(100dvh - var(--header-h)) !important;
+    min-height: 0 !important; /* перебить min-height: 100vh */
+    overflow: hidden !important;
+
+    /* убирает margin-collapsing, часто даёт +N пикселей scrollHeight */
+    display: flow-root !important;
+  }
+
+  .view {
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .view .app {
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+}
+
+/* правая колонка: без скролла, раскладка сверху вниз */
+.right {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+  min-height: 0;
+}
+
+/* панели справа должны уметь сжиматься */
+#panel-list,
+#panel-history {
+  min-height: 0;
+}
+
+/* если panel-list активен — он заполняет доступную высоту */
+#panel-list {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* сам список — единственный скроллящийся элемент */
+#full-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto; /* или overflow-y:auto; overflow-x:hidden; */
+}
+
+.panel.is-hidden {
+  display: none !important;
+}
+
+/* ПК: приложение без скролла страницы */
+html,
+body {
+  height: 100%;
+  overflow: hidden !important;
+}
+
+/* Мобилка: разрешаем скролл страницы */
+@media (width <= 520px) {
+  html,
+  body {
+    overflow: auto !important;
+  }
+}
+
+@media (width <= 520px) {
+  #full-list {
+    overflow: visible !important;
+  }
+}
+
+#full-list {
+  overflow-y: auto;
+}
+
+@media (width > 520px) {
+  /* страница не скроллится */
+  html,
+  body {
+    height: 100%;
+    overflow: hidden !important;
+  }
+
+  /* рабочая область под хедером */
+  #views {
+    height: calc(100vh - 56px) !important;
+    overflow: hidden !important;
+  }
+
+  .view,
+  .app {
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* правая колонка -> flex-колонка */
+  .right {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    min-height: 0 !important;
+  }
+
+  /* панель списка заполняет остаток */
+  #panel-list {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+
+  /* и только список скроллится */
+  #full-list {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+}
+
+@media (width > 520px) {
+  /* правая колонка уже нормальной высоты */
+  .right {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* ВОТ ЗДЕСЬ ПРОБЛЕМА: right-body должен уметь сжиматься */
+  .right-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important; /* критично */
+    overflow: hidden !important; /* чтобы скролл был не тут */
+  }
+
+  /* панель со списком заполняет right-body */
+  #panel-list {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+
+  /* скролл только у списка */
+  #full-list {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+}
+
+@media (width > 520px) {
+  .right {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* КЛЮЧ: right-body должен распределять высоту */
+  .right-body {
+    display: flex; /* <-- добавили */
+    flex-direction: column; /* <-- добавили */
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden; /* right-body не скроллится */
+  }
+
+  /* панель (list/history) занимает всё место right-body */
+  #panel-list,
+  #panel-history {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden; /* чтобы скролл был только внутри списка */
+  }
+
+  /* и ТОЛЬКО список скроллится */
+  #full-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+}
+
+@media (width <= 520px) {
+  /* На мобилке страница обычная: views не фиксируем по высоте */
+  #views {
+    height: auto !important;
+    min-height: calc(100dvh - var(--header-h, 56px));
+    overflow: visible !important;
+    position: static !important;
+  }
+
+  /* view не слоем, а обычным блоком */
+  #views > .view {
+    position: static !important;
+    inset: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* app внутри тоже по контенту */
+  #views > .view > .app {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* скрытая view не должна занимать место */
+  #view-settings.is-hidden-visually,
+  .view.is-hidden-visually {
+    display: none !important;
+  }
+}
+
+@media (width <= 520px) {
+  /* Обычное состояние — right в потоке, страница скроллится */
+  .right {
+    position: static;
+    width: 100%;
+  }
+
+  /* Свернутое состояние — right приклеен к низу */
+  .right.is-collapsed {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    z-index: 1000;
+
+    /* чтобы не было "хвоста" под ним */
+    margin: 0;
+  }
+}
+
+@media (width <= 520px) {
+  main.center {
+    padding-bottom: calc(12px + var(--right-collapsed-h, 83px));
+  }
+}
+
+@media (width <= 520px) {
+  .app.is-left-open .right.is-collapsed {
+    position: static;
+  }
+  .app.is-left-open main.center {
+    padding-bottom: 12px; /* обычное */
+  }
+}
+
+@media (width <= 520px) {
+  /* базово: всё в потоке (скролл страницы возможен) */
+  .right {
+    position: static;
+  }
+
+  /* оба collapsed -> right фиксируем снизу */
+  .app.m-both-collapsed .right {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+  }
+
+  /* если left открыт -> right НЕ должен быть fixed (даже если collapsed) */
+  .app.m-left-open .right {
+    position: static;
+    z-index: auto;
+  }
+
+  /* чтобы контент не прятался под фиксированным right */
+  .app.m-both-collapsed main.center {
+    padding-bottom: calc(12px + var(--right-collapsed-h, 83px));
+  }
+}
+
+@media (width > 520px) {
+  .center {
+    margin-inline: auto;
+  }
+}
+
+@media (width > 520px) {
+  .wheel-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    aspect-ratio: 1 / 1 !important;
+    height: auto !important;
+  }
+
+  /* если вылезает по высоте — заставляем считать размер от высоты */
+  .center {
+    align-items: center; /* у тебя уже есть */
+  }
+}
+
+.wheel-wrap {
+  aspect-ratio: 1 / 1;
+}
+
+@media (width > 520px) {
+  .center {
+    justify-self: stretch !important; /* ключ */
+    width: 100% !important; /* на всякий */
+    margin-inline: 0 !important; /* чтобы не мешало */
+  }
+}
+
+@media (width > 520px) {
+  :root {
+    --header-h: 56px;
+  }
+
+  #views {
+    height: calc(100vh - var(--header-h)) !important;
+    overflow: hidden;
+  }
+
+  /* чтобы гриды/флексы не раздували высоту */
+  #views .view,
+  #views .app {
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+}
+
+@media (width > 520px) {
+  #view-wheel .app {
+    height: calc(100vh - 57px) !important;
+  }
+
+  /* цепочка, чтобы дети не раздували */
+  #view-wheel .left,
+  #view-wheel .center,
+  #view-wheel .right {
+    min-height: 0 !important;
+  }
+}
+
+@media (width <= 520px) {
+  #view-wheel {
+    position: relative;
+  }
+}
+
+@media (width <= 520px) {
+  #view-wheel .right.is-collapsed {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    z-index: 10;
+  }
+}
+
+@media (width <= 520px) {
+  #view-wheel .center {
+    padding-bottom: calc(12px + var(--right-collapsed-h, 83px));
+  }
+}
+
+@media (width <= 520px) {
+  /* по умолчанию right в потоке */
+  #view-wheel .right {
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
+  }
+
+  /* приклеиваем ТОЛЬКО когда обе панели свернуты */
+  .app.m-both-collapsed #view-wheel .right.is-collapsed {
+    position: absolute; /* к низу view */
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+  }
+
+  /* если left открыт — right НИКОГДА не должен быть приклеен */
+  .app.m-left-open #view-wheel .right {
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    z-index: auto !important;
+  }
+
+  /* отступ под приклеенный right только в режиме обеих collapsed */
+  .app.m-both-collapsed #view-wheel .center {
+    padding-bottom: calc(12px + var(--right-collapsed-h, 83px));
+  }
+
+  /* и наоборот: когда left открыт — убираем этот отступ */
+  .app.m-left-open #view-wheel .center {
+    padding-bottom: 12px !important; /* или твой базовый padding */
+  }
+}
+
+@media (width <= 520px) {
+  #view-wheel {
+    position: relative;
+  }
+}
+
+@media (width <= 520px) {
+  /* якорь для absolute */
+  #view-wheel {
+    position: relative;
+  }
+
+  /* 1) Запрещаем fixed для collapsed right на мобилке */
+  .right.is-collapsed {
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: auto !important;
+    z-index: auto !important;
+    margin: 0 !important;
+  }
+
+  /* 2) Приклеиваем ТОЛЬКО когда обе панели collapsed */
+  .app.m-both-collapsed #view-wheel .right.is-collapsed {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    z-index: 10 !important;
+  }
+
+  /* 3) Отступ под панель только в этом режиме */
+  .app.m-both-collapsed #view-wheel .center {
+    padding-bottom: calc(12px + var(--right-collapsed-h, 83px)) !important;
+  }
+
+  /* Когда left открыт (или right открыт) — отступ не нужен */
+  .app.m-left-open #view-wheel .center,
+  .app.m-right-open #view-wheel .center {
+    padding-bottom: 12px !important;
+  }
+}
+
+@media (width <= 520px) {
+  /* мобильный layout: рабочая область под хедером */
+  #views {
+    position: relative !important;
+    height: calc(100dvh - var(--header-h, 56px)) !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* активный view растягиваем на всю высоту #views */
+  #views > .view {
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* app тоже занимает всю высоту view */
+  #views > .view > .app {
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+}
+
+@media (width <= 520px) {
+  #view-wheel {
+    position: relative;
+  }
+
+  .app.m-both-collapsed {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+
+  .app.m-both-collapsed .center {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+
+  /* right приклеиваем к низу VIEW, не экрана */
+  .app.m-both-collapsed #view-wheel .right.is-collapsed {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    z-index: 10 !important;
+  }
+}
+
+@media (width <= 520px) {
+  /* БАЗА: на мобилке по умолчанию обычная страница (скролл) */
+  #views {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+  #views > .view,
+  #views > .view > .app {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* ЭКРАННЫЙ РЕЖИМ ТОЛЬКО когда обе панели collapsed */
+  .app.m-both-collapsed {
+    height: 100% !important;
+  }
+
+  .app.m-both-collapsed ~ * {
+    /* ничего, просто чтобы не было случайных пересечений */
+  }
+
+  .app.m-both-collapsed #views, /* на случай если .app не внутри #views */
+  #views:has(.app.m-both-collapsed) {
+    position: relative !important;
+    height: calc(100dvh - var(--header-h, 56px)) !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  #views:has(.app.m-both-collapsed) > .view {
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  #views:has(.app.m-both-collapsed) > .view > .app {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    min-height: 0 !important;
+  }
+}
+
+@media (width <= 520px) {
+  .left {
+    min-height: 0;
+  }
+}
+
+@media (width <= 520px) {
+  #views:has(.app.m-both-collapsed) {
+    overflow: hidden !important;
+  }
+
+  body:has(.app.m-both-collapsed),
+  html:has(.app.m-both-collapsed) {
+    overflow: hidden !important;
+  }
+}
+
+@media (width <= 520px) {
+  /* дефолт: страница скроллится */
+  html,
+  body {
+    overflow: auto;
+  }
+
+  /* экранный режим (оба collapsed) — НИКАКОГО скролла страницы */
+  html.m-screen,
+  html.m-screen body {
+    overflow: hidden !important;
+  }
+
+  /* рабочая область под header в экранном режиме */
+  html.m-screen #views {
+    position: relative !important;
+    height: calc(100dvh - var(--header-h, 56px)) !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  html.m-screen #views > .view,
+  html.m-screen #views > .view > .app {
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+}
+
+@media (width <= 520px) {
+  #view-wheel {
+    position: relative;
+  }
+
+  /* по умолчанию right в потоке */
+  .right {
+    position: static;
+  }
+
+  /* в экранном режиме (оба collapsed) — приклеиваем */
+  html.m-screen #view-wheel .right.is-collapsed {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    z-index: 10 !important;
+  }
+
+  /* отступ под панель — только в экранном режиме */
+  html.m-screen #view-wheel .center {
+    padding-bottom: calc(12px + var(--right-collapsed-h, 83px)) !important;
+  }
+}
+
+@media (width <= 520px) {
+  html.m-screen #view-wheel .center {
+    padding-bottom: calc(
+      12px + min(var(--right-collapsed-h, 83px), 120px)
+    ) !important;
   }
 }

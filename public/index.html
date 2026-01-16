@@ -28,19 +28,23 @@
         <div class="app">
           <!-- Левая колонка: результат -->
           <aside class="left">
-            <h2>Результат</h2>
+            <div class="left-head">
+              <h2 id="left-title">Результат</h2>
+            </div>
 
-            <div class="result-card">
-              <h1 class="result-title" id="result-title">—</h1>
+            <div class="left-body">
+              <div class="result-card">
+                <h1 class="result-title" id="result-title">—</h1>
 
-              <div class="result-cover">
-                <img id="result-cover" src="" alt="cover" />
-                <span class="badge" id="result-badge">—</span>
+                <div class="result-cover">
+                  <img id="result-cover" src="" alt="cover" />
+                  <span class="badge" id="result-badge">—</span>
+                </div>
+
+                <div class="result-info" id="result-info"></div>
+
+                <div class="result-actions" id="result-actions"></div>
               </div>
-
-              <div class="result-info" id="result-info"></div>
-
-              <div class="result-actions" id="result-actions"></div>
             </div>
           </aside>
 
@@ -68,29 +72,32 @@
           <aside class="right">
             <div class="right-head">
               <h2 id="right-title">Список</h2>
+            </div>
+
+            <div class="right-body">
               <div class="right-tabs" id="right-tabs">
                 <button class="tab active" data-panel="list">Список</button>
                 <button class="tab" data-panel="history">История</button>
               </div>
-            </div>
 
-            <!-- Панель списка -->
-            <div id="panel-list">
-              <div class="search">
-                <input
-                  id="search-input"
-                  type="search"
-                  placeholder="Поиск по названию…"
-                  autocomplete="off" />
+              <!-- Панель списка -->
+              <div id="panel-list">
+                <div class="search">
+                  <input
+                    id="search-input"
+                    type="search"
+                    placeholder="Поиск по названию…"
+                    autocomplete="off" />
+                </div>
+                <ul class="list" id="full-list"></ul>
               </div>
-              <ul class="list" id="full-list"></ul>
-            </div>
 
-            <!-- Панель истории -->
-            <div id="panel-history" class="panel is-hidden">
-              <ul class="list history-list" id="history-list">
-                <li class="muted">История пуста</li>
-              </ul>
+              <!-- Панель истории -->
+              <div id="panel-history" class="panel is-hidden">
+                <ul class="list history-list" id="history-list">
+                  <li class="muted">История пуста</li>
+                </ul>
+              </div>
             </div>
           </aside>
         </div>

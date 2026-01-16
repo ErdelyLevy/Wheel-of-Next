@@ -1,7 +1,7 @@
 // js/wheelRender.js
 import { getPosterSrc, getFallbackPosterSrc } from "./posterFallback.js";
 
-function resizeCanvasToDisplaySize(canvas) {
+export function resizeCanvasToDisplaySize(canvas) {
   const dpr = window.devicePixelRatio || 1;
 
   // ✅ берём реальный CSS-размер канваса (то, что уже посчитала верстка)
