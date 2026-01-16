@@ -2668,7 +2668,8 @@ body {
     flex-direction: column;
     flex: 1 1 auto;
     min-height: 0;
-    overflow: hidden; /* чтобы скролл был только внутри списка */
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   /* и ТОЛЬКО список скроллится */
@@ -3328,4 +3329,41 @@ html.is-spinning .tab[data-view] {
   pointer-events: none;
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+/* ПК: list и history должны вести себя одинаково */
+@media (width > 520px) {
+  .right {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .right-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden; /* чтобы скролл был внутри панели */
+  }
+
+  #panel-list,
+  #panel-history {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+
+    /* важно: панель занимает всё доступное место */
+    height: auto !important;
+    max-height: none !important;
+
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+}
+
+#panel-list.is-hidden,
+#panel-history.is-hidden {
+  display: none !important;
 }
