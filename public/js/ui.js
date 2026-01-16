@@ -12,7 +12,17 @@ function setActiveTabs(container, predicate) {
   );
 }
 
+function isWheelSpinning() {
+  const canvas = document.getElementById("wheel");
+  return !!canvas?.__spinning;
+}
+
 function applyView() {
+  if (isWheelSpinning()) {
+    showToast?.("Дождись окончания вращения", 1200);
+    return;
+  }
+
   const s = getState();
   const topTabs = $("top-tabs");
   const viewWheel = $("view-wheel");

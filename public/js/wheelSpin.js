@@ -101,6 +101,8 @@ export function spinToWinner({
       if (t < 1) {
         requestAnimationFrame(tick);
       } else {
+        canvas.__spinning = false;
+
         if (window.requestWheelRedraw) window.requestWheelRedraw();
         resolve();
       }

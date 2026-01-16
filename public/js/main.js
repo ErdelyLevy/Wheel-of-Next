@@ -152,6 +152,13 @@ function makeRightListRow(it) {
 async function applyPresetToWheelPage(presetId) {
   if (!presetId) return;
 
+  // ✅ запрет во время вращения
+  const canvas = document.getElementById("wheel");
+  if (canvas?.__spinning) {
+    showToast?.("Подожди окончания вращения", 1200);
+    return;
+  }
+
   // сброс поиска при смене пресета (дешево — можно сразу)
   const searchInput = document.getElementById("search-input");
   if (searchInput) searchInput.value = "";
