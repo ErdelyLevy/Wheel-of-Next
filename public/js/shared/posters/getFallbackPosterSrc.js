@@ -56,7 +56,7 @@ function splitTitleBySeparator(title) {
   const wordRe = /\s+(и|или|да|но|либо|and|or|vs)\s+/gi;
 
   // спецсимволы-разделители
-  const symbolRe = /\s*([\-–—:·|])\s*/g;
+  const symbolRe = /\s*([-–—:·|])\s*/g;
 
   const matches = [];
 

@@ -166,10 +166,6 @@ export function getRightListById() {
   return rightListById;
 }
 
-export function getRightListItemById(id) {
-  return rightListById.get(String(id));
-}
-
 export function setRightListAllItems(items) {
   const arr = Array.isArray(items) ? items : [];
   rightListAllItems = arr;
@@ -181,9 +177,4 @@ export function setRightListAllItems(items) {
     if (key) m.set(key, it);
   }
   rightListById = m;
-}
-
-export function resetRightList() {
-  rightListAllItems = [];
-  rightListById = new Map();
 }

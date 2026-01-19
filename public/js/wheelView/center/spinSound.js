@@ -34,7 +34,9 @@ export async function playDing({
   try {
     a.pause();
     a.currentTime = 0;
-  } catch {}
+  } catch {
+    // intentionally ignored
+  }
 
   try {
     await a.play();

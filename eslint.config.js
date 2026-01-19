@@ -1,8 +1,11 @@
+import js from "@eslint/js";
 import importPlugin from "eslint-plugin-import";
+import unusedImports from "eslint-plugin-unused-imports";
 import globals from "globals";
 
 export default [
-  // Линтим только ваш фронт-код
+  js.configs.recommended,
+
   {
     files: ["public/js/**/*.js"],
     languageOptions: {
@@ -10,31 +13,45 @@ export default [
       sourceType: "module",
       globals: {
         ...globals.browser,
+        ...globals.es2021,
       },
     },
+
     plugins: {
       import: importPlugin,
+      "unused-imports": unusedImports,
     },
-    settings: {
-      // Чтобы import/no-unresolved нормально резолвил .js
-      "import/resolver": {
-        node: { extensions: [".js"] },
-      },
-    },
+
     rules: {
-      // БАЗОВОЕ: несуществующие пути
-      "import/no-unresolved": "error",
+      /* ---------- A: локальные ---------- */
+      "no-unused-vars": [
+        "warn",
+        {
+          vars: "all",
+          args: "after-used",
+          ignoreRestSiblings: true,
+        },
+      ],
 
-      // ГЛАВНОЕ ДЛЯ ВАС: импортируемое имя должно быть экспортировано
-      "import/named": "error",
+      /* ---------- C: неиспользуемые импорты ---------- */
+      "unused-imports/no-unused-imports": "warn",
+      "unused-imports/no-unused-vars": [
+        "warn",
+        {
+          vars: "all",
+          varsIgnorePattern: "^_",
+          argsIgnorePattern: "^_",
+        },
+      ],
 
-      // Дополнительно полезные проверки по импорту
-      "import/default": "error",
-      "import/namespace": "error",
-      "import/no-duplicates": "error",
-
-      // Ловит использование переменных, которые не объявлены/не импортированы
-      "no-undef": "error",
+      /* ---------- B: экспорт, который никто не импортирует ---------- */
+      "import/no-unused-modules": [
+        "warn",
+        {
+          unusedExports: true,
+          src: ["public/js/**/*.js"],
+        },
+      ],
     },
   },
 ];

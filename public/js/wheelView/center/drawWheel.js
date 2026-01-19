@@ -222,6 +222,8 @@ function scheduleOnce(fn) {
     scheduled = false;
     try {
       fn();
-    } catch {}
+    } catch {
+      // intentionally ignored
+    }
   });
 }

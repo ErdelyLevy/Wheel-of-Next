@@ -3,7 +3,6 @@ import { apiGetMeta, apiGetVirtualCollections } from "../shared/api.js";
 
 let __msMediaRoot = null;
 let __msCollectionRoot = null;
-let __metaCache = { media_types: [], collections: [] };
 let __msVcRoot = null;
 let __vcCache = []; // [{id,name,media,poster,...}]
 const DEFAULT_WEIGHT = 1.0;
@@ -36,7 +35,6 @@ export async function initPresetDropdowns() {
   __msMediaRoot = msMedia;
   __msCollectionRoot = msCollection;
   __msVcRoot = msVc;
-  __metaCache = meta;
 
   // ✅ MEDIA
   buildMultiSelect(
@@ -314,21 +312,21 @@ function normalizeWeightsEntries(entries, weights) {
   return { sortedEntries: sorted, weights: out };
 }
 
-function buildWeightEntriesFromDraft(draft) {
-  const cats = (draft?.categories || []).map((c) => ({
-    kind: "cat",
-    key: String(c),
-    label: String(c),
-  }));
+// function buildWeightEntriesFromDraft(draft) {
+//   const cats = (draft?.categories || []).map((c) => ({
+//     kind: "cat",
+//     key: String(c),
+//     label: String(c),
+//   }));
 
-  const vcs = (draft?.virtual_collection_ids || []).map((id) => ({
-    kind: "vc",
-    key: "vc:" + String(id),
-    label: vcNameById(id), // у тебя уже есть
-  }));
+//   const vcs = (draft?.virtual_collection_ids || []).map((id) => ({
+//     kind: "vc",
+//     key: "vc:" + String(id),
+//     label: vcNameById(id), // у тебя уже есть
+//   }));
 
-  return [...cats, ...vcs];
-}
+//   return [...cats, ...vcs];
+// }
 
 function getWeightEntriesFromDraft(draft) {
   const cats = Array.isArray(draft?.categories) ? draft.categories : [];
@@ -455,20 +453,17 @@ function __applyMultiSelectUI(msRoot, selected) {
   const set = new Set((selected || []).map((x) => String(x)));
 
   list.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
-    const set = new Set((selected || []).map((x) => String(x)));
-    list.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
-      // ✅ сначала пробуем value (правильно), потом fallback на текст (старое поведение)
-      const v = String(cb.value || "").trim();
-      if (v) {
-        cb.checked = set.has(v);
-        return;
-      }
+    // ✅ сначала пробуем value (правильно)
+    const v = String(cb.value || "").trim();
+    if (v) {
+      cb.checked = set.has(v);
+      return;
+    }
 
-      const label = cb.closest(".ms-opt");
-      const text = String(
-        label?.querySelector("span")?.textContent ?? "",
-      ).trim();
-      cb.checked = set.has(text);
-    });
+    // fallback на текст (старое поведение)
+    const label = cb.closest(".ms-opt");
+    const text = String(label?.querySelector("span")?.textContent ?? "").trim();
+
+    cb.checked = set.has(text);
   });
 }
