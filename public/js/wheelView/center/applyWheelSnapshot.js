@@ -1,18 +1,33 @@
-// public/js/actions.js
-import { getState, setState } from "./state.js";
+import { getState, setState } from "../../shared/state.js";
 
-/**
- * Открыть карточку слева (результат)
- */
-function clampInt(v, min, max) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return min;
-  return Math.max(min, Math.min(max, Math.trunc(n)));
-}
+const OVERSCAN = 1.06;
+const MIN_N = 6;
+const MAX_N = 200;
+const POSTER_W_K = 0.62;
+const POSTER_OVER = 6;
 
-export function openResult(item) {
+export function applyWheelSnapshot({ wheelItems, winnerId, winnerItem } = {}) {
+  const s = getState();
+
+  const computedWinnerId =
+    winnerId ?? (winnerItem?.id != null ? winnerItem.id : null);
+
+  // ✅ важное: делаем "свой" массив и "свои" объекты
+  const baseItems = Array.isArray(wheelItems)
+    ? structuredClone(wheelItems)
+    : [];
+
+  // ✅ 1) расширяем сразу (это и есть то, что реально будет на колесе)
+  const expanded = autoExpandWheelItems(baseItems, computedWinnerId);
+
+  // ✅ 2) сначала обновляем state — колесо/результат должны появиться мгновенно (fallback’ами)
   setState({
-    result: { item: item || null, updatedAt: Date.now() },
+    result: winnerItem ? { item: winnerItem } : s.result,
+    wheel: {
+      items: expanded,
+      winnerId: computedWinnerId,
+      updatedAt: Date.now(),
+    },
   });
 }
 
@@ -35,21 +50,6 @@ function getWheelGeometry() {
   }
 
   return { outerR, innerR };
-}
-
-const OVERSCAN = 1.06; // чуть шире, чтобы не ловить щели
-const MIN_N = 6;
-const MAX_N = 200;
-
-// ⚠️ должно совпадать с тем, что ты реально рисуешь в drawWheel
-// сейчас у тебя: zoneW = zoneH * 0.62, а zoneH ≈ R (+over)
-// значит width ~ outerR * 0.62 (плюс небольшой over)
-const POSTER_W_K = 0.62;
-const POSTER_OVER = 6; // такой же "over", как в drawWheel
-
-function getItemW(it) {
-  const w = Number(it?.w);
-  return Number.isFinite(w) && w > 0 ? w : 1;
 }
 
 function splitWideSegments(items, winnerId, outerR) {
@@ -84,7 +84,7 @@ function splitWideSegments(items, winnerId, outerR) {
     const isWinner = wid && id && id === wid;
 
     if (parts === 1) {
-      // ✅ даже если parts=1, пометим winner (полезно для spinToWinner)
+      // ✅ даже если parts=1, пометим winner
       groups.push([{ ...it, __winner: !!isWinner }]);
       continue;
     }
@@ -151,32 +151,13 @@ function autoExpandWheelItems(items, winnerId) {
   return split;
 }
 
-/**
- * Применить снимок колеса (items в нужном порядке + winnerId)
- * - запускает preload постеров
- * - автоматически доклонирует элементы, чтобы сегменты не были пустыми
- */
-export function applyWheelSnapshot({ wheelItems, winnerId, winnerItem } = {}) {
-  const s = getState();
+function clampInt(v, min, max) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return min;
+  return Math.max(min, Math.min(max, Math.trunc(n)));
+}
 
-  const computedWinnerId =
-    winnerId ?? (winnerItem?.id != null ? winnerItem.id : null);
-
-  // ✅ важное: делаем "свой" массив и "свои" объекты
-  const baseItems = Array.isArray(wheelItems)
-    ? structuredClone(wheelItems)
-    : [];
-
-  // ✅ 1) расширяем сразу (это и есть то, что реально будет на колесе)
-  const expanded = autoExpandWheelItems(baseItems, computedWinnerId);
-
-  // ✅ 2) сначала обновляем state — колесо/результат должны появиться мгновенно (fallback’ами)
-  setState({
-    result: winnerItem ? { item: winnerItem } : s.result,
-    wheel: {
-      items: expanded,
-      winnerId: computedWinnerId,
-      updatedAt: Date.now(),
-    },
-  });
+function getItemW(it) {
+  const w = Number(it?.w);
+  return Number.isFinite(w) && w > 0 ? w : 1;
 }

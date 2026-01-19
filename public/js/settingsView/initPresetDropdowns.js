@@ -1,10 +1,116 @@
-// js/presetsUi.js
-import { getState, setState, setPresetDraft } from "./state.js";
-import { apiGetVirtualCollections } from "./api.js";
+import { getState, setPresetDraft, setState, $ } from "../shared/state.js";
+import { apiGetMeta, apiGetVirtualCollections } from "../shared/api.js";
 
-const WHEEL_BASE = window.location.pathname.startsWith("/wheel/")
-  ? "/wheel"
-  : "";
+let __msMediaRoot = null;
+let __msCollectionRoot = null;
+let __metaCache = { media_types: [], collections: [] };
+let __msVcRoot = null;
+let __vcCache = []; // [{id,name,media,poster,...}]
+const DEFAULT_WEIGHT = 1.0;
+
+export async function initPresetDropdowns() {
+  const msMedia = document.getElementById("ms-media");
+  const msCollection = document.getElementById("ms-collection");
+  const msVc = document.getElementById("ms-vc");
+  if (!msMedia || !msCollection || !msVc) return;
+
+  const meta = await apiGetMeta();
+
+  const vcRows = await apiGetVirtualCollections(); // [{id,name,media,...}]
+  __vcCache = vcRows || [];
+
+  // после __vcCache = vcRows || [];
+  msVc.__labelOf = (id) => {
+    const sid = String(id || "");
+    const row = (__vcCache || []).find((x) => String(x?.id || "") === sid);
+    return String(row?.name || sid);
+  };
+
+  const vcOptions = (__vcCache || []).map((x) => ({
+    value: String(x.id),
+    label: String(x.name || x.id),
+  }));
+
+  const s = getState();
+
+  __msMediaRoot = msMedia;
+  __msCollectionRoot = msCollection;
+  __msVcRoot = msVc;
+  __metaCache = meta;
+
+  // ✅ MEDIA
+  buildMultiSelect(
+    msMedia,
+    meta.media_types || [],
+    () => getState().presetDraft.media || [],
+    (arr) => {
+      setPresetDraft({ ...getState().presetDraft, media: arr || [] });
+      syncHidden("preset-media", arr || []);
+      renderWeights(); // необязательно, но пусть будет консистентно
+    },
+  );
+
+  // ✅ RYOT COLLECTIONS
+  buildMultiSelect(
+    msCollection,
+    meta.collections || [],
+    () => getState().presetDraft.categories || [],
+    (arr) => {
+      setPresetDraft({ ...getState().presetDraft, categories: arr || [] });
+      syncHidden("preset-category", arr || []);
+      renderWeights();
+    },
+  );
+
+  // ✅ VIRTUAL COLLECTIONS
+  buildMultiSelect(
+    msVc,
+    vcOptions,
+    () => getState().presetDraft.virtual_collection_ids || [],
+    (arr) => {
+      setPresetDraft({
+        ...getState().presetDraft,
+        virtual_collection_ids: arr || [],
+      });
+      syncHidden("preset-vc", arr || []);
+      renderWeights();
+    },
+  );
+
+  // initial sync
+  syncHidden("preset-media", s.presetDraft.media || []);
+  syncHidden("preset-category", s.presetDraft.categories || []);
+  syncHidden("preset-vc", s.presetDraft.virtual_collection_ids || []);
+  renderWeights(); // ✅ без аргументов
+
+  syncPresetEditorFromState();
+}
+
+export function syncPresetEditorFromState() {
+  const s = getState();
+  const draft = s.presetDraft || {
+    name: "",
+    media: [],
+    categories: [],
+    virtual_collection_ids: [],
+    weights: {},
+  };
+
+  const nameEl = document.getElementById("preset-name");
+  if (nameEl) nameEl.value = draft.name || "";
+
+  syncHidden("preset-media", draft.media || []);
+  syncHidden("preset-category", draft.categories || []);
+  syncHidden("preset-vc", draft.virtual_collection_ids || []);
+
+  if (__msMediaRoot) __applyMultiSelectUI(__msMediaRoot, draft.media || []);
+  if (__msCollectionRoot)
+    __applyMultiSelectUI(__msCollectionRoot, draft.categories || []);
+  if (__msVcRoot)
+    __applyMultiSelectUI(__msVcRoot, draft.virtual_collection_ids || []);
+
+  renderWeights(); // ✅ без аргументов
+}
 
 function resetPresetEditorForm() {
   // очисти поля формы (name, collections, media_types, weights и т.д.)
@@ -15,16 +121,6 @@ function resetPresetEditorForm() {
 document.getElementById("preset-new-btn")?.addEventListener("click", () => {
   resetPresetEditorForm();
 });
-
-export async function fetchMeta() {
-  const r = await fetch(`${WHEEL_BASE}/api/meta`, { cache: "no-store" });
-  if (!r.ok) throw new Error("meta fetch failed");
-  return r.json();
-}
-
-function $(sel, root = document) {
-  return root.querySelector(sel);
-}
 
 function renderMsLabel(msRoot, selected) {
   const textEl = $(".ms-text", msRoot);
@@ -49,7 +145,13 @@ function syncHidden(id, arr) {
   if (el) el.value = JSON.stringify(arr || []);
 }
 
-function buildMultiSelect(msRoot, values, getSelected, setSelected, onChange) {
+export function buildMultiSelect(
+  msRoot,
+  values,
+  getSelected,
+  setSelected,
+  onChange,
+) {
   const btn = $(".ms-btn", msRoot);
   const pop = $(".ms-pop", msRoot);
   const list = $(".ms-list", msRoot);
@@ -188,15 +290,13 @@ function buildMultiSelect(msRoot, values, getSelected, setSelected, onChange) {
   renderList("");
 }
 
-const DEFAULT_WEIGHT = 1.0;
-
 function stableSortEntries(entries) {
   return [...(entries || [])].sort((a, b) =>
     String(a?.label ?? a?.key ?? "").localeCompare(
       String(b?.label ?? b?.key ?? ""),
       "ru",
-      { sensitivity: "base", numeric: true }
-    )
+      { sensitivity: "base", numeric: true },
+    ),
   );
 }
 
@@ -260,17 +360,7 @@ function renderWeights() {
   const st = getState();
   const draft = st.presetDraft || {};
 
-  console.log("[renderWeights] ENTER");
-  console.log("  draft.categories:", draft.categories);
-  console.log("  draft.virtual_collection_ids:", draft.virtual_collection_ids);
-  console.log("  draft.weights:", draft.weights);
-
   const entries = getWeightEntriesFromDraft(draft);
-
-  console.log(
-    "  weight entries:",
-    entries.map((e) => ({ key: e.key, label: e.label, kind: e.kind }))
-  );
 
   const norm = normalizeWeightsEntries(entries, draft.weights || {});
   const sortedEntries = norm.sortedEntries;
@@ -283,17 +373,12 @@ function renderWeights() {
 
   if (prevWJson !== nextWJson) {
     setPresetDraft({ ...draft, weights });
-    console.log("[renderWeights] updating weights only");
-    console.log(
-      "  BEFORE setPresetDraft, draft.virtual_collection_ids =",
-      draft.virtual_collection_ids
-    );
 
     setTimeout(() => {
       const d = getState().presetDraft;
       console.log(
         "  AFTER setPresetDraft, draft.virtual_collection_ids =",
-        d.virtual_collection_ids
+        d.virtual_collection_ids,
       );
     }, 0);
   }
@@ -343,110 +428,6 @@ function renderWeights() {
   }
 }
 
-export async function initPresetDropdowns() {
-  const msMedia = document.getElementById("ms-media");
-  const msCollection = document.getElementById("ms-collection");
-  const msVc = document.getElementById("ms-vc");
-  if (!msMedia || !msCollection || !msVc) return;
-
-  const meta = await fetchMeta();
-
-  const vcRows = await apiGetVirtualCollections(); // [{id,name,media,...}]
-  __vcCache = vcRows || [];
-
-  // после __vcCache = vcRows || [];
-  msVc.__labelOf = (id) => {
-    const sid = String(id || "");
-    const row = (__vcCache || []).find((x) => String(x?.id || "") === sid);
-    return String(row?.name || sid);
-  };
-
-  const vcOptions = (__vcCache || []).map((x) => ({
-    value: String(x.id),
-    label: String(x.name || x.id),
-  }));
-
-  const s = getState();
-
-  __msMediaRoot = msMedia;
-  __msCollectionRoot = msCollection;
-  __msVcRoot = msVc;
-  __metaCache = meta;
-
-  // ✅ MEDIA
-  buildMultiSelect(
-    msMedia,
-    meta.media_types || [],
-    () => getState().presetDraft.media || [],
-    (arr) => {
-      setPresetDraft({ ...getState().presetDraft, media: arr || [] });
-      syncHidden("preset-media", arr || []);
-      renderWeights(); // необязательно, но пусть будет консистентно
-    }
-  );
-
-  // ✅ RYOT COLLECTIONS
-  buildMultiSelect(
-    msCollection,
-    meta.collections || [],
-    () => getState().presetDraft.categories || [],
-    (arr) => {
-      setPresetDraft({ ...getState().presetDraft, categories: arr || [] });
-      syncHidden("preset-category", arr || []);
-      renderWeights();
-    }
-  );
-
-  // ✅ VIRTUAL COLLECTIONS
-  buildMultiSelect(
-    msVc,
-    vcOptions,
-    () => getState().presetDraft.virtual_collection_ids || [],
-    (arr) => {
-      setPresetDraft({
-        ...getState().presetDraft,
-        virtual_collection_ids: arr || [],
-      });
-      syncHidden("preset-vc", arr || []);
-      renderWeights();
-    }
-  );
-
-  // initial sync
-  syncHidden("preset-media", s.presetDraft.media || []);
-  syncHidden("preset-category", s.presetDraft.categories || []);
-  syncHidden("preset-vc", s.presetDraft.virtual_collection_ids || []);
-  renderWeights(); // ✅ без аргументов
-
-  syncPresetEditorFromState();
-}
-
-export function buildSingleSelect(msRoot, options, getValue, setValue) {
-  msRoot.dataset.mode = "single"; // 👈 флаг
-
-  return buildMultiSelect(
-    msRoot,
-    options,
-    () => {
-      const v = String(getValue?.() ?? "").trim();
-      return v ? [v] : [];
-    },
-    (arr) => {
-      const v = Array.isArray(arr) && arr.length ? String(arr[0] ?? "") : "";
-      setValue?.(v);
-    }
-  );
-}
-
-// ----- Editor sync API for catalog -----
-let __msMediaRoot = null;
-let __msCollectionRoot = null;
-let __metaCache = { media_types: [], collections: [] };
-let __msVcRoot = null;
-let __vcCache = []; // [{id,name,media,poster,...}]
-
-// маленькие локальные хелперы (используем те, что уже есть в файле)
-
 function vcNameById(id) {
   const sid = String(id || "");
   const row = (__vcCache || []).find((x) => String(x?.id || "") === sid);
@@ -485,35 +466,9 @@ function __applyMultiSelectUI(msRoot, selected) {
 
       const label = cb.closest(".ms-opt");
       const text = String(
-        label?.querySelector("span")?.textContent ?? ""
+        label?.querySelector("span")?.textContent ?? "",
       ).trim();
       cb.checked = set.has(text);
     });
   });
-}
-
-export function syncPresetEditorFromState() {
-  const s = getState();
-  const draft = s.presetDraft || {
-    name: "",
-    media: [],
-    categories: [],
-    virtual_collection_ids: [],
-    weights: {},
-  };
-
-  const nameEl = document.getElementById("preset-name");
-  if (nameEl) nameEl.value = draft.name || "";
-
-  syncHidden("preset-media", draft.media || []);
-  syncHidden("preset-category", draft.categories || []);
-  syncHidden("preset-vc", draft.virtual_collection_ids || []);
-
-  if (__msMediaRoot) __applyMultiSelectUI(__msMediaRoot, draft.media || []);
-  if (__msCollectionRoot)
-    __applyMultiSelectUI(__msCollectionRoot, draft.categories || []);
-  if (__msVcRoot)
-    __applyMultiSelectUI(__msVcRoot, draft.virtual_collection_ids || []);
-
-  renderWeights(); // ✅ без аргументов
 }

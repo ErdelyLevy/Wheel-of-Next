@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
@@ -60,11 +60,6 @@
                 <canvas id="wheel"></canvas>
                 <button id="spin-btn" class="spin-center">ROLL</button>
               </div>
-              <div
-                id="toast"
-                class="toast"
-                role="status"
-                aria-live="polite"></div>
             </div>
           </main>
 
@@ -145,7 +140,6 @@
                 <button class="tab" id="save-spin-settings" type="button">
                   Сохранить
                 </button>
-                <span class="toast is-hidden" id="spin-saved">Сохранено</span>
               </div>
             </section>
             <section class="settings-card" id="vc-card">
@@ -338,6 +332,7 @@
         </div>
       </div>
     </div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
     <script type="module" src="js/main.js"></script>
   </body>
 </html>

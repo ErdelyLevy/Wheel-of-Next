@@ -1,4 +1,24 @@
-// public/js/posterFallback.js
+const FALLBACK_CACHE = new Map(); // key -> dataUrl
+
+export function getFallbackPosterSrc(item) {
+  const title = (item?.title || item?.name || "—").trim();
+  const media_type = String(item?.media_type || "").trim();
+  const year = item?.publish_year ?? item?.year ?? "";
+  const y = String(year ?? "").trim();
+
+  const key = `${media_type}::${y}::${title}`;
+
+  const cached = FALLBACK_CACHE.get(key);
+  if (cached) return cached;
+
+  const dataUrl = makeGlassFallbackDataUrl({ title, media_type, year: y });
+  FALLBACK_CACHE.set(key, dataUrl);
+  return dataUrl;
+}
+
+function makeGlassFallbackDataUrl(args = {}) {
+  return makeGlassFallbackCanvas(args).toDataURL("image/png");
+}
 
 function getGradient(mediaType = "") {
   switch (String(mediaType)) {
@@ -92,12 +112,6 @@ function fitTextNoEllipsis(ctx, text, maxWidth) {
   return { text: s.trim(), clipped: true };
 }
 
-/**
- * Рисует заголовок:
- * - если есть союз => 3 строки (верх/союз маленький/низ)
- * - иначе => wrapLines как раньше
- * Автоподбор размера.
- */
 function drawSmartTitle(ctx, text, { x, yCenter, maxWidth } = {}) {
   const raw = String(text || "—").trim() || "—";
   const split = splitTitleBySeparator(raw);
@@ -179,8 +193,8 @@ function drawSmartTitle(ctx, text, { x, yCenter, maxWidth } = {}) {
     const lines = Array.isArray(res?.lines)
       ? res.lines
       : Array.isArray(res)
-      ? res
-      : [];
+        ? res
+        : [];
     const overflow = !!res?.truncated;
 
     // ✅ страховка: если в строках вдруг уже есть "…", убираем
@@ -235,10 +249,10 @@ function drawSmartTitle(ctx, text, { x, yCenter, maxWidth } = {}) {
       const testLines = Array.isArray(tRes?.lines)
         ? tRes.lines
         : Array.isArray(tRes)
-        ? tRes
-        : [];
+          ? tRes
+          : [];
       const tooWide = testLines.some(
-        (ln) => ctx.measureText(String(ln)).width > maxWidth
+        (ln) => ctx.measureText(String(ln)).width > maxWidth,
       );
       if (!tooWide) break;
     }
@@ -253,7 +267,7 @@ function drawSmartTitle(ctx, text, { x, yCenter, maxWidth } = {}) {
     sep,
     x,
     y,
-    { font, fillStyle, rotateIfTall = true } = {}
+    { font, fillStyle, rotateIfTall = true } = {},
   ) {
     const s = String(sep || "").trim();
     if (!s) return;
@@ -528,83 +542,4 @@ function makeGlassFallbackCanvas({ title, media_type, year } = {}) {
   ctx.restore();
 
   return canvas;
-}
-
-// Оставляем для <img>, но вызывать будем ЛЕНИВО
-export function makeGlassFallbackDataUrl(args = {}) {
-  return makeGlassFallbackCanvas(args).toDataURL("image/png");
-}
-const FALLBACK_CACHE = new Map(); // key -> dataUrl
-
-export function getFallbackPosterSrc(item) {
-  const title = (item?.title || item?.name || "—").trim();
-  const media_type = String(item?.media_type || "").trim();
-  const year = item?.publish_year ?? item?.year ?? "";
-  const y = String(year ?? "").trim();
-
-  const key = `${media_type}::${y}::${title}`;
-
-  const cached = FALLBACK_CACHE.get(key);
-  if (cached) return cached;
-
-  const dataUrl = makeGlassFallbackDataUrl({ title, media_type, year: y });
-  FALLBACK_CACHE.set(key, dataUrl);
-  return dataUrl;
-}
-
-export function getPosterSrc(item, { w = 512, fmt = "webp" } = {}) {
-  const url = String(item?.poster || item?.image || "").trim();
-  if (!url) return getFallbackPosterSrc(item);
-
-  // всегда ходим через серверный прокси-кэш
-  const u = encodeURIComponent(url);
-  return `/wheel/api/poster?u=${u}&w=${encodeURIComponent(
-    String(w)
-  )}&fmt=${encodeURIComponent(String(fmt))}`;
-}
-
-let io;
-
-function ensureIO() {
-  if (io) return io;
-
-  io = new IntersectionObserver(
-    (entries) => {
-      for (const e of entries) {
-        if (!e.isIntersecting) continue;
-
-        const img = e.target;
-        io.unobserve(img);
-
-        const item = img.__lazyItem;
-        if (!item) continue;
-
-        // ставим реальный постер через серверный прокси-кэш
-        img.src = getPosterSrc(item, { w: 256, fmt: "webp" });
-      }
-    },
-    { root: null, rootMargin: "300px 0px", threshold: 0.01 }
-  );
-
-  return io;
-}
-
-export function bindLazyPoster(imgEl, item) {
-  if (!imgEl) return;
-
-  imgEl.__lazyItem = item;
-
-  // 1) мгновенный fallback
-  imgEl.src = getFallbackPosterSrc(item);
-
-  // 2) если реальный постер не загрузился — назад на fallback
-  // и больше не дёргаем сеть для этого img
-  imgEl.onerror = () => {
-    imgEl.onerror = null;
-    imgEl.__lazyItem = null;
-    imgEl.src = getFallbackPosterSrc(item);
-  };
-
-  // 3) загрузку реального постера начинаем только при появлении в viewport
-  ensureIO().observe(imgEl);
 }

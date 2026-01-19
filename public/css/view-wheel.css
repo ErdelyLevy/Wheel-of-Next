@@ -320,6 +320,11 @@
   opacity: 0.75;
 }
 
+.toast.is-on {
+  opacity: 1;
+  transform: translate(-50%, -60%);
+}
+
 .toast-winner {
   color: var(--accent);
   font-weight: 900;
@@ -328,7 +333,9 @@
 .toast {
   background: rgb(20 20 30 / 92%);
   border-radius: 18px;
-  box-shadow: 0 0 0 2px rgb(255 255 255 / 8%), 0 10px 30px rgb(0 0 0 / 45%);
+  box-shadow:
+    0 0 0 2px rgb(255 255 255 / 8%),
+    0 10px 30px rgb(0 0 0 / 45%);
   color: #fff;
   font-size: 22px;
   font-weight: 900;
@@ -336,12 +343,14 @@
   opacity: 0;
   padding: 18px 28px;
   pointer-events: none;
-  position: absolute;
+  position: fixed;
   text-align: center;
   top: 50%;
   transform: translate(-50%, -50%);
-  transition: opacity 0.25s ease, transform 0.25s ease;
-  z-index: 20;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+  z-index: 2000;
 }
 
 .result-poster {
@@ -376,11 +385,6 @@
 .list-btn:hover,
 .history-btn:hover {
   border-color: rgb(255 255 255 / 18%);
-}
-
-.toast.is-on {
-  opacity: 1;
-  transform: translate(-50%, -60%);
 }
 
 aside.is-collapsed h2::before {
@@ -430,7 +434,9 @@ aside.is-collapsed h2::before {
   text-align: center;
   gap: 6px;
   pointer-events: none;
-  text-shadow: 0 1px 2px rgb(0 0 0 / 75%), 0 0 4px rgb(0 0 0 / 60%);
+  text-shadow:
+    0 1px 2px rgb(0 0 0 / 75%),
+    0 0 4px rgb(0 0 0 / 60%);
   user-select: none;
   line-height: 1;
   white-space: nowrap;
@@ -605,7 +611,9 @@ aside.is-collapsed h2::before {
   background: linear-gradient(180deg, rgb(255 255 255 / 6%), rgb(0 0 0 / 35%));
   border: 1px solid rgb(255 255 255 / 8%);
   border-radius: 14px;
-  box-shadow: 0 10px 30px rgb(0 0 0 / 45%), inset 0 1px 0 rgb(255 255 255 / 6%);
+  box-shadow:
+    0 10px 30px rgb(0 0 0 / 45%),
+    inset 0 1px 0 rgb(255 255 255 / 6%);
   padding: 14px;
   display: flex;
   flex-direction: column;

@@ -1,71 +1,12 @@
-// js/wheelRender.js
-import { getPosterSrc, getFallbackPosterSrc } from "./posterFallback.js";
+import { getFallbackPosterSrc } from "../../shared/posters/getFallbackPosterSrc.js";
+import { getPosterSrc } from "../../shared/posters/getPosterSrc.js";
+import { buildWeightedSegments } from "./buildWeightedSegments.js";
+import { resizeCanvasToDisplaySize } from "./resizeCanvasToDisplaySize.js";
 
-export function resizeCanvasToDisplaySize(canvas) {
-  const dpr = window.devicePixelRatio || 1;
-
-  // ✅ берём реальный CSS-размер канваса (то, что уже посчитала верстка)
-  const cssW = canvas.clientWidth;
-  const cssH = canvas.clientHeight;
-
-  const w = Math.max(1, Math.round(cssW * dpr));
-  const h = Math.max(1, Math.round(cssH * dpr));
-
-  if (canvas.width !== w || canvas.height !== h) {
-    canvas.width = w;
-    canvas.height = h;
-    return true;
-  }
-  return false;
-}
-
-export function buildWeightedSegments(items) {
-  const arr = Array.isArray(items) ? items : [];
-  if (!arr.length) return [];
-
-  const ws = arr.map((it) => {
-    const w = Number(it?.w);
-    return Number.isFinite(w) && w > 0 ? w : 1;
-  });
-
-  const total = ws.reduce((a, b) => a + b, 0) || 1;
-
-  let acc = 0;
-  const segs = arr.map((item, i) => {
-    const da = (ws[i] / total) * Math.PI * 2;
-    const start = acc;
-    const end = acc + da;
-    acc = end;
-    return { item, start, end, w: ws[i] };
-  });
-
-  segs[segs.length - 1].end = Math.PI * 2;
-  return segs;
-}
-
-function drawPosterCover(ctx, img, x, y, w, h) {
-  // x,y — центр зоны (как у тебя сейчас), w/h — размеры зоны
-  if (!img || !img.complete || !img.naturalWidth || !img.naturalHeight) {
-    // плейсхолдер
-    ctx.fillStyle = "rgba(255,255,255,0.06)";
-    ctx.fillRect(x - w / 2, y - h / 2, w, h);
-    return;
-  }
-
-  const iw = img.naturalWidth;
-  const ih = img.naturalHeight;
-
-  // scale "cover": заполняем полностью
-  const scale = Math.max(w / iw, h / ih);
-  const sw = w / scale;
-  const sh = h / scale;
-
-  // центрируем кроп
-  const sx = (iw - sw) / 2;
-  const sy = (ih - sh) / 2;
-
-  ctx.drawImage(img, sx, sy, sw, sh, x - w / 2, y - h / 2, w, h);
-}
+const imgBySrc = new Map(); // src -> HTMLImageElement
+const stateBySrc = new Map(); // src -> 'loading' | 'ok' | 'error'
+const fallbackSrcByKey = new Map(); // key -> dataUrl
+let scheduled = false;
 
 export function drawWheel(canvas, items, opts = {}) {
   if (!canvas) return;
@@ -184,23 +125,47 @@ export function drawWheel(canvas, items, opts = {}) {
   ctx.stroke();
 }
 
-//canvasPoster
+function drawPosterCover(ctx, img, x, y, w, h) {
+  // x,y — центр зоны (как у тебя сейчас), w/h — размеры зоны
+  if (!img || !img.complete || !img.naturalWidth || !img.naturalHeight) {
+    // плейсхолдер
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    ctx.fillRect(x - w / 2, y - h / 2, w, h);
+    return;
+  }
 
-const imgBySrc = new Map(); // src -> HTMLImageElement
-const stateBySrc = new Map(); // src -> 'loading' | 'ok' | 'error'
-const fallbackSrcByKey = new Map(); // key -> dataUrl
+  const iw = img.naturalWidth;
+  const ih = img.naturalHeight;
 
-// чтобы не спамить onUpdate по 100 раз в кадр
-let scheduled = false;
-function scheduleOnce(fn) {
-  if (!fn || scheduled) return;
-  scheduled = true;
-  requestAnimationFrame(() => {
-    scheduled = false;
-    try {
-      fn();
-    } catch {}
-  });
+  // scale "cover": заполняем полностью
+  const scale = Math.max(w / iw, h / ih);
+  const sw = w / scale;
+  const sh = h / scale;
+
+  // центрируем кроп
+  const sx = (iw - sw) / 2;
+  const sy = (ih - sh) / 2;
+
+  ctx.drawImage(img, sx, sy, sw, sh, x - w / 2, y - h / 2, w, h);
+}
+
+function getCanvasPosterImage(item, onUpdate) {
+  // пробуем реальный постер через /wheel/api/poster
+  const src = getPosterSrc(item, { w: 512, fmt: "webp" });
+
+  // 1) если это fallback dataURL — отдаем КЕШИРОВАННЫЙ fallback и НЕ спамим onUpdate
+  if (String(src).startsWith("data:image/")) {
+    const fb = getFallbackSrcCached(item);
+    return imageFromSrc(fb, null); // <-- null, чтобы не было перерисовок по fallback
+  }
+
+  // 2) реальный: грузим и уведомляем onUpdate (колесо дорисуется)
+  const img = imageFromSrc(src, onUpdate);
+  if (img) return img;
+
+  // 3) если реальный уже помечен error — fallback (кеш) без onUpdate
+  const fb = getFallbackSrcCached(item);
+  return imageFromSrc(fb, null);
 }
 
 function imageFromSrc(src, onUpdate) {
@@ -250,21 +215,13 @@ function getFallbackSrcCached(item) {
   return src;
 }
 
-export function getCanvasPosterImage(item, onUpdate) {
-  // пробуем реальный постер через /wheel/api/poster
-  const src = getPosterSrc(item, { w: 512, fmt: "webp" });
-
-  // 1) если это fallback dataURL — отдаем КЕШИРОВАННЫЙ fallback и НЕ спамим onUpdate
-  if (String(src).startsWith("data:image/")) {
-    const fb = getFallbackSrcCached(item);
-    return imageFromSrc(fb, null); // <-- null, чтобы не было перерисовок по fallback
-  }
-
-  // 2) реальный: грузим и уведомляем onUpdate (колесо дорисуется)
-  const img = imageFromSrc(src, onUpdate);
-  if (img) return img;
-
-  // 3) если реальный уже помечен error — fallback (кеш) без onUpdate
-  const fb = getFallbackSrcCached(item);
-  return imageFromSrc(fb, null);
+function scheduleOnce(fn) {
+  if (!fn || scheduled) return;
+  scheduled = true;
+  requestAnimationFrame(() => {
+    scheduled = false;
+    try {
+      fn();
+    } catch {}
+  });
 }

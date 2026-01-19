@@ -28,3 +28,4 @@ tools/
 knip.json
 eslint.config.mjs
 analysis-report.json
+import-audit.txt

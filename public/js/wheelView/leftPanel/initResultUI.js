@@ -1,9 +1,29 @@
-// js/resultUi.js
-import { subscribe, getState } from "./state.js";
-import { getPosterSrc, getFallbackPosterSrc } from "./posterFallback.js"; // добавь вверху файла
+import { getFallbackPosterSrc } from "../../shared/posters/getFallbackPosterSrc.js";
+import { getPosterSrc } from "../../shared/posters/getPosterSrc.js";
+import { getState, subscribe, $ } from "../../shared/state.js";
 
-function $(id) {
-  return document.getElementById(id);
+const __log = (...a) => console.log("[initResultUI]", ...a);
+
+let __renderRetry = 0;
+const __maxRenderRetries = 90; // ~1.5с при rAF, можно поднять при необходимости
+
+export function initResultUI() {
+  __log("initResultUI() ENTER");
+
+  // первичный рендер (может случиться до готовности DOM)
+  render(getState().result?.item || null);
+
+  // обновление по state
+  let lastId = null;
+  subscribe((s) => {
+    const it = s.result?.item || null;
+    const nextId = it
+      ? String(it.id ?? it.meta_id ?? it.title ?? "")
+      : "__none__";
+    if (nextId === lastId) return;
+    lastId = nextId;
+    render(it);
+  });
 }
 
 function setText(el, v) {
@@ -76,12 +96,34 @@ function addActionLink(box, label, href) {
   box.appendChild(a);
 }
 
+function scheduleRenderRetry(reason) {
+  if (__renderRetry >= __maxRenderRetries) {
+    __log("render retry limit reached -> stop retrying", {
+      retries: __renderRetry,
+      reason,
+    });
+    return;
+  }
+  __renderRetry += 1;
+  __log("schedule render retry", { retry: __renderRetry, reason });
+  requestAnimationFrame(() => render(getState().result?.item || null));
+}
+
 function render(item) {
   const titleEl = $("result-title");
   const imgEl = $("result-cover");
   const badgeEl = $("result-badge");
   const infoEl = $("result-info");
   const actionsEl = $("result-actions");
+
+  // ключевая правка: если DOM результата ещё не готов — ретраим
+  if (!titleEl && !imgEl && !badgeEl && !infoEl && !actionsEl) {
+    scheduleRenderRetry("result DOM not ready");
+    return;
+  }
+
+  // как только DOM появился — ретраи больше не нужны
+  __renderRetry = __maxRenderRetries;
 
   if (!item) {
     setText(titleEl, "—");
@@ -102,48 +144,36 @@ function render(item) {
   // сначала ставим fallback — сразу красиво
   setImg(imgEl, fallback, title);
 
-  // потом пробуем реальный
-  imgEl.onerror = () => {
-    // если /wheel/api/poster отдал ошибку или битую картинку — возвращаем fallback
-    setImg(imgEl, fallback, title);
-  };
-  imgEl.src = src;
-  imgEl.style.opacity = "1";
+  if (imgEl) {
+    imgEl.onerror = () => setImg(imgEl, fallback, title);
+    imgEl.src = src;
+    imgEl.style.opacity = "1";
+  }
 
   // badge: media_type приоритетнее
   const badge = item.media_type
     ? String(item.media_type)
     : item.category_name
-    ? String(item.category_name)
-    : "—";
+      ? String(item.category_name)
+      : "—";
   setText(badgeEl, badge);
 
   // сброс старых классов типов
-  badgeEl.classList.remove(
+  badgeEl?.classList?.remove(
     "badge--movie",
     "badge--anime",
     "badge--show",
     "badge--video_game",
-    "badge--book"
+    "badge--book",
   );
 
   // добавим новый
   const mt = String(item.media_type || "")
     .toLowerCase()
-    .replace(/[^a-z0-9_]+/g, ""); // оставляем только то, что ожидаем
-  if (mt) badgeEl.classList.add(`badge--${mt}`);
+    .replace(/[^a-z0-9_]+/g, "");
+  if (mt) badgeEl?.classList?.add(`badge--${mt}`);
 
   clear(infoEl);
-
-  function normalizeValue(v) {
-    if (v == null) return "";
-    if (Array.isArray(v)) {
-      const arr = v.map((x) => String(x ?? "").trim()).filter(Boolean);
-      return arr.length ? arr.join(", ") : "";
-    }
-    const s = String(v).trim();
-    return s;
-  }
 
   // базовые
   addInfoRow(infoEl, "Коллекция", normalizeValue(item.category_name));
@@ -154,7 +184,7 @@ function render(item) {
   addInfoRow(
     infoEl,
     "Эпизодов",
-    normalizeValue(item.total_episodes || item.anime_episodes)
+    normalizeValue(item.total_episodes || item.anime_episodes),
   );
   addInfoRow(infoEl, "Страницы", normalizeValue(item.pages));
   addInfoRow(infoEl, "Описание", normalizeValue(item.description));
@@ -164,21 +194,15 @@ function render(item) {
 
   // ===== VC =====
   if (item.__kind === "vc") {
-    // ❌ Ryot для VC не показываем
-
-    // ✅ Source для VC
     if (item.source_url) {
       addActionLink(
         actionsEl,
         item.source_label ? String(item.source_label).toUpperCase() : "SOURCE",
-        item.source_url
+        item.source_url,
       );
     }
-
-    return; // ⬅️ важно: дальше не идём
+    return;
   }
-
-  // ===== Обычный item =====
 
   // Ryot
   const ryotId = item.meta_id || item.id || "";
@@ -192,24 +216,7 @@ function render(item) {
     addActionLink(
       actionsEl,
       item.source ? String(item.source).toUpperCase() : "SOURCE",
-      item.source_url
+      item.source_url,
     );
   }
-}
-
-export function initResultUI() {
-  // первичный рендер
-  render(getState().result?.item || null);
-
-  // обновление по state
-  let lastId = null;
-  subscribe((s) => {
-    const it = s.result?.item || null;
-    const nextId = it
-      ? String(it.id ?? it.meta_id ?? it.title ?? "")
-      : "__none__";
-    if (nextId === lastId) return;
-    lastId = nextId;
-    render(it);
-  });
 }

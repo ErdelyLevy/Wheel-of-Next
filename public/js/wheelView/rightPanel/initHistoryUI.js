@@ -1,8 +1,12 @@
-// public/js/historyUi.js
-import { setView } from "./state.js";
-import { applyWheelSnapshot } from "./actions.js";
-import { apiGetHistory, apiGetHistoryById } from "./api.js";
-import { bindLazyPoster } from "./posterFallback.js"; // добавь импорт сверху
+import { apiGetHistory, apiGetHistoryById } from "../../shared/api.js";
+import { bindLazyPoster } from "../../shared/posters/bindLazyPoster.js";
+import { setView } from "../../shared/state.js";
+import { applyWheelSnapshot } from "../center/applyWheelSnapshot.js";
+
+export function initHistoryUI() {
+  renderHistoryList();
+  initHistoryClicks();
+}
 
 function fmtDate(iso) {
   try {
@@ -126,10 +130,4 @@ function initHistoryClicks() {
   });
 }
 
-export function initHistoryUI() {
-  renderHistoryList();
-  initHistoryClicks();
-}
-
-// чтобы main.js мог обновлять историю после ROLL без циклических импортов
 window.refreshHistory = renderHistoryList;

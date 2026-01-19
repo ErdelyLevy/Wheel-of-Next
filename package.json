@@ -4,7 +4,8 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "lint": "eslint \"public/js/**/*.js\""
   },
   "keywords": [],
   "author": "",
@@ -13,7 +14,10 @@
   "dependencies": {
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "fs-extra": "^11.3.3",
+    "glob": "^13.0.0",
     "pg": "^8.16.3",
+    "recast": "^0.23.11",
     "sharp": "^0.34.5",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
@@ -23,7 +27,9 @@
     "@babel/parser": "^7.28.6",
     "@babel/traverse": "^7.28.6",
     "eslint": "^9.39.2",
+    "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-unused-imports": "^4.3.0",
+    "globals": "^17.0.0",
     "postcss": "^8.5.6",
     "postcss-cli": "^11.0.1",
     "postcss-scss": "^4.0.9",

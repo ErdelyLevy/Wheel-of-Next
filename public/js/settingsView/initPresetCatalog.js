@@ -1,11 +1,48 @@
-// js/presetsCatalog.js
-import { subscribe, getState, setState, setPresetDraft } from "./state.js";
-import { syncPresetEditorFromState } from "./presetsUi.js";
-// если в одном модуле — адаптируй импорт
+import {
+  apiDeletePreset,
+  apiGetPresets,
+  apiUpsertPreset,
+} from "../shared/api.js";
+import {
+  getState,
+  setPresetDraft,
+  setState,
+  subscribe,
+} from "../shared/state.js";
+import { syncPresetEditorFromState } from "./initPresetDropdowns.js";
 
-const WHEEL_BASE = window.location.pathname.startsWith("/wheel/")
-  ? "/wheel"
-  : "";
+export async function initPresetCatalog() {
+  // 1) загрузить пресеты из БД и положить в state
+  try {
+    const presets = await apiGetPresets();
+    setState({ presets });
+  } catch (e) {
+    console.error("[presets] fetch failed:", e);
+    setState({ presets: [] });
+  }
+
+  // 2) первый рендер каталога + валидации
+  renderCatalog(getState().presets);
+  applyPresetValidationUI();
+  initCatalogClick();
+  initUpsertDelete();
+  initNameBinding();
+
+  // ✅ по умолчанию — создаём новый (пустой) пресет
+  startNewPresetDraft();
+
+  // 3) авто-выбор первого пресета при старте
+  const s = getState();
+  const list = Array.isArray(s.presets) ? s.presets : [];
+  if (s.activePresetId) {
+    // если активный уже есть — подтянем его (по желанию, можно оставить как есть)
+  } else if (list[0]) {
+    // оставь как было
+  }
+
+  // 4) подписка на state: только UI валидации (каталог не перерисовываем на каждое изменение)
+  subscribe(() => applyPresetValidationUI());
+}
 
 function validateDraft(d) {
   const errors = [];
@@ -70,7 +107,7 @@ function applyPresetValidationUI() {
   setInvalid(msMedia, !(Array.isArray(d?.media) && d.media.length));
   setInvalid(
     msCollection,
-    !(Array.isArray(d?.categories) && d.categories.length)
+    !(Array.isArray(d?.categories) && d.categories.length),
   );
 
   return v;
@@ -88,8 +125,8 @@ function renderCatalog(presetsArg) {
   const presets = Array.isArray(presetsArg)
     ? presetsArg
     : Array.isArray(s.presets)
-    ? s.presets
-    : [];
+      ? s.presets
+      : [];
 
   ul.innerHTML = "";
 
@@ -166,7 +203,7 @@ function applyPresetToEditor(preset) {
   console.log("  incoming preset.id =", preset?.id);
   console.log(
     "  incoming preset.virtual_collection_ids =",
-    preset?.virtual_collection_ids
+    preset?.virtual_collection_ids,
   );
   console.log("  draft BEFORE setPresetDraft =", getState().presetDraft);
 
@@ -242,36 +279,6 @@ function initCatalogClick() {
   });
 }
 
-async function fetchPresets() {
-  const r = await fetch(`${WHEEL_BASE}/api/presets`, { cache: "no-store" });
-  const j = await r.json();
-  if (!r.ok || j?.ok === false)
-    throw new Error(j?.error || "presets fetch failed");
-  return j.presets || [];
-}
-
-async function upsertPreset(payload) {
-  const r = await fetch(`${WHEEL_BASE}/api/presets`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const j = await r.json();
-  if (!r.ok || j?.ok === false)
-    throw new Error(j?.error || "preset save failed");
-  return j.preset || j; // на случай разного формата
-}
-
-async function deletePreset(id) {
-  const r = await fetch(`${WHEEL_BASE}/api/presets/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-  });
-  const j = await r.json().catch(() => ({ ok: true }));
-  if (!r.ok || j?.ok === false)
-    throw new Error(j?.error || "preset delete failed");
-  return true;
-}
-
 function initUpsertDelete() {
   const addBtn = document.getElementById("preset-add");
   const delBtn = document.getElementById("preset-delete");
@@ -298,13 +305,13 @@ function initUpsertDelete() {
     try {
       addBtn.disabled = true;
 
-      const saved = await upsertPreset(payload);
+      const saved = await apiUpsertPreset(payload);
 
       // обновляем activePresetId в state
       setState({ activePresetId: saved.id });
 
       // перерисуем каталог из БД
-      const presets = await fetchPresets();
+      const presets = await apiGetPresets();
 
       // проще: добавь renderCatalogFrom(presets) или сохрани presets в state.
       // Я делаю минимально: сохраняю в state и вызываю renderCatalog()
@@ -340,11 +347,11 @@ function initUpsertDelete() {
     try {
       delBtn.disabled = true;
 
-      await deletePreset(s.activePresetId);
+      await apiDeletePreset(s.activePresetId);
 
       setState({ activePresetId: null });
 
-      const presets = await fetchPresets();
+      const presets = await apiGetPresets();
       setState({ presets });
       renderCatalog(presets);
 
@@ -387,37 +394,4 @@ function initNameBinding() {
     setPresetDraft({ ...s.presetDraft, name: nameEl.value });
   });
   applyPresetValidationUI();
-}
-
-export async function initPresetCatalog() {
-  // 1) загрузить пресеты из БД и положить в state
-  try {
-    const presets = await fetchPresets();
-    setState({ presets });
-  } catch (e) {
-    console.error("[presets] fetch failed:", e);
-    setState({ presets: [] });
-  }
-
-  // 2) первый рендер каталога + валидации
-  renderCatalog(getState().presets);
-  applyPresetValidationUI();
-  initCatalogClick();
-  initUpsertDelete();
-  initNameBinding();
-
-  // ✅ по умолчанию — создаём новый (пустой) пресет
-  startNewPresetDraft();
-
-  // 3) авто-выбор первого пресета при старте
-  const s = getState();
-  const list = Array.isArray(s.presets) ? s.presets : [];
-  if (s.activePresetId) {
-    // если активный уже есть — подтянем его (по желанию, можно оставить как есть)
-  } else if (list[0]) {
-    // оставь как было
-  }
-
-  // 4) подписка на state: только UI валидации (каталог не перерисовываем на каждое изменение)
-  subscribe(() => applyPresetValidationUI());
 }

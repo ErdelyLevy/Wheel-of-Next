@@ -1,58 +1,13 @@
-// public/js/virtualCollectionsUi.js
-import { buildSingleSelect, fetchMeta } from "./presetsUi.js";
+import { toast } from "../shared/showToast.js";
+import { buildMultiSelect } from "./initPresetDropdowns.js";
+import { escapeHtml } from "../shared/utils.js";
 import {
+  apiDeleteVirtualCollection,
+  apiGetMeta,
   apiGetVirtualCollections,
   apiUpsertVirtualCollection,
-  apiDeleteVirtualCollection,
-} from "./api.js";
+} from "../shared/api.js";
 
-function escapeHtml(s) {
-  return String(s ?? "").replace(
-    /[&<>"']/g,
-    (c) =>
-      ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;",
-      }[c])
-  );
-}
-
-function uid(prefix = "vcms") {
-  return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now()}`;
-}
-
-function slugify(s) {
-  const x = String(s || "")
-    .trim()
-    .toLowerCase()
-    .replace(/['"]/g, "")
-    .replace(/[^a-z0-9а-яё]+/gi, "_")
-    .replace(/^_+|_+$/g, "")
-    .slice(0, 40);
-  return x || "vc";
-}
-
-function genVcIdFromName(name) {
-  return `vc_${slugify(name)}`;
-}
-
-// маленький хелпер: показать ошибку пользователю (можно заменить на твой toast)
-function toast(msg) {
-  const el = document.getElementById("toast");
-  if (!el) return alert(msg);
-  el.textContent = msg;
-  el.classList.add("is-show");
-  clearTimeout(toast._t);
-  toast._t = setTimeout(() => el.classList.remove("is-show"), 2600);
-}
-
-/**
- * Инициализация UI виртуальных коллекций.
- * initial (optional): массив rows из API [{id,name,media,poster,...}]
- */
 export async function initVirtualCollectionsUI({ initial = null } = {}) {
   const listEl = document.getElementById("vc-list");
   const addBtn = document.getElementById("vc-add");
@@ -63,7 +18,7 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
     const hidden = row.querySelector(".vc-media");
     if (!msRoot || !hidden) return;
 
-    const meta = await fetchMeta(); // media_types
+    const meta = await apiGetMeta(); // media_types
     buildSingleSelect(
       msRoot,
       meta.media_types || [],
@@ -71,7 +26,7 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
       (v) => {
         hidden.value = String(v || "");
         markDirty(row);
-      }
+      },
     );
   }
 
@@ -125,7 +80,7 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
       </div>
 
       <input type="hidden" class="vc-media" value="${escapeHtml(
-        (data.media || "").trim()
+        (data.media || "").trim(),
       )}" />
     </div>
   </div>
@@ -223,14 +178,14 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
       const name = String(row.querySelector(".vc-name")?.value || "").trim();
       const media = String(row.querySelector(".vc-media")?.value || "").trim();
       const poster = String(
-        row.querySelector(".vc-poster")?.value || ""
+        row.querySelector(".vc-poster")?.value || "",
       ).trim();
       const source_label = String(
-        row.querySelector(".vc-source-label")?.value || ""
+        row.querySelector(".vc-source-label")?.value || "",
       ).trim();
 
       const source_url = String(
-        row.querySelector(".vc-source-url")?.value || ""
+        row.querySelector(".vc-source-url")?.value || "",
       ).trim();
 
       console.log("[vc] payload fields:", {
@@ -311,4 +266,40 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
 
   // debug helpers
   window.__vcReload = reload;
+}
+
+function uid(prefix = "vcms") {
+  return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now()}`;
+}
+
+function slugify(s) {
+  const x = String(s || "")
+    .trim()
+    .toLowerCase()
+    .replace(/['"]/g, "")
+    .replace(/[^a-z0-9а-яё]+/gi, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 40);
+  return x || "vc";
+}
+
+function genVcIdFromName(name) {
+  return `vc_${slugify(name)}`;
+}
+
+function buildSingleSelect(msRoot, options, getValue, setValue) {
+  msRoot.dataset.mode = "single"; // 👈 флаг
+
+  return buildMultiSelect(
+    msRoot,
+    options,
+    () => {
+      const v = String(getValue?.() ?? "").trim();
+      return v ? [v] : [];
+    },
+    (arr) => {
+      const v = Array.isArray(arr) && arr.length ? String(arr[0] ?? "") : "";
+      setValue?.(v);
+    },
+  );
 }
