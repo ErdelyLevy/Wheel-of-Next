@@ -1,4 +1,4 @@
-import { $, getState } from "../../shared/state.js";
+import { $, getState, setState } from "../../shared/state.js";
 
 export function initRightPanels() {
   const rightTabs = $("right-tabs");
@@ -37,4 +37,9 @@ export function setActiveTabs(container, predicate) {
   [...container.querySelectorAll(".tab")].forEach((b) =>
     b.classList.toggle("active", predicate(b)),
   );
+}
+
+function setRightPanel(rightPanel) {
+  setState({ rightPanel });
+  localStorage.setItem("won:rightPanel", rightPanel);
 }

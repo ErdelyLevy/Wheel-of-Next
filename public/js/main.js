@@ -20,10 +20,11 @@ import { initRollButton } from "./wheelView/center/roll.js";
 import { initWheelCanvas } from "./wheelView/center/initWheelCanvas.js";
 import { initSettingsSliders } from "./settingsView/initSettingsSliders.js";
 import { initTopTabs } from "./initTopTabs.js";
+import { initRightPanels } from "./wheelView/rightPanel/initRightPanels.js";
 
 async function boot() {
   initTopTabs();
-  // initRightPanels();
+  initRightPanels();
   initSettingsSliders();
   syncHeaderHeightVar();
   initMobileSidebarsCollapsible();
