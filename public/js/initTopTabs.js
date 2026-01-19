@@ -1,6 +1,6 @@
 import { showToast } from "./shared/showToast.js";
 import { getState, setView, $ } from "./shared/state.js";
-import { setActiveTabs } from "./wheelView/rightPanel/applyRightPanel.js";
+import { setActiveTabs } from "./wheelView/rightPanel/initRightPanels.js";
 
 const __log = (...a) => console.log("[initTopTabs]", ...a);
 
