@@ -798,6 +798,8 @@ let vcCols = new Set();
 let PRESETS_HAS_USER_ID = false;
 let HISTORY_HAS_USER_ID = false;
 let VC_HAS_USER_ID = false;
+let wheelItemsCols = new Set();
+let WHEEL_ITEMS_HAS_USER_ID = false;
 
 async function resolveSchema() {
   // prefer won_* if exists
@@ -811,6 +813,11 @@ async function resolveSchema() {
   } else {
     vcCols = new Set();
   }
+  if (await tableExists("wheel_items")) {
+    wheelItemsCols = await getColumns("wheel_items");
+  } else {
+    wheelItemsCols = new Set();
+  }
 
   PRESET_COL_COLLECTIONS = presetsCols.has("collections")
     ? "collections"
@@ -819,6 +826,7 @@ async function resolveSchema() {
   PRESETS_HAS_USER_ID = presetsCols.has("user_id");
   HISTORY_HAS_USER_ID = historyCols.has("user_id");
   VC_HAS_USER_ID = vcCols.has("user_id");
+  WHEEL_ITEMS_HAS_USER_ID = wheelItemsCols.has("user_id");
 
 }
 
@@ -932,13 +940,21 @@ async function buildWheelSnapshotFromPreset(preset, size, userId = null) {
   }
 
   const { rows: poolRows } = await pool.query(
+    WHEEL_ITEMS_HAS_USER_ID
+      ? `
+    select *
+      from wheel_items
+     where user_id = $3
+       and media_type = any($1::text[])
+       and category_name = any($2::text[])
     `
+      : `
     select *
       from wheel_items
      where media_type = any($1::text[])
        and category_name = any($2::text[])
     `,
-    [media_types, collections],
+    WHEEL_ITEMS_HAS_USER_ID ? [media_types, collections, userId] : [media_types, collections],
   );
 
   let vcRows = [];
@@ -1439,11 +1455,23 @@ app.get("/api/health", async (req, res) => {
  */
 app.get("/api/meta", async (req, res) => {
   try {
+    const scope = await resolveUserScope(req);
+    const userId = scope?.userId || null;
+    if (WHEEL_ITEMS_HAS_USER_ID && !userId) {
+      return res.json({ ok: true, media_types: [], collections: [] });
+    }
+
     const media = await pool.query(
-      `select distinct media_type from wheel_items where media_type is not null order by 1`,
+      WHEEL_ITEMS_HAS_USER_ID
+        ? `select distinct media_type from wheel_items where user_id = $1 and media_type is not null order by 1`
+        : `select distinct media_type from wheel_items where media_type is not null order by 1`,
+      WHEEL_ITEMS_HAS_USER_ID ? [userId] : [],
     );
     const cols = await pool.query(
-      `select distinct category_name from wheel_items where category_name is not null order by 1`,
+      WHEEL_ITEMS_HAS_USER_ID
+        ? `select distinct category_name from wheel_items where user_id = $1 and category_name is not null order by 1`
+        : `select distinct category_name from wheel_items where category_name is not null order by 1`,
+      WHEEL_ITEMS_HAS_USER_ID ? [userId] : [],
     );
 
     res.json({
@@ -2292,13 +2320,23 @@ app.post("/api/random", async (req, res) => {
 
     // Pool from view (обычные Items)
     const { rows: poolRows } = await pool.query(
-      `
+      WHEEL_ITEMS_HAS_USER_ID
+        ? `
+  select *
+    from wheel_items
+   where user_id = $3
+     and media_type = any($1::text[])
+     and category_name = any($2::text[])
+  `
+        : `
   select *
     from wheel_items
    where media_type = any($1::text[])
      and category_name = any($2::text[])
   `,
-      [media_types, collections],
+      WHEEL_ITEMS_HAS_USER_ID
+        ? [media_types, collections, userId]
+        : [media_types, collections],
     );
 
     // Virtual collections rows (VC)
@@ -2633,14 +2671,25 @@ app.get("/api/items", async (req, res) => {
 
     // --- items from view ---
     const { rows: itemRows } = await pool.query(
+      WHEEL_ITEMS_HAS_USER_ID
+        ? `
+      select *
+        from wheel_items
+       where user_id = $3
+         and media_type = any($1::text[])
+         and category_name = any($2::text[])
+       order by title asc
       `
+        : `
       select *
         from wheel_items
        where media_type = any($1::text[])
          and category_name = any($2::text[])
        order by title asc
       `,
-      [media_types, collections],
+      WHEEL_ITEMS_HAS_USER_ID
+        ? [media_types, collections, userId]
+        : [media_types, collections],
     );
 
     // --- VC rows ---
