@@ -1482,10 +1482,7 @@ app.get("/api/meta", async (req, res) => {
     }
 
     const media = await pool.query(
-      WHEEL_ITEMS_HAS_USER_ID
-        ? `select distinct media_type from wheel_items where user_id = $1 and media_type is not null order by 1`
-        : `select distinct media_type from wheel_items where media_type is not null order by 1`,
-      WHEEL_ITEMS_HAS_USER_ID ? [userId] : [],
+      `select distinct media_type from wheel_items where media_type is not null order by 1`,
     );
     const cols = await pool.query(
       WHEEL_ITEMS_HAS_USER_ID
