@@ -7,10 +7,7 @@ import { pool } from "./db.js";
 import fs from "fs";
 import fsp from "fs/promises";
 import crypto from "crypto";
-import sharp from "sharp";
-import { Resolver } from "node:dns/promises";
 import dns from "node:dns";
-import net from "node:net";
 import { Agent, setGlobalDispatcher } from "undici";
 import swaggerUi from "swagger-ui-express";
 import swaggerJsdoc from "swagger-jsdoc";
@@ -71,7 +68,7 @@ setGlobalDispatcher(
     },
     headersTimeout: 30_000,
     bodyTimeout: 60_000,
-  })
+  }),
 );
 
 const __filename = fileURLToPath(import.meta.url);
@@ -200,7 +197,7 @@ async function enforcePosterCacheLimit(maxBytes = POSTER_CACHE_MAX_BYTES) {
 
 // --- poster fetch: dedupe + concurrency limit ---
 const POSTER_FETCH_CONCURRENCY = Number(
-  process.env.POSTER_FETCH_CONCURRENCY || 4
+  process.env.POSTER_FETCH_CONCURRENCY || 4,
 );
 
 // key(sha1(url)) -> Promise<{ filePath, ct }>
@@ -292,25 +289,6 @@ function sha1(s) {
   return crypto.createHash("sha1").update(String(s)).digest("hex");
 }
 
-// SSRF guard: разрешаем только https/http и только внешние хосты (без localhost/lan)
-function isPrivateHost(hostname) {
-  const h = String(hostname || "").toLowerCase();
-  if (!h) return true;
-  if (h === "localhost") return true;
-  if (h.endsWith(".local")) return true;
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(h)) {
-    // ipv4
-    const parts = h.split(".").map((x) => Number(x));
-    const [a, b] = parts;
-    if (a === 10) return true;
-    if (a === 127) return true;
-    if (a === 192 && b === 168) return true;
-    if (a === 172 && b >= 16 && b <= 31) return true;
-    if (a === 169 && b === 254) return true;
-  }
-  return false;
-}
-
 function normalizePosterParams(q) {
   const w = clampInt(q.w, 64, 1024, 512); // ширина по умолчанию 512
   const fmt = String(q.fmt || "webp").toLowerCase();
@@ -328,7 +306,7 @@ async function tableExists(name) {
      from information_schema.tables
      where table_schema='public' and table_name=$1
      limit 1`,
-    [name]
+    [name],
   );
   return !!rows.length;
 }
@@ -339,7 +317,7 @@ async function getColumns(tableName) {
      from information_schema.columns
      where table_schema='public' and table_name=$1
      order by ordinal_position`,
-    [tableName]
+    [tableName],
   );
   return new Set(rows.map((r) => r.column_name));
 }
@@ -364,7 +342,7 @@ async function resolveSchema() {
     "[DB] presets table:",
     T_PRESETS,
     "collections col:",
-    PRESET_COL_COLLECTIONS
+    PRESET_COL_COLLECTIONS,
   );
   console.log("[DB] history table:", T_HISTORY);
 }
@@ -413,7 +391,7 @@ async function enrichVcInHistoryRow(client, row) {
       from won_virtual_collections
      where id = any($1::text[])
     `,
-    [vcIds]
+    [vcIds],
   );
 
   const map = new Map(rows.map((r) => [String(r.id), r]));
@@ -470,7 +448,7 @@ app.get("/api/virtual-collections", async (req, res) => {
   select id, name, media, poster, source_label, source_url, created_at, updated_at
     from won_virtual_collections
    order by name asc
-  `
+  `,
     );
 
     res.json({ ok: true, rows });
@@ -531,7 +509,7 @@ app.post("/api/virtual-collections", async (req, res) => {
         updated_at = now()
   returning id, name, media, poster, source_label, source_url, created_at, updated_at
   `,
-      [id, name, media, poster, source_label, source_url]
+      [id, name, media, poster, source_label, source_url],
     );
 
     res.json({ ok: true, row: rows[0] || null });
@@ -568,7 +546,7 @@ app.delete("/api/virtual-collections/:id", async (req, res) => {
     // 1) удаляем VC
     const del = await client.query(
       `delete from won_virtual_collections where id = $1 returning id`,
-      [id]
+      [id],
     );
     if (!del.rowCount) {
       await client.query("rollback");
@@ -583,7 +561,7 @@ app.delete("/api/virtual-collections/:id", async (req, res) => {
              array_remove(virtual_collection_ids, $1)
        where $1 = any(virtual_collection_ids)
       `,
-      [id]
+      [id],
     );
 
     await client.query("commit");
@@ -729,10 +707,10 @@ app.get("/api/health", async (req, res) => {
 app.get("/api/meta", async (req, res) => {
   try {
     const media = await pool.query(
-      `select distinct media_type from wheel_items where media_type is not null order by 1`
+      `select distinct media_type from wheel_items where media_type is not null order by 1`,
     );
     const cols = await pool.query(
-      `select distinct category_name from wheel_items where category_name is not null order by 1`
+      `select distinct category_name from wheel_items where category_name is not null order by 1`,
     );
 
     res.json({
@@ -758,7 +736,7 @@ app.get("/api/meta", async (req, res) => {
 app.get("/api/presets", async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `select * from ${T_PRESETS} order by created_at asc nulls last, name asc`
+      `select * from ${T_PRESETS} order by created_at asc nulls last, name asc`,
     );
 
     const asTextArray = (v) => {
@@ -780,12 +758,12 @@ app.get("/api/presets", async (req, res) => {
       media_types: asTextArray(p.media_types ?? p.media ?? []),
 
       collections: asTextArray(
-        p[PRESET_COL_COLLECTIONS] ?? p.categories ?? p.collections ?? []
+        p[PRESET_COL_COLLECTIONS] ?? p.categories ?? p.collections ?? [],
       ),
 
       // ✅ NEW
       virtual_collection_ids: asTextArray(
-        p.virtual_collection_ids ?? p.virtualCollections ?? []
+        p.virtual_collection_ids ?? p.virtualCollections ?? [],
       ),
 
       weights: p.weights ?? {},
@@ -843,7 +821,7 @@ app.post("/api/presets", async (req, res) => {
     const media_types = asTextArray(body.media_types ?? body.media);
 
     const collections = asTextArray(
-      body.collections ?? body.categories ?? body.category_names
+      body.collections ?? body.categories ?? body.category_names,
     );
 
     // ✅ NEW: virtual collections ids (optional)
@@ -851,7 +829,7 @@ app.post("/api/presets", async (req, res) => {
       body.virtual_collection_ids ??
         body.virtualCollections ??
         body.virtual_collections ??
-        body.vc_ids
+        body.vc_ids,
     );
 
     const weights = normalizeWeightsObject(body.weights);
@@ -886,7 +864,7 @@ app.post("/api/presets", async (req, res) => {
          where id = $1
          returning *
         `,
-        [id, name, media_types, collections, virtual_collection_ids, weights]
+        [id, name, media_types, collections, virtual_collection_ids, weights],
       );
 
       if (rows[0]) {
@@ -900,7 +878,7 @@ app.post("/api/presets", async (req, res) => {
         values ($1, $2, $3, $4, $5, $6, now(), now())
         returning *
         `,
-        [id, name, media_types, collections, virtual_collection_ids, weights]
+        [id, name, media_types, collections, virtual_collection_ids, weights],
       );
       return res.json({ ok: true, preset: ins.rows[0] });
     }
@@ -911,7 +889,7 @@ app.post("/api/presets", async (req, res) => {
       values ($1, $2, $3, $4, $5, now(), now())
       returning *
       `,
-      [name, media_types, collections, virtual_collection_ids, weights]
+      [name, media_types, collections, virtual_collection_ids, weights],
     );
 
     res.json({ ok: true, preset: rows[0] });
@@ -968,12 +946,12 @@ app.get("/api/history", async (req, res) => {
     const limit = clampInt(req.query.limit, 1, 200, 50);
     const { rows } = await pool.query(
       `select * from ${T_HISTORY} order by created_at desc limit $1`,
-      [limit]
+      [limit],
     );
 
     // обогащаем VC (можно параллельно)
     const out = await Promise.all(
-      rows.map((r) => enrichVcInHistoryRow(pool, r))
+      rows.map((r) => enrichVcInHistoryRow(pool, r)),
     );
 
     res.json({ ok: true, rows: out });
@@ -1006,7 +984,7 @@ app.get("/api/history/:id", async (req, res) => {
 
     const { rows } = await pool.query(
       `select * from ${T_HISTORY} where id = $1 limit 1`,
-      [id]
+      [id],
     );
     if (!rows[0])
       return res.status(404).json({ ok: false, error: "not found" });
@@ -1053,7 +1031,7 @@ app.post("/api/random", async (req, res) => {
 
     const { rows: pres } = await pool.query(
       `select * from ${T_PRESETS} where id = $1 limit 1`,
-      [presetId]
+      [presetId],
     );
     const preset = pres[0];
     if (!preset)
@@ -1082,7 +1060,7 @@ app.post("/api/random", async (req, res) => {
    where media_type = any($1::text[])
      and category_name = any($2::text[])
   `,
-      [media_types, collections]
+      [media_types, collections],
     );
 
     // Virtual collections rows (VC)
@@ -1095,7 +1073,7 @@ select id, name, media, poster, source_label, source_url, created_at, updated_at
  where id = any($1::text[])
 
     `,
-        [vcIds]
+        [vcIds],
       );
       vcRows = r.rows || [];
     }
@@ -1146,7 +1124,7 @@ select id, name, media, poster, source_label, source_url, created_at, updated_at
     // обычные: только те, у которых реально есть items (иначе шанс уйдёт в пустоту)
     if (poolRows.length) {
       const presentCats = new Set(
-        poolRows.map((x) => String(x?.category_name || ""))
+        poolRows.map((x) => String(x?.category_name || "")),
       );
       for (const c of collections) {
         const key = String(c);
@@ -1170,7 +1148,7 @@ select id, name, media, poster, source_label, source_url, created_at, updated_at
 
     // 2) выбираем коллекцию по весам (ВАЖНО: независимо от кол-ва items внутри)
     const pickedColIdx = weightedPickIndex(collectionCandidates, (c) =>
-      getCollectionWeight(c.key)
+      getCollectionWeight(c.key),
     );
     const picked = collectionCandidates[pickedColIdx];
 
@@ -1182,7 +1160,7 @@ select id, name, media, poster, source_label, source_url, created_at, updated_at
       winner = vc ? vcToWheelItem(vc) : null;
     } else {
       const bucket = poolRows.filter(
-        (x) => String(x?.category_name || "") === String(picked.value)
+        (x) => String(x?.category_name || "") === String(picked.value),
       );
       if (bucket.length) winner = bucket[(Math.random() * bucket.length) | 0];
     }
@@ -1264,7 +1242,7 @@ select id, name, media, poster, source_label, source_url, created_at, updated_at
           values ($1, $2, $3, $4::jsonb, $5::jsonb, now())
           returning id
           `,
-          [presetId, presetName, winnerId, winnerJson, itemsJson]
+          [presetId, presetName, winnerId, winnerJson, itemsJson],
         );
         historyId = rows[0]?.id ?? null;
       } else {
@@ -1274,7 +1252,7 @@ select id, name, media, poster, source_label, source_url, created_at, updated_at
           values ($1, $2, $3::jsonb, $4::jsonb, now())
           returning id
           `,
-          [presetId, presetName, winnerJson, itemsJson]
+          [presetId, presetName, winnerJson, itemsJson],
         );
         historyId = rows[0]?.id ?? null;
       }
@@ -1308,12 +1286,12 @@ select id, name, media, poster, source_label, source_url, created_at, updated_at
 
     // полезно: какие категории из пула НЕ имеют веса (значит будет fallback)
     const missingWeightKeys = Object.keys(poolCountsByCategory).filter(
-      (k) => !(k in weightsObj)
+      (k) => !(k in weightsObj),
     );
 
     // и наоборот: какие веса заданы, но в пуле таких категорий нет
     const unusedWeightKeys = weightKeys.filter(
-      (k) => !(k in poolCountsByCategory)
+      (k) => !(k in poolCountsByCategory),
     );
 
     const winnerOut = winnerWithW
@@ -1378,7 +1356,7 @@ app.get("/api/items", async (req, res) => {
 
     const { rows: pres } = await pool.query(
       `select * from ${T_PRESETS} where id=$1 limit 1`,
-      [presetId]
+      [presetId],
     );
     const preset = pres[0];
     if (!preset)
@@ -1405,7 +1383,7 @@ app.get("/api/items", async (req, res) => {
          and category_name = any($2::text[])
        order by title asc
       `,
-      [media_types, collections]
+      [media_types, collections],
     );
 
     // --- VC rows ---
@@ -1418,7 +1396,7 @@ app.get("/api/items", async (req, res) => {
          where id = any($1::text[])
          order by name asc
         `,
-        [vcIds]
+        [vcIds],
       );
       vcRows = r.rows || [];
     }

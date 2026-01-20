@@ -12,6 +12,7 @@ import {
   ensureSpinAudio,
   playDing,
   startSpinSound,
+  setSpinSoundVolume,
   stopSpinSound,
 } from "./spinSound.js";
 
@@ -132,33 +133,50 @@ function spinToWinner({
     const targetBase = normRad(-targetAngle);
     const from = Number(canvas.__rotation || 0);
 
-    const baseTurns = 4;
-    const sp = Math.max(0.1, Number(speed || 1)); // защита от 0 и NaN
-    const turns = baseTurns + (sp - 1) * 3; // плавное влияние speed
-
-    const durMs = Math.max(300, Number(durationSec || 10) * 1000);
-
     const two = Math.PI * 2;
-    let to = targetBase + turns * two;
+    const sp = Math.max(0.05, Number(speed || 1)); // защита от 0 и NaN
+    const baseOmega = 2.8; // rad/s at speed=1
+    const omega = baseOmega * sp;
 
-    while (to <= from + two) to += two;
+    let distance = normRad(targetBase - from);
+    let durMs = durationForDistance(distance, omega);
+    const minMs = Math.max(0, Number(durationSec || 10) * 1000);
+
+    while (durMs < minMs) {
+      distance += two;
+      durMs = durationForDistance(distance, omega);
+    }
+
+    const totalSec = Math.max(0.001, durMs / 1000);
+    const constSec = totalSec * 0.8;
+    const decelSec = Math.max(0.001, totalSec - constSec);
 
     const t0 = performance.now();
-
-    startSpinSound({ durationSec: durMs / 1000, speed });
+    startSpinSound();
 
     canvas.__spinning = true;
     document.documentElement.classList.add("is-spinning");
 
     function tick(now) {
-      const t = Math.min(1, (now - t0) / durMs);
-      const k = easeOutCubic(t);
-      const rot = from + (to - from) * k;
+      const t = Math.min(totalSec, (now - t0) / 1000);
+      let dist = 0;
+
+      if (t <= constSec) {
+        dist = omega * t;
+      } else {
+        const td = t - constSec;
+        dist =
+          omega * constSec + omega * td - 0.5 * omega * (td * td) / decelSec;
+        const speedFactor = Math.max(0, 1 - td / decelSec);
+        setSpinSoundVolume(speedFactor);
+      }
+
+      const rot = from + dist;
 
       canvas.__rotation = rot;
       drawWheel(canvas, arr, { rotation: rot, animate: true });
 
-      if (t < 1) {
+      if (t < totalSec) {
         requestAnimationFrame(tick);
       } else {
         canvas.__spinning = false;
@@ -179,8 +197,11 @@ function normRad(a) {
   return a;
 }
 
-function easeOutCubic(t) {
-  return 1 - Math.pow(1 - t, 3);
+function durationForDistance(distance, omega) {
+  const d = Math.max(0, Number(distance) || 0);
+  const w = Math.max(0.001, Number(omega) || 0.001);
+  // 80% constant speed + 20% linear decel => 0.9 * w * T
+  return (d / (0.9 * w)) * 1000;
 }
 
 function pickRandomInsideSegment(start, end, padPct = 0.12) {
