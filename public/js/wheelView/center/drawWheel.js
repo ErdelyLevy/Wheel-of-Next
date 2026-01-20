@@ -16,6 +16,8 @@ export function drawWheel(canvas, items, opts = {}) {
   const rotation = Number(opts.rotation || 0);
   const animate = !!opts.animate; // ✅ NEW
   const onUpdate = animate ? null : opts.onUpdate; // ✅ NEW (важно)
+  const hoverKey = opts.hoverKey || null;
+  const selectedKey = opts.selectedKey || null;
 
   resizeCanvasToDisplaySize(canvas);
 
@@ -96,6 +98,36 @@ export function drawWheel(canvas, items, opts = {}) {
     }
 
     ctx.restore();
+
+    const segKey = getItemKey(s.item);
+    const isHovered = hoverKey && segKey === hoverKey;
+    const isSelected = selectedKey && segKey === selectedKey;
+
+    if (isHovered || isSelected) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, R, a0, a1);
+      ctx.closePath();
+
+      if (isHovered) {
+        ctx.fillStyle = "rgba(255,255,255,0.08)";
+        ctx.fill();
+      }
+
+      if (isSelected) {
+        ctx.strokeStyle = "rgba(255, 60, 172, 0.9)";
+        ctx.lineWidth = 2;
+        ctx.shadowColor = "rgba(255, 60, 172, 0.5)";
+        ctx.shadowBlur = 10;
+        ctx.stroke();
+      } else if (isHovered) {
+        ctx.strokeStyle = "rgba(255,255,255,0.25)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
   }
 
   // === поверх всего: внешнее кольцо + стрелка ===
@@ -226,4 +258,16 @@ function scheduleOnce(fn) {
       // intentionally ignored
     }
   });
+}
+
+function getItemKey(it) {
+  if (!it) return "";
+  const baseId =
+    it.__sliceOf != null ? String(it.__sliceOf) : String(it.id ?? "");
+
+  if (it.__kind === "vc" || it.__vc_id != null) {
+    const vcId = String(it.__vc_id || baseId || "");
+    return `vc:${vcId}`;
+  }
+  return `it:${baseId}`;
 }

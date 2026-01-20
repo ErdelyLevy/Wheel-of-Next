@@ -32,6 +32,13 @@ export function initRollButton() {
   btn.addEventListener("click", async () => {
     ensureSpinAudio(`${WHEEL_BASE}/sounds/spin.mp3`);
     ensureDingAudio(`${WHEEL_BASE}/sounds/ding.mp3`);
+    canvas.__selectedKey = null;
+    canvas.__hoverKey = null;
+    drawWheel(canvas, getState().wheel?.items || [], {
+      rotation: Number(canvas.__rotation || 0),
+      hoverKey: null,
+      selectedKey: null,
+    });
 
     try {
       btn.disabled = true;
