@@ -100,7 +100,10 @@
   margin-top: 8px;
 }
 
-html.onboarding-presets #view-settings .settings-grid > :not(#preset-card) {
+html.onboarding-presets
+  #view-settings
+  .settings-grid
+  > :not(#preset-card):not(#vc-card) {
   opacity: 0.35;
   filter: grayscale(0.2);
   pointer-events: none;
