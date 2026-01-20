@@ -60,7 +60,9 @@ export async function playDing({
 
 export async function startSpinSound({ src, volume = 0.35, rate = 1 } = {}) {
   const a = ensureSpinAudio(src);
-  a.volume = Math.max(0, Math.min(1, Number(volume)));
+  const v = Math.max(0, Math.min(1, Number(volume)));
+  a.volume = v;
+  a.__baseVolume = v;
   a.playbackRate = Math.max(0.25, Math.min(4, Number(rate)));
 
   try {
@@ -68,6 +70,17 @@ export async function startSpinSound({ src, volume = 0.35, rate = 1 } = {}) {
   } catch {
     // blocked by browser → ignore
   }
+}
+
+export function setSpinSoundVolume(scale = 1) {
+  const a = spinAudio;
+  if (!a) return;
+  const base =
+    Number.isFinite(a.__baseVolume) && a.__baseVolume != null
+      ? a.__baseVolume
+      : a.volume;
+  const v = Math.max(0, Math.min(1, base * Number(scale)));
+  a.volume = v;
 }
 
 export function stopSpinSound({ fadeMs = 200 } = {}) {

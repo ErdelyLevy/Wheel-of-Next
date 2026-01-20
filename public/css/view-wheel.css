@@ -193,6 +193,11 @@
   justify-content: center;
 }
 
+.center-actions {
+  display: flex;
+  justify-content: center;
+}
+
 .tabs-wrap {
   display: flex;
   flex-wrap: wrap;

@@ -1,7 +1,7 @@
 import { showToast } from "../shared/showToast.js";
 import { setRightListAllItems } from "../shared/state.js";
 import { renderRightList } from "./rightPanel/initRightListSearch.js";
-import { apiGetItemsByPreset, apiRoll } from "../shared/api.js";
+import { apiGetItemsByPreset, apiRandomBegin } from "../shared/api.js";
 import { applyWheelSnapshot } from "./center/applyWheelSnapshot.js";
 import { openResult } from "./leftPanel/openResult.js";
 
@@ -22,12 +22,12 @@ export async function applyPresetToWheelPage(presetId) {
   // 1) Стартуем запросы ПАРАЛЛЕЛЬНО
 
   const pItems = apiGetItemsByPreset(presetId);
-  const pRoll = apiRoll(presetId, { save: false });
+  const pBegin = apiRandomBegin(presetId);
 
   // 2) Ждем ROLL раньше или одновременно — чтобы быстро показать wheel/result
   let snap;
   try {
-    snap = await pRoll;
+    snap = await pBegin;
   } catch (e) {
     console.error("roll failed", e);
     snap = null;
@@ -39,6 +39,8 @@ export async function applyPresetToWheelPage(presetId) {
       wheelItems: structuredClone(snap.wheel_items),
       winnerId: snap.winner_id ?? null,
       winnerItem: snap.winner_item ?? null,
+      snapshotId: snap.snapshot_id ?? null,
+      baseHistoryId: null,
     });
 
     // важно: первый кадр колеса — сразу

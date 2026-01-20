@@ -48,10 +48,25 @@ export async function apiGetItemsByPreset(presetId) {
   return j.rows || [];
 }
 
-export async function apiGetPresets() {
-  const r = await apiFetch(`/api/presets`);
-  const j = await jsonOrThrow(r);
-  return j.presets || [];
+let presetsCache = null;
+let presetsPromise = null;
+
+export async function apiGetPresets({ force = false } = {}) {
+  if (!force && presetsCache) return presetsCache;
+  if (!force && presetsPromise) return presetsPromise;
+
+  presetsPromise = (async () => {
+    const r = await apiFetch(`/api/presets`);
+    const j = await jsonOrThrow(r);
+    presetsCache = j.presets || [];
+    return presetsCache;
+  })();
+
+  try {
+    return await presetsPromise;
+  } finally {
+    presetsPromise = null;
+  }
 }
 
 export async function apiGetVirtualCollections() {
@@ -60,14 +75,52 @@ export async function apiGetVirtualCollections() {
   return j.rows || [];
 }
 
-export async function apiRoll(presetId, { save = true } = {}) {
-  const r = await apiFetch(`/api/random`, {
+export async function apiRandomBegin(presetId, { size } = {}) {
+  const body = { preset_id: presetId };
+  if (size != null) body.size = size;
+  const r = await apiFetch(`/api/random/begin`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ preset_id: presetId, save }),
+    body: JSON.stringify(body),
   });
-  const j = await jsonOrThrow(r);
-  return j;
+  return await jsonOrThrow(r);
+}
+
+export async function apiRandomWinner({ snapshotId, baseHistoryId } = {}) {
+  const body = {};
+  if (snapshotId) body.snapshot_id = snapshotId;
+  if (baseHistoryId) body.base_history_id = baseHistoryId;
+  const r = await apiFetch(`/api/random/winner`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return await jsonOrThrow(r);
+}
+
+export async function apiRandomCommit({
+  snapshotId,
+  baseHistoryId,
+  winnerIndex,
+} = {}) {
+  const body = { winner_index: winnerIndex };
+  if (snapshotId) body.snapshot_id = snapshotId;
+  if (baseHistoryId) body.base_history_id = baseHistoryId;
+  const r = await apiFetch(`/api/random/commit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return await jsonOrThrow(r);
+}
+
+export async function apiRandomAbort(snapshotId) {
+  const r = await apiFetch(`/api/random/abort`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ snapshot_id: snapshotId }),
+  });
+  return await jsonOrThrow(r);
 }
 
 export async function apiUpsertVirtualCollection(payload) {
@@ -80,9 +133,24 @@ export async function apiUpsertVirtualCollection(payload) {
   return j.row || null;
 }
 
-export async function apiGetMeta() {
-  const r = await apiFetch(`/api/meta`);
-  return await jsonOrThrow(r);
+let metaCache = null;
+let metaPromise = null;
+
+export async function apiGetMeta({ force = false } = {}) {
+  if (!force && metaCache) return metaCache;
+  if (!force && metaPromise) return metaPromise;
+
+  metaPromise = (async () => {
+    const r = await apiFetch(`/api/meta`);
+    metaCache = await jsonOrThrow(r);
+    return metaCache;
+  })();
+
+  try {
+    return await metaPromise;
+  } finally {
+    metaPromise = null;
+  }
 }
 
 export async function apiUpsertPreset(payload) {

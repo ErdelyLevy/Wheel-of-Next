@@ -120,6 +120,8 @@ function initHistoryClicks() {
         wheelItems: getWheelItems(row),
         winnerId: winner?.id ?? row.winner_id ?? null,
         winnerItem: winner || null,
+        snapshotId: row.id ?? null,
+        baseHistoryId: row.id ?? null,
       });
 
       setView("wheel");
