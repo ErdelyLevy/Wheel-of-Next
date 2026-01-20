@@ -31,13 +31,16 @@ export function applyWheelSnapshot({
     snapshotId !== undefined ? snapshotId : s.wheel?.snapshotId ?? null;
   const nextBaseHistoryId =
     baseHistoryId !== undefined ? baseHistoryId : s.wheel?.baseHistoryId ?? null;
+  const prevUpdatedAt = Number(s.wheel?.updatedAt || 0);
+  const now = Date.now();
+  const nextUpdatedAt = now <= prevUpdatedAt ? prevUpdatedAt + 1 : now;
 
   setState({
     result: winnerItem ? { item: winnerItem } : s.result,
     wheel: {
       items: expanded,
       winnerId: computedWinnerId,
-      updatedAt: Date.now(),
+      updatedAt: nextUpdatedAt,
       snapshotId: nextSnapshotId,
       baseHistoryId: nextBaseHistoryId,
     },
