@@ -129,6 +129,21 @@ function normalizeWeightsObject(obj) {
   return out;
 }
 
+function vcToWheelItem(vc) {
+  return {
+    id: String(vc.id),
+    title: String(vc.name || "-"),
+    name: String(vc.name || "-"),
+    media_type: String(vc.media || "book"),
+    category_name: "__virtual__",
+    poster: vc.poster || "",
+    source_label: vc.source_label || "",
+    source_url: vc.source_url || "",
+    __kind: "vc",
+    __vc_id: String(vc.id),
+  };
+}
+
 function shuffleInPlace(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -149,6 +164,129 @@ function weightedPickIndex(items, weightFn) {
     if (r <= 0) return i;
   }
   return items.length - 1;
+}
+
+function itemKey(it) {
+  if (it && (it.__kind === "vc" || it.__vc_id != null)) {
+    const id = String(it.__vc_id || it.id || "").trim();
+    return `vc:${id}`;
+  }
+  const id = String(it?.id ?? "").trim();
+  return `it:${id}`;
+}
+
+function categoryKeyForItem(it) {
+  if (it && (it.__kind === "vc" || it.__vc_id != null)) {
+    const id = String(it.__vc_id || it.id || "").trim();
+    return `vc:${id}`;
+  }
+  return String(it?.category_name || "").trim();
+}
+
+function normalizeCategoryWeights(categories, weightsObj) {
+  const weights = new Map();
+  const hasWeights = weightsObj && typeof weightsObj === "object";
+  let total = 0;
+
+  for (const c of categories) {
+    const key = c.key;
+    const hasKey = hasWeights && Object.hasOwn(weightsObj, key);
+    let w = hasKey ? Number(weightsObj[key]) : 1;
+    if (!Number.isFinite(w)) w = hasKey ? 0 : 1;
+    w = Math.max(0, w);
+    weights.set(key, w);
+    total += w;
+  }
+
+  if (!(total > 0)) {
+    total = categories.length || 1;
+    for (const c of categories) weights.set(c.key, 1);
+  }
+
+  return { weights, total };
+}
+
+function allocateCategoryCounts(categories, size, weightsObj) {
+  const out = new Map();
+  const weightMap = new Map();
+  if (!categories.length || !(size > 0)) return { counts: out, weights: weightMap };
+
+  const { weights, total } = normalizeCategoryWeights(categories, weightsObj);
+
+  const rows = categories.map((c) => {
+    const w = weights.get(c.key) || 0;
+    const raw = (size * w) / total;
+    const base = Math.floor(raw);
+    const rem = raw - base;
+    return { key: c.key, base, rem, weight: w };
+  });
+
+  shuffleInPlace(rows);
+  rows.sort((a, b) => b.rem - a.rem);
+
+  let sum = rows.reduce((acc, r) => acc + r.base, 0);
+  let left = size - sum;
+  for (let i = 0; i < left; i++) {
+    const row = rows[i % rows.length];
+    row.base += 1;
+  }
+
+  for (const r of rows) {
+    out.set(r.key, r.base);
+    weightMap.set(r.key, r.weight);
+  }
+
+  return { counts: out, weights: weightMap };
+}
+
+function pickItemsForCategory(items, count, weight) {
+  const out = [];
+  if (!(count > 0)) return out;
+  if (!items.length) return out;
+
+  const pool = items.slice();
+  shuffleInPlace(pool);
+
+  for (let i = 0; i < count; i++) {
+    const it = pool[i % pool.length];
+    out.push({ ...it, w: weight });
+  }
+  return out;
+}
+
+function reorderNoAdjacent(items) {
+  const buckets = new Map();
+  for (const it of items) {
+    const key = itemKey(it);
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(it);
+  }
+
+  const entries = [];
+  for (const [key, list] of buckets.entries()) {
+    shuffleInPlace(list);
+    entries.push({ key, list, count: list.length });
+  }
+
+  const res = [];
+  let prevKey = null;
+
+  while (entries.length) {
+    entries.sort(
+      (a, b) => b.count - a.count || (Math.random() < 0.5 ? -1 : 1),
+    );
+    let idx = entries.findIndex((e) => e.key !== prevKey);
+    if (idx < 0) idx = 0;
+
+    const bucket = entries[idx];
+    res.push(bucket.list.pop());
+    bucket.count -= 1;
+    prevKey = bucket.key;
+
+    if (bucket.count <= 0) entries.splice(idx, 1);
+  }
+
+  return res;
 }
 
 const POSTER_CACHE_MAX_BYTES = 4 * 1024 * 1024 * 1024; // 4GB
@@ -428,6 +566,197 @@ function safeJsonParse(s) {
   } catch {
     return null;
   }
+}
+
+function parseWheelItems(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    const parsed = safeJsonParse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  }
+  return [];
+}
+
+async function buildWheelSnapshotFromPreset(preset, size) {
+  const media_types = asTextArray(preset.media_types);
+  const collections = asTextArray(preset[PRESET_COL_COLLECTIONS]);
+  const weightsObj = normalizeWeightsObject(preset.weights || {});
+  const vcIds = asTextArray(preset.virtual_collection_ids);
+
+  if (!media_types.length || !collections.length) {
+    return { wheelItems: [], poolTotal: 0 };
+  }
+
+  const { rows: poolRows } = await pool.query(
+    `
+    select *
+      from wheel_items
+     where media_type = any($1::text[])
+       and category_name = any($2::text[])
+    `,
+    [media_types, collections],
+  );
+
+  let vcRows = [];
+  if (vcIds.length) {
+    const r = await pool.query(
+      `
+      select id, name, media, poster, source_label, source_url, created_at, updated_at
+        from won_virtual_collections
+       where id = any($1::text[])
+      `,
+      [vcIds],
+    );
+    vcRows = r.rows || [];
+  }
+
+  const itemsByCat = new Map();
+  for (const it of poolRows) {
+    const key = String(it?.category_name || "").trim();
+    if (!key) continue;
+    if (!itemsByCat.has(key)) itemsByCat.set(key, []);
+    itemsByCat.get(key).push(it);
+  }
+
+  const categories = [];
+  for (const c of collections) {
+    const key = String(c);
+    const items = itemsByCat.get(key);
+    if (!items || !items.length) continue;
+    categories.push({ key, items });
+  }
+
+  for (const vc of vcRows) {
+    const id = String(vc.id);
+    categories.push({ key: `vc:${id}`, items: [vcToWheelItem(vc)] });
+  }
+
+  if (!categories.length) {
+    return { wheelItems: [], poolTotal: poolRows.length + vcRows.length };
+  }
+
+  const { counts, weights } = allocateCategoryCounts(categories, size, weightsObj);
+  const selected = [];
+
+  for (const c of categories) {
+    const count = counts.get(c.key) || 0;
+    const weight = weights.get(c.key) || 1;
+    const picked = pickItemsForCategory(c.items, count, weight);
+    selected.push(...picked);
+  }
+
+  const wheelItems = reorderNoAdjacent(selected);
+  return { wheelItems, poolTotal: poolRows.length + vcRows.length };
+}
+
+async function insertHistorySnapshot({
+  presetId,
+  presetName,
+  wheelItems,
+  winnerItem,
+  winnerId,
+  baseHistoryId = null,
+}) {
+  const cols = [];
+  const placeholders = [];
+  const vals = [];
+  let i = 1;
+
+  function add(col, val, cast = "") {
+    cols.push(col);
+    if (val === "now()") {
+      placeholders.push("now()");
+      return;
+    }
+    placeholders.push(`$${i}${cast}`);
+    vals.push(val);
+    i++;
+  }
+
+  if (historyCols.has("preset_id")) add("preset_id", presetId);
+  if (historyCols.has("preset_name")) add("preset_name", presetName);
+  if (historyCols.has("wheel_items"))
+    add("wheel_items", JSON.stringify(wheelItems || []), "::jsonb");
+  if (historyCols.has("winner"))
+    add("winner", JSON.stringify(winnerItem ?? null), "::jsonb");
+  if (historyCols.has("winner_id")) add("winner_id", winnerId ?? null);
+  if (historyCols.has("base_history_id") && baseHistoryId)
+    add("base_history_id", baseHistoryId);
+  if (historyCols.has("created_at")) add("created_at", "now()");
+  if (historyCols.has("updated_at")) add("updated_at", "now()");
+
+  const sql = `insert into ${T_HISTORY} (${cols.join(", ")})
+               values (${placeholders.join(", ")})
+               returning id`;
+  const { rows } = await pool.query(sql, vals);
+  return rows[0]?.id ?? null;
+}
+
+async function updateHistoryWinner(snapshotId, winnerItem, winnerId) {
+  const sets = [];
+  const vals = [];
+  let i = 1;
+
+  if (historyCols.has("winner")) {
+    sets.push(`winner = $${i}::jsonb`);
+    vals.push(JSON.stringify(winnerItem));
+    i++;
+  }
+  if (historyCols.has("winner_id")) {
+    sets.push(`winner_id = $${i}`);
+    vals.push(winnerId ?? null);
+    i++;
+  }
+  if (historyCols.has("updated_at")) {
+    sets.push("updated_at = now()");
+  }
+
+  if (!sets.length) return null;
+
+  vals.push(snapshotId);
+  const sql = `update ${T_HISTORY}
+                 set ${sets.join(", ")}
+               where id = $${i}
+               returning id`;
+  const { rows } = await pool.query(sql, vals);
+  return rows[0]?.id ?? null;
+}
+
+function buildSnapshotCategories(items) {
+  const map = new Map();
+
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    const key = categoryKeyForItem(it);
+    if (!key) continue;
+
+    if (!map.has(key)) {
+      map.set(key, { key, weight: null, entries: [] });
+    }
+
+    const bucket = map.get(key);
+    bucket.entries.push({ item: it, index: i });
+
+    const w = Number(it?.w);
+    if (Number.isFinite(w) && w > 0 && bucket.weight == null) {
+      bucket.weight = w;
+    }
+  }
+
+  const categories = [...map.values()];
+  if (!categories.length) return [];
+
+  let total = 0;
+  for (const c of categories) {
+    if (!(c.weight > 0)) c.weight = 1;
+    total += c.weight;
+  }
+
+  if (!(total > 0)) {
+    for (const c of categories) c.weight = 1;
+  }
+
+  return categories;
 }
 
 // ---- API ----
@@ -944,8 +1273,19 @@ app.delete("/api/presets/:id", async (req, res) => {
 app.get("/api/history", async (req, res) => {
   try {
     const limit = clampInt(req.query.limit, 1, 200, 50);
+    const historyFilters = [];
+    if (historyCols.has("winner_id")) {
+      historyFilters.push("winner_id is not null");
+    }
+    if (historyCols.has("winner")) {
+      historyFilters.push("winner is not null and winner <> 'null'::jsonb");
+    }
+    const whereWinner =
+      historyFilters.length > 0
+        ? `where (${historyFilters.join(" or ")})`
+        : "";
     const { rows } = await pool.query(
-      `select * from ${T_HISTORY} order by created_at desc limit $1`,
+      `select * from ${T_HISTORY} ${whereWinner} order by created_at desc limit $1`,
       [limit],
     );
 
@@ -993,6 +1333,321 @@ app.get("/api/history/:id", async (req, res) => {
     res.json({ ok: true, row });
   } catch (e) {
     console.error("[API] /wheel/api/history/:id failed:", e);
+    res.status(500).json({ ok: false, error: String(e.message || e) });
+  }
+});
+
+/**
+ * @openapi
+ * /api/random/begin:
+ *   post:
+ *     tags: [Wheel]
+ *     summary: Build wheel snapshot (no winner)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [preset_id]
+ *             properties:
+ *               preset_id: { type: string }
+ *               size: { type: integer, minimum: 3, maximum: 128, default: 18 }
+ *     responses:
+ *       200: { description: OK }
+ *       400: { description: Bad Request }
+ *       404: { description: Not Found }
+ */
+app.post("/api/random/begin", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const presetId = String(body.preset_id || body.presetId || "").trim();
+    const size = clampInt(body.size, 3, 128, 18);
+
+    if (!presetId)
+      return res.status(400).json({ ok: false, error: "preset_id required" });
+
+    const { rows: pres } = await pool.query(
+      `select * from ${T_PRESETS} where id = $1 limit 1`,
+      [presetId],
+    );
+    const preset = pres[0];
+    if (!preset)
+      return res.status(404).json({ ok: false, error: "preset not found" });
+
+    const { wheelItems, poolTotal } = await buildWheelSnapshotFromPreset(
+      preset,
+      size,
+    );
+    if (!wheelItems.length) {
+      return res.status(404).json({
+        ok: false,
+        error: "No items or virtual collections for this preset",
+      });
+    }
+
+    const historyId = await insertHistorySnapshot({
+      presetId,
+      presetName: preset.name || "",
+      wheelItems,
+    });
+    if (!historyId) {
+      return res.status(500).json({
+        ok: false,
+        error: "snapshot create failed",
+      });
+    }
+
+    const wheelItemsOut = wheelItems.map((it) => ({
+      ...it,
+      poster: it?.poster
+        ? proxifyPoster(it.poster, { w: 512, fmt: "webp" })
+        : it?.poster,
+    }));
+
+    res.json({
+      ok: true,
+      snapshot_id: historyId,
+      preset_id: presetId,
+      preset_name: preset.name || null,
+      wheel_items: wheelItemsOut,
+      wheel_size: wheelItemsOut.length,
+      pool_total: poolTotal,
+    });
+  } catch (e) {
+    console.error("[API] /wheel/api/random/begin failed:", e);
+    res.status(500).json({ ok: false, error: String(e.message || e) });
+  }
+});
+
+/**
+ * @openapi
+ * /api/random/winner:
+ *   post:
+ *     tags: [Wheel]
+ *     summary: Pick winner for snapshot
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               snapshot_id: { type: string }
+ *               base_history_id: { type: string }
+ *     responses:
+ *       200: { description: OK }
+ *       400: { description: Bad Request }
+ *       404: { description: Not Found }
+ */
+app.post("/api/random/winner", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const snapshotId = String(body.snapshot_id || body.snapshotId || "").trim();
+    const baseHistoryId = String(
+      body.base_history_id || body.baseHistoryId || "",
+    ).trim();
+    const lookupId = baseHistoryId || snapshotId;
+
+    if (!lookupId)
+      return res.status(400).json({
+        ok: false,
+        error: "snapshot_id or base_history_id required",
+      });
+
+    const { rows } = await pool.query(
+      `select * from ${T_HISTORY} where id = $1 limit 1`,
+      [lookupId],
+    );
+    const row = rows[0];
+    if (!row) return res.status(404).json({ ok: false, error: "not found" });
+
+    const wheelItems = parseWheelItems(row.wheel_items);
+    if (!wheelItems.length) {
+      return res.status(404).json({
+        ok: false,
+        error: "snapshot has no wheel_items",
+      });
+    }
+
+    const categories = buildSnapshotCategories(wheelItems);
+    if (!categories.length) {
+      return res.status(404).json({
+        ok: false,
+        error: "snapshot has no categories",
+      });
+    }
+
+    const pickedIdx = weightedPickIndex(categories, (c) => c.weight);
+    const picked = categories[pickedIdx];
+    const entry =
+      picked.entries[Math.floor(Math.random() * picked.entries.length)];
+
+    const winnerItem = entry?.item || null;
+    const winnerIndex = entry?.index ?? -1;
+    const winnerId = winnerItem?.id ?? null;
+
+    const winnerOut = winnerItem
+      ? {
+          ...winnerItem,
+          poster: winnerItem.poster
+            ? proxifyPoster(winnerItem.poster, { w: 512, fmt: "webp" })
+            : winnerItem.poster,
+        }
+      : null;
+
+    res.json({
+      ok: true,
+      snapshot_id: lookupId,
+      base_history_id: baseHistoryId || null,
+      winner_id: winnerId,
+      winner_index: winnerIndex,
+      winner: winnerOut,
+    });
+  } catch (e) {
+    console.error("[API] /wheel/api/random/winner failed:", e);
+    res.status(500).json({ ok: false, error: String(e.message || e) });
+  }
+});
+
+/**
+ * @openapi
+ * /api/random/commit:
+ *   post:
+ *     tags: [Wheel]
+ *     summary: Commit winner to history
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [winner_index]
+ *             properties:
+ *               snapshot_id: { type: string }
+ *               base_history_id: { type: string }
+ *               winner_index: { type: integer }
+ *     responses:
+ *       200: { description: OK }
+ *       400: { description: Bad Request }
+ *       404: { description: Not Found }
+ */
+app.post("/api/random/commit", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const snapshotId = String(body.snapshot_id || body.snapshotId || "").trim();
+    const baseHistoryId = String(
+      body.base_history_id || body.baseHistoryId || "",
+    ).trim();
+    const winnerIndex = Number(body.winner_index ?? body.winnerIndex ?? -1);
+
+    const lookupId = baseHistoryId || snapshotId;
+    if (!lookupId)
+      return res.status(400).json({
+        ok: false,
+        error: "snapshot_id or base_history_id required",
+      });
+    if (!Number.isInteger(winnerIndex) || winnerIndex < 0) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "winner_index required" });
+    }
+
+    const { rows } = await pool.query(
+      `select * from ${T_HISTORY} where id = $1 limit 1`,
+      [lookupId],
+    );
+    const row = rows[0];
+    if (!row) return res.status(404).json({ ok: false, error: "not found" });
+
+    const wheelItems = parseWheelItems(row.wheel_items);
+    const winnerItem = wheelItems[winnerIndex] || null;
+    if (!winnerItem) {
+      return res
+        .status(404)
+        .json({ ok: false, error: "winner item not found" });
+    }
+
+    const winnerId = winnerItem?.id ?? null;
+    let historyId = null;
+
+    if (baseHistoryId) {
+      historyId = await insertHistorySnapshot({
+        presetId: row.preset_id ?? null,
+        presetName: row.preset_name ?? null,
+        wheelItems,
+        winnerItem,
+        winnerId,
+        baseHistoryId,
+      });
+    } else {
+      historyId = await updateHistoryWinner(snapshotId, winnerItem, winnerId);
+    }
+
+    res.json({ ok: true, history_id: historyId });
+  } catch (e) {
+    console.error("[API] /wheel/api/random/commit failed:", e);
+    res.status(500).json({ ok: false, error: String(e.message || e) });
+  }
+});
+
+/**
+ * @openapi
+ * /api/random/abort:
+ *   post:
+ *     tags: [Wheel]
+ *     summary: Delete pending snapshot (no winner)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [snapshot_id]
+ *             properties:
+ *               snapshot_id: { type: string }
+ *     responses:
+ *       200: { description: OK }
+ *       400: { description: Bad Request }
+ *       404: { description: Not Found }
+ *       409: { description: Conflict }
+ */
+app.post("/api/random/abort", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const snapshotId = String(body.snapshot_id || body.snapshotId || "").trim();
+    if (!snapshotId)
+      return res
+        .status(400)
+        .json({ ok: false, error: "snapshot_id required" });
+
+    const { rows } = await pool.query(
+      `select * from ${T_HISTORY} where id = $1 limit 1`,
+      [snapshotId],
+    );
+    const row = rows[0];
+    if (!row) return res.status(404).json({ ok: false, error: "not found" });
+
+    let hasWinner = false;
+    if (historyCols.has("winner_id") && row.winner_id != null) {
+      hasWinner = true;
+    }
+    if (historyCols.has("winner")) {
+      let w = row.winner;
+      if (typeof w === "string") w = safeJsonParse(w);
+      if (w) hasWinner = true;
+    }
+
+    if (hasWinner) {
+      return res
+        .status(409)
+        .json({ ok: false, error: "snapshot has winner" });
+    }
+
+    await pool.query(`delete from ${T_HISTORY} where id = $1`, [snapshotId]);
+    res.json({ ok: true, deleted: true });
+  } catch (e) {
+    console.error("[API] /wheel/api/random/abort failed:", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
@@ -1399,21 +2054,6 @@ app.get("/api/items", async (req, res) => {
         [vcIds],
       );
       vcRows = r.rows || [];
-    }
-
-    function vcToWheelItem(vc) {
-      return {
-        id: String(vc.id),
-        title: String(vc.name || "—"),
-        name: String(vc.name || "—"),
-        media_type: String(vc.media || "book"),
-        category_name: "__virtual__",
-        poster: vc.poster || "",
-        source_label: vc.source_label || null,
-        source_url: vc.source_url || null,
-        __kind: "vc",
-        __vc_id: String(vc.id),
-      };
     }
 
     res.set("Cache-Control", "no-store");

@@ -20,6 +20,8 @@ const initial = {
     items: [], // массив элементов колеса в нужном порядке
     winnerId: null, // id победителя (из items)
     updatedAt: null, // Date.now() для триггера перерисовки
+    snapshotId: null,
+    baseHistoryId: null,
   },
 };
 const wonState = (window.wonState = initial);

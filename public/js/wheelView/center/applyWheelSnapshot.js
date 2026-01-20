@@ -6,7 +6,13 @@ const MAX_N = 200;
 const POSTER_W_K = 0.62;
 const POSTER_OVER = 6;
 
-export function applyWheelSnapshot({ wheelItems, winnerId, winnerItem } = {}) {
+export function applyWheelSnapshot({
+  wheelItems,
+  winnerId,
+  winnerItem,
+  snapshotId,
+  baseHistoryId,
+} = {}) {
   const s = getState();
 
   const computedWinnerId =
@@ -21,12 +27,19 @@ export function applyWheelSnapshot({ wheelItems, winnerId, winnerItem } = {}) {
   const expanded = autoExpandWheelItems(baseItems, computedWinnerId);
 
   // ✅ 2) сначала обновляем state — колесо/результат должны появиться мгновенно (fallback’ами)
+  const nextSnapshotId =
+    snapshotId !== undefined ? snapshotId : s.wheel?.snapshotId ?? null;
+  const nextBaseHistoryId =
+    baseHistoryId !== undefined ? baseHistoryId : s.wheel?.baseHistoryId ?? null;
+
   setState({
     result: winnerItem ? { item: winnerItem } : s.result,
     wheel: {
       items: expanded,
       winnerId: computedWinnerId,
       updatedAt: Date.now(),
+      snapshotId: nextSnapshotId,
+      baseHistoryId: nextBaseHistoryId,
     },
   });
 }

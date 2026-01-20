@@ -311,7 +311,7 @@ function initUpsertDelete() {
       setState({ activePresetId: saved.id });
 
       // перерисуем каталог из БД
-      const presets = await apiGetPresets();
+      const presets = await apiGetPresets({ force: true });
 
       // проще: добавь renderCatalogFrom(presets) или сохрани presets в state.
       // Я делаю минимально: сохраняю в state и вызываю renderCatalog()
@@ -351,7 +351,7 @@ function initUpsertDelete() {
 
       setState({ activePresetId: null });
 
-      const presets = await apiGetPresets();
+      const presets = await apiGetPresets({ force: true });
       setState({ presets });
       renderCatalog(presets);
 

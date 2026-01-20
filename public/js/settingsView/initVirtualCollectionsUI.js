@@ -13,15 +13,23 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
   const addBtn = document.getElementById("vc-add");
   if (!listEl || !addBtn) return;
 
-  async function initMediaSelect(row) {
+  let meta = null;
+  try {
+    meta = await apiGetMeta();
+  } catch (e) {
+    console.error("[vc] meta failed:", e);
+    meta = { media_types: [] };
+  }
+  const mediaTypes = Array.isArray(meta?.media_types) ? meta.media_types : [];
+
+  function initMediaSelect(row) {
     const msRoot = row.querySelector(".vc-ms");
     const hidden = row.querySelector(".vc-media");
     if (!msRoot || !hidden) return;
 
-    const meta = await apiGetMeta(); // media_types
     buildSingleSelect(
       msRoot,
-      meta.media_types || [],
+      mediaTypes,
       () => hidden.value,
       (v) => {
         hidden.value = String(v || "");

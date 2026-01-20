@@ -1,5 +1,11 @@
 import { showToast } from "../../shared/showToast.js";
-import { WHEEL_BASE, apiRoll } from "../../shared/api.js";
+import {
+  WHEEL_BASE,
+  apiRandomBegin,
+  apiRandomAbort,
+  apiRandomCommit,
+  apiRandomWinner,
+} from "../../shared/api.js";
 import { escapeHtml } from "../../shared/utils.js";
 import { getActivePresetId } from "./tabs.js";
 import { getState } from "../../shared/state.js";
@@ -16,6 +22,8 @@ import {
   stopSpinSound,
 } from "./spinSound.js";
 
+const BASE_OMEGA = 2.8; // rad/s at speed=1
+
 export function initRollButton() {
   const btn = document.getElementById("spin-btn");
   const canvas = document.getElementById("wheel");
@@ -24,27 +32,16 @@ export function initRollButton() {
   btn.addEventListener("click", async () => {
     ensureSpinAudio(`${WHEEL_BASE}/sounds/spin.mp3`);
     ensureDingAudio(`${WHEEL_BASE}/sounds/ding.mp3`);
-    const presetId = getActivePresetId();
-    if (!presetId) return alert("Выбери пресет");
 
     try {
       btn.disabled = true;
-
-      const snap = await apiRoll(presetId, { save: true });
-
-      const winnerId = String(snap.winner_id ?? snap.winner?.id ?? "");
-      const winnerItem = snap.winner || null;
-
-      // 1) обновляем wheel, но result НЕ трогаем
-      applyWheelSnapshot({
-        wheelItems: structuredClone(snap.wheel_items || []),
-        winnerId,
-        winnerItem: null, // ✅ важно
-      });
-
-      // 2) берём актуальные items из state (после autoExpand)
       const s = getState();
       const items = s.wheel?.items || [];
+      if (!items.length) return alert("Нет колеса для вращения");
+
+      const snapshotId = s.wheel?.snapshotId || null;
+      const baseHistoryId = s.wheel?.baseHistoryId || null;
+      if (!snapshotId && !baseHistoryId) return alert("Нет снимка колеса");
 
       const durationSec = Number(s.spin?.duration || 20);
       const speed = Number(s.spin?.speed || 1);
@@ -55,18 +52,57 @@ export function initRollButton() {
         spin: s.spin,
       });
 
-      // 3) крутим
+      const idle = startIdleSpin({ canvas, items, speed });
+      const idleStart = performance.now();
+      startSpinSound();
+
+      let snap;
+      try {
+        snap = await apiRandomWinner({
+          snapshotId,
+          baseHistoryId,
+        });
+      } catch (e) {
+        idle.stop();
+        canvas.__spinning = false;
+        document.documentElement.classList.remove("is-spinning");
+        await stopSpinSound({ fadeMs: 150 });
+        throw e;
+      }
+
+      const idleMs = performance.now() - idleStart;
+      idle.stop();
+
+      const winnerId = String(snap.winner_id ?? snap.winner?.id ?? "");
+      const winnerItem = snap.winner || null;
+      const winnerIndex = Number.isInteger(snap.winner_index)
+        ? snap.winner_index
+        : null;
+
+      const presetId = getActivePresetId();
+      let nextSnapshotPromise = null;
+      if (!baseHistoryId && presetId) {
+        nextSnapshotPromise = apiRandomBegin(presetId).catch((e) => {
+          console.error("[roll] prefetch begin failed:", e);
+          return null;
+        });
+      }
+
+      const minTravelMs = Math.max(0, durationSec * 1000 - idleMs);
+
+      // 1) докручиваем до победителя
       await spinToWinner({
         canvas,
         items,
         winnerId,
-        durationSec,
+        minDurationMs: minTravelMs,
         speed,
+        startSound: false,
       });
 
       await stopSpinSound({ fadeMs: 250 });
 
-      // 4) покажем тост с победителем (до звука, чтобы не пропасть при ошибке audio)
+      // 2) покажем тост с победителем (до звука, чтобы не пропасть при ошибке audio)
       if (winnerItem?.title) {
         const safeTitle = escapeHtml(winnerItem.title);
         showToast(
@@ -80,11 +116,47 @@ export function initRollButton() {
 
       await playDing({ src: `${WHEEL_BASE}/sounds/ding.mp3`, volume: 0.9 });
 
-      // 5) теперь показываем победителя слева
+      // 3) теперь показываем победителя слева
       if (winnerItem) openResult(winnerItem);
 
-      // 6) обновим историю
+      // 4) коммитим после показа
+      if (winnerIndex != null) {
+        try {
+          await apiRandomCommit({
+            snapshotId: baseHistoryId ? null : snapshotId,
+            baseHistoryId,
+            winnerIndex,
+          });
+        } catch (e) {
+          console.error("[roll] commit failed:", e);
+        }
+      } else {
+        console.warn("[roll] missing winner_index, skip commit");
+      }
+
+      // 5) обновим историю
       window.refreshHistory?.();
+
+      if (!baseHistoryId && nextSnapshotPromise) {
+        nextSnapshotPromise
+          .then((nextSnap) => {
+            const activeId = getActivePresetId();
+            if (
+              nextSnap?.wheel_items?.length &&
+              String(activeId) === String(presetId)
+            ) {
+              applyWheelSnapshot({
+                wheelItems: structuredClone(nextSnap.wheel_items || []),
+                winnerId: null,
+                winnerItem: null,
+                snapshotId: nextSnap.snapshot_id ?? null,
+                baseHistoryId: null,
+              });
+              window.requestWheelRedraw?.();
+            }
+          })
+          .catch(() => {});
+      }
     } catch (e) {
       console.error(e);
       alert(e.message || e);
@@ -94,12 +166,92 @@ export function initRollButton() {
   });
 }
 
+export function initWheelRefreshButton() {
+  const btn = document.getElementById("refresh-wheel");
+  const canvas = document.getElementById("wheel");
+  if (!btn || !canvas) return;
+
+  btn.addEventListener("click", async () => {
+    if (canvas.__spinning) {
+      showToast?.("Подожди окончания вращения", 1200);
+      return;
+    }
+
+    const presetId = getActivePresetId();
+    if (!presetId) return alert("Выбери пресет");
+
+    try {
+      btn.disabled = true;
+      const s = getState();
+      const snapshotId = s.wheel?.snapshotId || null;
+      const baseHistoryId = s.wheel?.baseHistoryId || null;
+
+      if (snapshotId && !baseHistoryId) {
+        try {
+          await apiRandomAbort(snapshotId);
+        } catch (e) {
+          console.debug("[refresh] abort skipped:", e?.message || e);
+        }
+      }
+
+      const snap = await apiRandomBegin(presetId);
+      if (snap?.wheel_items?.length) {
+        applyWheelSnapshot({
+          wheelItems: structuredClone(snap.wheel_items || []),
+          winnerId: null,
+          winnerItem: null,
+          snapshotId: snap.snapshot_id ?? null,
+          baseHistoryId: null,
+        });
+        window.requestWheelRedraw?.();
+      }
+    } catch (e) {
+      console.error(e);
+      showToast?.("Не удалось обновить колесо", 1400);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+function startIdleSpin({ canvas, items, speed = 1 } = {}) {
+  let active = true;
+  const arr = Array.isArray(items) ? items : [];
+  const sp = Math.max(0.05, Number(speed || 1));
+  const omega = BASE_OMEGA * sp;
+
+  canvas.__spinning = true;
+  document.documentElement.classList.add("is-spinning");
+
+  let last = performance.now();
+  function tick(now) {
+    if (!active) return;
+    const dt = Math.max(0, (now - last) / 1000);
+    last = now;
+
+    const rot = Number(canvas.__rotation || 0) + omega * dt;
+    canvas.__rotation = rot;
+    drawWheel(canvas, arr, { rotation: rot, animate: true });
+
+    requestAnimationFrame(tick);
+  }
+
+  requestAnimationFrame(tick);
+
+  return {
+    stop() {
+      active = false;
+    },
+  };
+}
+
 function spinToWinner({
   canvas,
   items,
   winnerId,
-  durationSec = 10,
+  minDurationMs = 0,
   speed = 1,
+  startSound = true,
 } = {}) {
   return new Promise((resolve) => {
     if (!canvas) return resolve();
@@ -135,12 +287,11 @@ function spinToWinner({
 
     const two = Math.PI * 2;
     const sp = Math.max(0.05, Number(speed || 1)); // защита от 0 и NaN
-    const baseOmega = 2.8; // rad/s at speed=1
-    const omega = baseOmega * sp;
+    const omega = BASE_OMEGA * sp;
 
     let distance = normRad(targetBase - from);
     let durMs = durationForDistance(distance, omega);
-    const minMs = Math.max(0, Number(durationSec || 10) * 1000);
+    const minMs = Math.max(0, Number(minDurationMs || 0));
 
     while (durMs < minMs) {
       distance += two;
@@ -152,7 +303,7 @@ function spinToWinner({
     const decelSec = Math.max(0.001, totalSec - constSec);
 
     const t0 = performance.now();
-    startSpinSound();
+    if (startSound) startSpinSound();
 
     canvas.__spinning = true;
     document.documentElement.classList.add("is-spinning");
