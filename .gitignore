@@ -27,3 +27,4 @@ knip.json
 eslint.config.mjs
 analysis/
 docker-compose.yml
+deploy.sh
