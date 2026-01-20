@@ -1477,19 +1477,18 @@ app.get("/api/meta", async (req, res) => {
   try {
     const scope = await resolveUserScope(req);
     const userId = scope?.userId || null;
-    if (WHEEL_ITEMS_HAS_USER_ID && !userId) {
-      return res.json({ ok: true, media_types: [], collections: [] });
-    }
-
     const media = await pool.query(
       `select distinct media_type from wheel_items where media_type is not null order by 1`,
     );
-    const cols = await pool.query(
-      WHEEL_ITEMS_HAS_USER_ID
-        ? `select distinct category_name from wheel_items where user_id = $1 and category_name is not null order by 1`
-        : `select distinct category_name from wheel_items where category_name is not null order by 1`,
-      WHEEL_ITEMS_HAS_USER_ID ? [userId] : [],
-    );
+    let cols = { rows: [] };
+    if (!WHEEL_ITEMS_HAS_USER_ID || userId) {
+      cols = await pool.query(
+        WHEEL_ITEMS_HAS_USER_ID
+          ? `select distinct category_name from wheel_items where user_id = $1 and category_name is not null order by 1`
+          : `select distinct category_name from wheel_items where category_name is not null order by 1`,
+        WHEEL_ITEMS_HAS_USER_ID ? [userId] : [],
+      );
+    }
 
     res.json({
       ok: true,
