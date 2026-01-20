@@ -65,7 +65,23 @@
     justify-content: flex-start;
   }
 
+  .topbar-inner {
+    flex-wrap: wrap;
+    height: auto;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
   .top-tabs .tab {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+  .auth-btn {
     font-size: 13px;
     padding: 8px 12px;
   }

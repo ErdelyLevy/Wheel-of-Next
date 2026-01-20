@@ -25,9 +25,11 @@ import { initWheelCanvas } from "./wheelView/center/initWheelCanvas.js";
 import { initSettingsSliders } from "./settingsView/initSettingsSliders.js";
 import { initTopTabs } from "./initTopTabs.js";
 import { initRightPanels } from "./wheelView/rightPanel/initRightPanels.js";
+import { initAuthButton } from "./initAuthButton.js";
 
 async function boot() {
   initTopTabs();
+  initAuthButton();
   initRightPanels();
   initSettingsSliders();
   syncHeaderHeightVar();

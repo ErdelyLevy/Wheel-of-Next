@@ -10,6 +10,7 @@ import {
   subscribe,
 } from "../shared/state.js";
 import { syncPresetEditorFromState } from "./initPresetDropdowns.js";
+import { toast } from "../shared/showToast.js";
 
 export async function initPresetCatalog() {
   // 1) загрузить пресеты из БД и положить в state
@@ -323,7 +324,11 @@ function initUpsertDelete() {
         await window.refreshPresetTabsFromDB({ selectId: saved.id });
       }
     } catch (e) {
-      alert(`Ошибка сохранения пресета: ${e.message || e}`);
+      if (e?.status === 401) {
+        toast("Необходимо авторизоваться");
+      } else {
+        toast(`Ошибка сохранения пресета: ${e.message || e}`);
+      }
     } finally {
       addBtn.disabled = false;
     }
@@ -365,7 +370,11 @@ function initUpsertDelete() {
         });
       }
     } catch (e) {
-      alert(`Ошибка удаления пресета: ${e.message || e}`);
+      if (e?.status === 401) {
+        toast("Необходимо авторизоваться");
+      } else {
+        toast(`Ошибка удаления пресета: ${e.message || e}`);
+      }
     } finally {
       delBtn.disabled = false;
     }

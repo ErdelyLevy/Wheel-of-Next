@@ -31,12 +31,14 @@ async function jsonOrThrow(r) {
     const msg = j?.error || `HTTP ${r.status}`;
     const err = new Error(traceId ? `${msg} (trace: ${traceId})` : msg);
     err.traceId = traceId;
+    err.status = r.status;
     throw err;
   }
   if (j && j.ok === false) {
     const msg = j.error || "API error";
     const err = new Error(traceId ? `${msg} (trace: ${traceId})` : msg);
     err.traceId = traceId;
+    err.status = r.status;
     throw err;
   }
   return j;
@@ -98,6 +100,12 @@ export async function apiGetVirtualCollections() {
   const r = await apiFetch(`/api/virtual-collections`);
   const j = await jsonOrThrow(r);
   return j.rows || [];
+}
+
+export async function apiGetMe() {
+  const r = await apiFetch(`/api/me`);
+  if (r.status === 401) return null;
+  return await jsonOrThrow(r);
 }
 
 export async function apiRandomBegin(presetId, { size } = {}) {
