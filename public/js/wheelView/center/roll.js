@@ -1,4 +1,4 @@
-import { showToast } from "../../shared/showToast.js";
+﻿import { showToast } from "../../shared/showToast.js";
 import {
   WHEEL_BASE,
   apiRandomBegin,
@@ -55,12 +55,6 @@ export function initRollButton() {
       const durationSec = Number(s.spin?.duration || 20);
       const speed = Number(s.spin?.speed || 1);
 
-      console.log("[roll] durationSec/speed", {
-        durationSec,
-        speed,
-        spin: s.spin,
-      });
-
       const idle = startIdleSpin({ canvas, items, speed });
       const idleStart = performance.now();
       startSpinSound();
@@ -91,10 +85,7 @@ export function initRollButton() {
       const presetId = getActivePresetId();
       let nextSnapshotPromise = null;
       if (!baseHistoryId && presetId) {
-        nextSnapshotPromise = apiRandomBegin(presetId).catch((e) => {
-          console.error("[roll] prefetch begin failed:", e);
-          return null;
-        });
+        nextSnapshotPromise = apiRandomBegin(presetId).catch(() => null);
       }
 
       const minTravelMs = Math.max(0, durationSec * 1000 - idleMs);
@@ -136,11 +127,7 @@ export function initRollButton() {
             baseHistoryId,
             winnerIndex,
           });
-        } catch (e) {
-          console.error("[roll] commit failed:", e);
-        }
-      } else {
-        console.warn("[roll] missing winner_index, skip commit");
+        } catch {}
       }
 
       // 5) обновим историю
@@ -167,7 +154,6 @@ export function initRollButton() {
           .catch(() => {});
       }
     } catch (e) {
-      console.error(e);
       alert(e.message || e);
     } finally {
       btn.disabled = false;
@@ -198,9 +184,7 @@ export function initWheelRefreshButton() {
       if (snapshotId && !baseHistoryId) {
         try {
           await apiRandomAbort(snapshotId);
-        } catch (e) {
-          console.debug("[refresh] abort skipped:", e?.message || e);
-        }
+        } catch {}
       }
 
       const snap = await apiRandomBegin(presetId);
@@ -214,8 +198,7 @@ export function initWheelRefreshButton() {
         });
         window.requestWheelRedraw?.();
       }
-    } catch (e) {
-      console.error(e);
+    } catch {
       showToast?.("Не удалось обновить колесо", 1400);
     } finally {
       btn.disabled = false;
@@ -399,3 +382,4 @@ function pickRandomInsideSegment(start, end, padPct = 0.12) {
 
   return lo + Math.random() * (hi - lo);
 }
+

@@ -1,4 +1,4 @@
-// server.js
+﻿// server.js
 import "dotenv/config";
 import express from "express";
 import path from "path";
@@ -77,6 +77,90 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.disable("x-powered-by");
 app.use(express.json({ limit: "2mb" }));
+
+const TRACE_HEADER = "x-trace-id";
+const DEBUG_POSTER_LOGS = process.env.DEBUG_POSTER_LOGS === "true";
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function logLine(level, msg, fields = {}) {
+  const payload = { ts: nowIso(), level, msg, ...fields };
+  const line = JSON.stringify(payload);
+  if (level === "error") console.error(line);
+  else if (level === "warn") console.warn(line);
+  else console.log(line);
+}
+
+function createTraceId() {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return crypto.randomBytes(16).toString("hex");
+}
+
+function getTraceId(req) {
+  const incoming = req.get(TRACE_HEADER);
+  if (incoming && String(incoming).trim()) return String(incoming).trim();
+  return createTraceId();
+}
+
+function getRequestPath(req) {
+  const raw = String(req?.originalUrl || "");
+  const idx = raw.indexOf("?");
+  return idx >= 0 ? raw.slice(0, idx) : raw;
+}
+
+function logError(req, msg, err, extra = {}) {
+  const traceId = req?.traceId || req?.get?.(TRACE_HEADER) || "unknown";
+  const payload = {
+    trace_id: traceId,
+    method: req?.method,
+    path: getRequestPath(req),
+    error: err?.message || String(err || ""),
+    ...extra,
+  };
+  if (err?.stack) payload.stack = err.stack;
+  logLine("error", msg, payload);
+}
+
+function isApiRequest(req) {
+  const url = String(req?.originalUrl || "");
+  return url.startsWith("/api/") || url.startsWith("/wheel/api/");
+}
+
+function isPosterRequest(req) {
+  const path = getRequestPath(req);
+  return path.endsWith("/api/poster");
+}
+
+function shouldLogRequest(req) {
+  if (!isApiRequest(req)) return false;
+  if (isPosterRequest(req) && !DEBUG_POSTER_LOGS) return false;
+  return true;
+}
+
+app.use((req, res, next) => {
+  const traceId = getTraceId(req);
+  req.traceId = traceId;
+  res.setHeader(TRACE_HEADER, traceId);
+
+  const started = process.hrtime.bigint();
+  res.on("finish", () => {
+    if (!shouldLogRequest(req)) return;
+    const durationMs = Number(process.hrtime.bigint() - started) / 1e6;
+    const status = res.statusCode;
+    const level = status >= 500 ? "error" : status >= 400 ? "warn" : "info";
+    logLine(level, "request", {
+      trace_id: traceId,
+      method: req.method,
+      path: getRequestPath(req),
+      status,
+      duration_ms: Math.round(durationMs),
+    });
+  });
+
+  next();
+});
 
 // ---- helpers ----
 const openapiSpec = swaggerJsdoc({
@@ -362,24 +446,6 @@ function posterRelease() {
 async function fetchPosterToCache({ url, key, filePath }) {
   await posterAcquire();
   try {
-    async function logPosterTarget(u) {
-      try {
-        const U = new URL(u);
-        const host = U.hostname;
-
-        console.log("[poster] url =", u);
-        console.log("[poster] host =", host);
-
-        // ✅ логируем ИМЕННО то, что пойдёт в undici lookup
-        const addrs = await resolveHost(host);
-        console.log("[poster] resolved =", addrs);
-      } catch (e) {
-        console.log("[poster] bad url =", u, "err =", String(e?.message || e));
-      }
-    }
-
-    // ...
-    await logPosterTarget(url);
 
     const r = await fetch(url, {
       redirect: "follow",
@@ -476,13 +542,6 @@ async function resolveSchema() {
     ? "collections"
     : "categories";
 
-  console.log(
-    "[DB] presets table:",
-    T_PRESETS,
-    "collections col:",
-    PRESET_COL_COLLECTIONS,
-  );
-  console.log("[DB] history table:", T_HISTORY);
 }
 
 function normStr(x) {
@@ -782,7 +841,7 @@ app.get("/api/virtual-collections", async (req, res) => {
 
     res.json({ ok: true, rows });
   } catch (e) {
-    console.error("[API] /wheel/api/virtual-collections GET failed:", e);
+    logError(req, "api_virtual_collections_get_failed", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
@@ -843,7 +902,7 @@ app.post("/api/virtual-collections", async (req, res) => {
 
     res.json({ ok: true, row: rows[0] || null });
   } catch (e) {
-    console.error("[API] /wheel/api/virtual-collections POST failed:", e);
+    logError(req, "api_virtual_collections_post_failed", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
@@ -897,7 +956,7 @@ app.delete("/api/virtual-collections/:id", async (req, res) => {
     res.json({ ok: true, id });
   } catch (e) {
     await client.query("rollback");
-    console.error("[API] /wheel/api/virtual-collections DELETE failed:", e);
+    logError(req, "api_virtual_collections_delete_failed", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   } finally {
     client.release();
@@ -939,12 +998,6 @@ app.get("/api/poster", async (req, res) => {
     if (!/^https?:\/\//i.test(url)) {
       return res.status(400).json({ ok: false, error: "invalid url" });
     }
-
-    // логи — только когда url уже валиден
-    try {
-      console.log("[poster] url =", url);
-      console.log("[poster] host =", new URL(url).hostname);
-    } catch {}
 
     const key = sha1(url);
     const filePath = path.join(POSTER_CACHE_DIR, key);
@@ -988,7 +1041,7 @@ app.get("/api/poster", async (req, res) => {
       }
 
       // остальные — логируем и возвращаем статус
-      console.error("[API] /wheel/api/poster fetch failed:", e);
+      logError(req, "api_poster_fetch_failed", e);
       return res.status(st).json({ ok: false, error: msg });
     }
 
@@ -998,7 +1051,7 @@ app.get("/api/poster", async (req, res) => {
     return res.sendFile(key, { root: POSTER_CACHE_DIR });
   } catch (e) {
     const status = Number(e?.status) || 500;
-    if (status >= 500) console.error("[API] /wheel/api/poster failed:", e);
+    if (status >= 500) logError(req, "api_poster_failed", e);
     return res
       .status(status)
       .json({ ok: false, error: String(e.message || e) });
@@ -1048,7 +1101,7 @@ app.get("/api/meta", async (req, res) => {
       collections: cols.rows.map((r) => r.category_name),
     });
   } catch (e) {
-    console.error("[API] /wheel/api/meta failed:", e);
+    logError(req, "api_meta_failed", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
@@ -1102,7 +1155,7 @@ app.get("/api/presets", async (req, res) => {
 
     res.json({ ok: true, presets });
   } catch (e) {
-    console.error("[API] /wheel/api/presets failed:", e);
+    logError(req, "api_presets_get_failed", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
@@ -1223,7 +1276,7 @@ app.post("/api/presets", async (req, res) => {
 
     res.json({ ok: true, preset: rows[0] });
   } catch (e) {
-    console.error("[API] POST /wheel/api/presets failed:", e);
+    logError(req, "api_presets_post_failed", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
@@ -1251,7 +1304,7 @@ app.delete("/api/presets/:id", async (req, res) => {
     await pool.query(`delete from ${T_PRESETS} where id = $1`, [id]);
     res.json({ ok: true });
   } catch (e) {
-    console.error("[API] DELETE /wheel/api/presets failed:", e);
+    logError(req, "api_presets_delete_failed", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
@@ -1296,7 +1349,7 @@ app.get("/api/history", async (req, res) => {
 
     res.json({ ok: true, rows: out });
   } catch (e) {
-    console.error("[API] /wheel/api/history failed:", e);
+    logError(req, "api_history_failed", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
@@ -1332,7 +1385,7 @@ app.get("/api/history/:id", async (req, res) => {
     const row = await enrichVcInHistoryRow(pool, rows[0]);
     res.json({ ok: true, row });
   } catch (e) {
-    console.error("[API] /wheel/api/history/:id failed:", e);
+    logError(req, "api_history_id_failed", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
@@ -1415,7 +1468,7 @@ app.post("/api/random/begin", async (req, res) => {
       pool_total: poolTotal,
     });
   } catch (e) {
-    console.error("[API] /wheel/api/random/begin failed:", e);
+    logError(req, "api_random_begin_failed", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
@@ -1505,7 +1558,7 @@ app.post("/api/random/winner", async (req, res) => {
       winner: winnerOut,
     });
   } catch (e) {
-    console.error("[API] /wheel/api/random/winner failed:", e);
+    logError(req, "api_random_winner_failed", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
@@ -1586,7 +1639,7 @@ app.post("/api/random/commit", async (req, res) => {
 
     res.json({ ok: true, history_id: historyId });
   } catch (e) {
-    console.error("[API] /wheel/api/random/commit failed:", e);
+    logError(req, "api_random_commit_failed", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
@@ -1647,7 +1700,7 @@ app.post("/api/random/abort", async (req, res) => {
     await pool.query(`delete from ${T_HISTORY} where id = $1`, [snapshotId]);
     res.json({ ok: true, deleted: true });
   } catch (e) {
-    console.error("[API] /wheel/api/random/abort failed:", e);
+    logError(req, "api_random_abort_failed", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
@@ -1982,7 +2035,7 @@ select id, name, media, poster, source_label, source_url, created_at, updated_at
       wheel_size: wheelItemsWithW.length,
     });
   } catch (e) {
-    console.error("[API] /wheel/api/random failed:", e);
+    logError(req, "api_random_failed", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
@@ -2074,7 +2127,7 @@ app.get("/api/items", async (req, res) => {
 
     return res.json({ ok: true, rows: [...outItems, ...outVcs] });
   } catch (e) {
-    console.error("[API] /wheel/api/items failed:", e);
+    logError(req, "api_items_failed", e);
     return res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 });
@@ -2088,7 +2141,7 @@ app.use(express.static(PUBLIC_DIR));
 app.get(/^(?!\/api\/).*/, (req, res) => {
   res.sendFile("index.html", { root: PUBLIC_DIR }, (err) => {
     if (err) {
-      console.error("[SPA] sendFile failed:", err);
+      logError(req, "spa_sendfile_failed", err);
       res.status(err.statusCode || 500).end();
     }
   });
@@ -2102,5 +2155,6 @@ const PORT = process.env.PORT || 3000;
 const HOST = "0.0.0.0";
 
 app.listen(PORT, () => {
-  console.log(`[BOOT] server listening on http://${HOST}:${PORT}`);
+  logLine("info", "server_listening", { host: HOST, port: PORT });
 });
+

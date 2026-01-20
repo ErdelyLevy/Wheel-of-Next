@@ -371,14 +371,6 @@ function renderWeights() {
 
   if (prevWJson !== nextWJson) {
     setPresetDraft({ ...draft, weights });
-
-    setTimeout(() => {
-      const d = getState().presetDraft;
-      console.log(
-        "  AFTER setPresetDraft, draft.virtual_collection_ids =",
-        d.virtual_collection_ids,
-      );
-    }, 0);
   }
 
   box.innerHTML = "";

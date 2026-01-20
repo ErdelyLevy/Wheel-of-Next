@@ -2,18 +2,43 @@ export const WHEEL_BASE = window.location.pathname.startsWith("/wheel/")
   ? "/wheel"
   : "";
 
+const TRACE_HEADER = "x-trace-id";
+
+function createTraceId() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  const rand = Math.random().toString(16).slice(2, 10);
+  return `${Date.now().toString(16)}-${rand}`;
+}
+
 async function apiFetch(path, init) {
+  const headers = new Headers(init?.headers || {});
+  if (!headers.has(TRACE_HEADER)) headers.set(TRACE_HEADER, createTraceId());
   const r = await fetch(`${WHEEL_BASE}${path}`, {
     cache: "no-store",
     ...(init || {}),
+    headers,
   });
+  try {
+    r.__traceId = headers.get(TRACE_HEADER);
+  } catch {}
   return r;
 }
 
 async function jsonOrThrow(r) {
   const j = await r.json().catch(() => null);
-  if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
-  if (j && j.ok === false) throw new Error(j.error || "API error");
+  const traceId = r.headers.get(TRACE_HEADER) || r.__traceId || null;
+  if (!r.ok) {
+    const msg = j?.error || `HTTP ${r.status}`;
+    const err = new Error(traceId ? `${msg} (trace: ${traceId})` : msg);
+    err.traceId = traceId;
+    throw err;
+  }
+  if (j && j.ok === false) {
+    const msg = j.error || "API error";
+    const err = new Error(traceId ? `${msg} (trace: ${traceId})` : msg);
+    err.traceId = traceId;
+    throw err;
+  }
   return j;
 }
 

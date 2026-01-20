@@ -1,4 +1,4 @@
-import { apiGetHistory, apiGetHistoryById } from "../../shared/api.js";
+﻿import { apiGetHistory, apiGetHistoryById } from "../../shared/api.js";
 import { bindLazyPoster } from "../../shared/posters/bindLazyPoster.js";
 import { setView } from "../../shared/state.js";
 import { applyWheelSnapshot } from "../center/applyWheelSnapshot.js";
@@ -42,8 +42,7 @@ async function renderHistoryList() {
   let rows = [];
   try {
     rows = await apiGetHistory(50);
-  } catch (e) {
-    console.error(e);
+  } catch {
     ul.innerHTML = `<li class="muted">Не удалось загрузить историю</li>`;
     return;
   }
@@ -126,10 +125,10 @@ function initHistoryClicks() {
 
       setView("wheel");
     } catch (e2) {
-      console.error(e2);
       alert(e2.message || e2);
     }
   });
 }
 
 window.refreshHistory = renderHistoryList;
+

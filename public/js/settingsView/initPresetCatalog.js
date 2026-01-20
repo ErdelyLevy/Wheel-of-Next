@@ -1,4 +1,4 @@
-import {
+﻿import {
   apiDeletePreset,
   apiGetPresets,
   apiUpsertPreset,
@@ -16,8 +16,7 @@ export async function initPresetCatalog() {
   try {
     const presets = await apiGetPresets();
     setState({ presets });
-  } catch (e) {
-    console.error("[presets] fetch failed:", e);
+  } catch {
     setState({ presets: [] });
   }
 
@@ -199,14 +198,6 @@ function applyPresetToEditor(preset) {
 
   setState({ activePresetId: preset.id });
 
-  console.log("[applyPresetToEditor]");
-  console.log("  incoming preset.id =", preset?.id);
-  console.log(
-    "  incoming preset.virtual_collection_ids =",
-    preset?.virtual_collection_ids,
-  );
-  console.log("  draft BEFORE setPresetDraft =", getState().presetDraft);
-
   setPresetDraft({
     name,
     media,
@@ -219,7 +210,6 @@ function applyPresetToEditor(preset) {
       : [],
   });
 
-  console.log("  draft AFTER setPresetDraft =", getState().presetDraft);
 
   // если у тебя есть синк скрытого поля под VC — раскомментируй
   // syncHidden("preset-virtual-collections", getState().presetDraft.virtual_collection_ids || []);
@@ -333,7 +323,6 @@ function initUpsertDelete() {
         await window.refreshPresetTabsFromDB({ selectId: saved.id });
       }
     } catch (e) {
-      console.error(e);
       alert(`Ошибка сохранения пресета: ${e.message || e}`);
     } finally {
       addBtn.disabled = false;
@@ -376,7 +365,6 @@ function initUpsertDelete() {
         });
       }
     } catch (e) {
-      console.error(e);
       alert(`Ошибка удаления пресета: ${e.message || e}`);
     } finally {
       delBtn.disabled = false;
@@ -395,3 +383,5 @@ function initNameBinding() {
   });
   applyPresetValidationUI();
 }
+
+
