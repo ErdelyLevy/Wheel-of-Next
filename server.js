@@ -1,6 +1,7 @@
 ﻿// server.js
 import "dotenv/config";
 import express from "express";
+import session from "express-session";
 import path from "path";
 import { fileURLToPath } from "url";
 import { pool } from "./db.js";
@@ -8,6 +9,7 @@ import fs from "fs";
 import fsp from "fs/promises";
 import crypto from "crypto";
 import dns from "node:dns";
+import * as oidc from "openid-client";
 import { Agent, setGlobalDispatcher } from "undici";
 import swaggerUi from "swagger-ui-express";
 import swaggerJsdoc from "swagger-jsdoc";
@@ -76,10 +78,33 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 app.disable("x-powered-by");
+app.set("trust proxy", 1);
 app.use(express.json({ limit: "2mb" }));
 
 const TRACE_HEADER = "x-trace-id";
 const DEBUG_POSTER_LOGS = process.env.DEBUG_POSTER_LOGS === "true";
+const SESSION_COOKIE_NAME = "won.sid";
+
+function requireEnv(name) {
+  const value = String(process.env[name] || "").trim();
+  if (!value) throw new Error(`Missing required env var: ${name}`);
+  return value;
+}
+
+function normalizePublicPrefix(prefix) {
+  const value = String(prefix || "").trim();
+  if (!value || value === "/") return "";
+  const withSlash = value.startsWith("/") ? value : `/${value}`;
+  return withSlash.endsWith("/") ? withSlash.slice(0, -1) : withSlash;
+}
+
+const APP_PUBLIC_ORIGIN = requireEnv("APP_PUBLIC_ORIGIN");
+const APP_PUBLIC_PREFIX = normalizePublicPrefix(requireEnv("APP_PUBLIC_PREFIX"));
+const PUBLIC_ROOT_PATH = APP_PUBLIC_PREFIX ? `${APP_PUBLIC_PREFIX}/` : "/";
+const REDIRECT_URI = `${APP_PUBLIC_ORIGIN}${APP_PUBLIC_PREFIX}/auth/callback`;
+const GOOGLE_CLIENT_ID = requireEnv("GOOGLE_CLIENT_ID");
+const GOOGLE_CLIENT_SECRET = requireEnv("GOOGLE_CLIENT_SECRET");
+const SESSION_SECRET = requireEnv("SESSION_SECRET");
 
 function nowIso() {
   return new Date().toISOString();
@@ -160,6 +185,121 @@ app.use((req, res, next) => {
   });
 
   next();
+});
+
+app.use(
+  session({
+    name: SESSION_COOKIE_NAME,
+    secret: SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: "auto",
+      sameSite: "lax",
+      path: "/",
+    },
+  }),
+);
+
+const oidcConfig = await oidc.discovery(
+  new URL("https://accounts.google.com"),
+  GOOGLE_CLIENT_ID,
+  {
+    client_secret: GOOGLE_CLIENT_SECRET,
+    redirect_uris: [REDIRECT_URI],
+    response_types: ["code"],
+  },
+);
+
+function buildExternalCallbackUrl(req) {
+  const url = new URL(`${APP_PUBLIC_ORIGIN}${APP_PUBLIC_PREFIX}${req.path}`);
+  const queryIndex = req.originalUrl.indexOf("?");
+  if (queryIndex >= 0) url.search = req.originalUrl.slice(queryIndex);
+  return url;
+}
+
+function requireAuth(req, res, next) {
+  if (!req.session?.user)
+    return res.status(401).json({ error: "unauthorized" });
+  return next();
+}
+
+function clearSession(req, res) {
+  if (!req.session) return res.redirect(PUBLIC_ROOT_PATH);
+  req.session.destroy((err) => {
+    if (err) logError(req, "auth_logout_failed", err);
+    res.clearCookie(SESSION_COOKIE_NAME, { path: "/" });
+    res.redirect(PUBLIC_ROOT_PATH);
+  });
+}
+
+app.get("/auth/login", async (req, res) => {
+  try {
+    const state = oidc.randomState();
+    const nonce = oidc.randomNonce();
+    const codeVerifier = oidc.randomPKCECodeVerifier();
+    const codeChallenge = await oidc.calculatePKCECodeChallenge(codeVerifier);
+    req.session.oidc = { state, nonce, codeVerifier };
+
+    const authUrl = oidc.buildAuthorizationUrl(oidcConfig, {
+      scope: "openid email profile",
+      redirect_uri: REDIRECT_URI,
+      state,
+      nonce,
+      code_challenge: codeChallenge,
+      code_challenge_method: "S256",
+    });
+
+    res.redirect(authUrl.href);
+  } catch (err) {
+    logError(req, "auth_login_failed", err);
+    res.status(500).send("Auth failed");
+  }
+});
+
+app.get("/auth/callback", async (req, res) => {
+  try {
+    const { state, nonce, codeVerifier } = req.session?.oidc || {};
+    if (!state || !nonce || !codeVerifier)
+      return res.status(400).send("Missing auth session");
+
+    const currentUrl = buildExternalCallbackUrl(req);
+    const tokenSet = await oidc.authorizationCodeGrant(
+      oidcConfig,
+      currentUrl,
+      {
+        expectedState: state,
+        expectedNonce: nonce,
+        pkceCodeVerifier: codeVerifier,
+      },
+      {
+        redirect_uri: REDIRECT_URI,
+      },
+    );
+    const claims = tokenSet.claims();
+    if (!claims) throw new Error("Missing ID token claims");
+    req.session.user = {
+      sub: claims.sub,
+      email: claims.email || null,
+      name: claims.name || null,
+    };
+    delete req.session.oidc;
+    return res.redirect(PUBLIC_ROOT_PATH);
+  } catch (err) {
+    delete req.session?.oidc;
+    logError(req, "auth_callback_failed", err);
+    return res.status(500).send("Auth failed");
+  }
+});
+
+app.all("/auth/logout", (req, res) => {
+  clearSession(req, res);
+});
+
+app.get("/api/me", requireAuth, (req, res) => {
+  const { email, name, sub } = req.session.user;
+  res.json({ email, name, sub });
 });
 
 // ---- helpers ----
