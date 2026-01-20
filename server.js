@@ -111,7 +111,7 @@ const GOOGLE_CLIENT_SECRET = requireEnv("GOOGLE_CLIENT_SECRET");
 const SESSION_SECRET = requireEnv("SESSION_SECRET");
 const GUEST_OWNER_OIDC_ID = requireEnv("GUEST_OWNER_OIDC_ID");
 
-const userIdByOidcId = new Map();
+const ryotUserIdByOidcId = new Map();
 
 function nowIso() {
   return new Date().toISOString();
@@ -234,7 +234,7 @@ function requireAuth(req, res, next) {
 
 async function lookupRyotUserIdByOidcId(oidcId) {
   if (!oidcId) return null;
-  if (userIdByOidcId.has(oidcId)) return userIdByOidcId.get(oidcId);
+  if (ryotUserIdByOidcId.has(oidcId)) return ryotUserIdByOidcId.get(oidcId);
 
   try {
     const { rows } = await pool.query(
@@ -242,7 +242,7 @@ async function lookupRyotUserIdByOidcId(oidcId) {
       [oidcId],
     );
     const id = rows[0]?.id ?? null;
-    userIdByOidcId.set(oidcId, id);
+    ryotUserIdByOidcId.set(oidcId, id);
     return id;
   } catch (err) {
     logLine("error", "lookup_user_failed", {
@@ -259,9 +259,14 @@ async function resolveUserScope(req) {
   const authOidcId = req.session?.user?.sub || null;
   const isGuest = !authOidcId;
   const oidcId = authOidcId || GUEST_OWNER_OIDC_ID;
-  const userId = await lookupRyotUserIdByOidcId(oidcId);
+  const ryotUserId = await lookupRyotUserIdByOidcId(oidcId);
+  const dataUserId = oidcId;
+  const dataUserIds =
+    ryotUserId && ryotUserId !== dataUserId
+      ? [dataUserId, ryotUserId]
+      : [dataUserId];
 
-  const scope = { oidcId, userId, isGuest };
+  const scope = { oidcId, dataUserId, dataUserIds, ryotUserId, isGuest };
   req.userScope = scope;
   return scope;
 }
@@ -270,9 +275,9 @@ async function requireAuthedUser(req, res, next) {
   if (!req.session?.user)
     return res.status(401).json({ error: "unauthorized" });
   const scope = await resolveUserScope(req);
-  if (!scope?.userId)
-    return res.status(403).json({ error: "user_not_registered" });
-  req.userId = scope.userId;
+  req.dataUserId = scope.dataUserId;
+  req.dataUserIds = scope.dataUserIds;
+  req.ryotUserId = scope.ryotUserId;
   return next();
 }
 
@@ -929,7 +934,11 @@ function parseWheelItems(value) {
   return [];
 }
 
-async function buildWheelSnapshotFromPreset(preset, size, userId = null) {
+async function buildWheelSnapshotFromPreset(
+  preset,
+  size,
+  { itemsUserId = null, dataUserIds = [] } = {},
+) {
   const media_types = asTextArray(preset.media_types);
   const collections = asTextArray(preset[PRESET_COL_COLLECTIONS]);
   const weightsObj = normalizeWeightsObject(preset.weights || {});
@@ -954,7 +963,9 @@ async function buildWheelSnapshotFromPreset(preset, size, userId = null) {
      where media_type = any($1::text[])
        and category_name = any($2::text[])
     `,
-    WHEEL_ITEMS_HAS_USER_ID ? [media_types, collections, userId] : [media_types, collections],
+    WHEEL_ITEMS_HAS_USER_ID
+      ? [media_types, collections, itemsUserId]
+      : [media_types, collections],
   );
 
   let vcRows = [];
@@ -964,14 +975,14 @@ async function buildWheelSnapshotFromPreset(preset, size, userId = null) {
         ? `
       select id, name, media, poster, source_label, source_url, created_at, updated_at
         from ${T_VC}
-       where id = any($1::text[]) and user_id = $2
+       where id = any($1::text[]) and user_id = any($2::text[])
       `
         : `
       select id, name, media, poster, source_label, source_url, created_at, updated_at
         from ${T_VC}
        where id = any($1::text[])
       `,
-      VC_HAS_USER_ID ? [vcIds, userId] : [vcIds],
+      VC_HAS_USER_ID ? [vcIds, dataUserIds] : [vcIds],
     );
     vcRows = r.rows || [];
   }
@@ -1022,7 +1033,7 @@ async function insertHistorySnapshot({
   winnerItem,
   winnerId,
   baseHistoryId = null,
-  userId = null,
+  dataUserId = null,
 }) {
   const cols = [];
   const placeholders = [];
@@ -1042,7 +1053,7 @@ async function insertHistorySnapshot({
 
   if (historyCols.has("preset_id")) add("preset_id", presetId);
   if (historyCols.has("preset_name")) add("preset_name", presetName);
-  if (HISTORY_HAS_USER_ID && userId) add("user_id", userId);
+  if (HISTORY_HAS_USER_ID && dataUserId) add("user_id", dataUserId);
   if (historyCols.has("wheel_items"))
     add("wheel_items", JSON.stringify(wheelItems || []), "::jsonb");
   if (historyCols.has("winner"))
@@ -1060,7 +1071,12 @@ async function insertHistorySnapshot({
   return rows[0]?.id ?? null;
 }
 
-async function updateHistoryWinner(snapshotId, winnerItem, winnerId, userId = null) {
+async function updateHistoryWinner(
+  snapshotId,
+  winnerItem,
+  winnerId,
+  dataUserIds = [],
+) {
   const sets = [];
   const vals = [];
   let i = 1;
@@ -1083,10 +1099,10 @@ async function updateHistoryWinner(snapshotId, winnerItem, winnerId, userId = nu
 
   vals.push(snapshotId);
   let where = `id = $${i}`;
-  if (HISTORY_HAS_USER_ID && userId) {
+  if (HISTORY_HAS_USER_ID && dataUserIds.length) {
     i += 1;
-    vals.push(userId);
-    where += ` and user_id = $${i}`;
+    vals.push(dataUserIds);
+    where += ` and user_id = any($${i}::text[])`;
   }
   const sql = `update ${T_HISTORY}
                  set ${sets.join(", ")}
@@ -1147,15 +1163,16 @@ function buildSnapshotCategories(items) {
 app.get("/api/virtual-collections", async (req, res) => {
   try {
     const scope = await resolveUserScope(req);
-    const userId = scope?.userId || null;
-    if (VC_HAS_USER_ID && !userId) return res.json({ ok: true, rows: [] });
+    const dataUserIds = scope?.dataUserIds || [];
+    if (VC_HAS_USER_ID && !dataUserIds.length)
+      return res.json({ ok: true, rows: [] });
 
     const { rows } = await pool.query(
       VC_HAS_USER_ID
         ? `
   select id, name, media, poster, source_label, source_url, created_at, updated_at
     from ${T_VC}
-   where user_id = $1
+   where user_id = any($1::text[])
    order by name asc
   `
         : `
@@ -1163,7 +1180,7 @@ app.get("/api/virtual-collections", async (req, res) => {
     from ${T_VC}
    order by name asc
   `,
-      VC_HAS_USER_ID ? [userId] : [],
+      VC_HAS_USER_ID ? [dataUserIds] : [],
     );
 
     res.json({ ok: true, rows });
@@ -1197,7 +1214,8 @@ app.get("/api/virtual-collections", async (req, res) => {
  */
 app.post("/api/virtual-collections", requireAuthedUser, async (req, res) => {
   try {
-    const userId = req.userId;
+    const dataUserId = req.dataUserId;
+    const dataUserIds = req.dataUserIds || [];
     const b = req.body || {};
     let id = toVcId(b.id);
     const name = normStr(b.name);
@@ -1211,7 +1229,7 @@ app.post("/api/virtual-collections", requireAuthedUser, async (req, res) => {
     if (!media)
       return res.status(400).json({ ok: false, error: "media required" });
     if (!id && VC_HAS_USER_ID) {
-      id = `vc_${String(userId).replace(/[^a-z0-9]+/gi, "")}_${Date.now().toString(36)}_${crypto
+      id = `vc_${String(dataUserId).replace(/[^a-z0-9]+/gi, "")}_${Date.now().toString(36)}_${crypto
         .randomBytes(4)
         .toString("hex")}`;
     }
@@ -1230,7 +1248,7 @@ app.post("/api/virtual-collections", requireAuthedUser, async (req, res) => {
         source_label = excluded.source_label,
         source_url = excluded.source_url,
         updated_at = now()
-  where ${T_VC}.user_id = $2
+  where ${T_VC}.user_id = any($8::text[])
   returning id, name, media, poster, source_label, source_url, created_at, updated_at
   `
           : `
@@ -1246,7 +1264,16 @@ app.post("/api/virtual-collections", requireAuthedUser, async (req, res) => {
   returning id, name, media, poster, source_label, source_url, created_at, updated_at
   `,
         VC_HAS_USER_ID
-          ? [vcId, userId, name, media, poster, source_label, source_url]
+          ? [
+              vcId,
+              dataUserId,
+              name,
+              media,
+              poster,
+              source_label,
+              source_url,
+              dataUserIds,
+            ]
           : [vcId, name, media, poster, source_label, source_url],
       );
 
@@ -1257,7 +1284,7 @@ app.post("/api/virtual-collections", requireAuthedUser, async (req, res) => {
         [id],
       );
       if (exists.rowCount) {
-        const newId = `vc_${String(userId).replace(/[^a-z0-9]+/gi, "")}_${Date.now().toString(36)}_${crypto
+        const newId = `vc_${String(dataUserId).replace(/[^a-z0-9]+/gi, "")}_${Date.now().toString(36)}_${crypto
           .randomBytes(4)
           .toString("hex")}`;
         result = await upsert(newId);
@@ -1293,7 +1320,7 @@ app.post("/api/virtual-collections", requireAuthedUser, async (req, res) => {
 app.delete("/api/virtual-collections/:id", requireAuthedUser, async (req, res) => {
   const id = toVcId(req.params.id);
   if (!id) return res.status(400).json({ ok: false, error: "id required" });
-  const userId = req.userId;
+  const dataUserIds = req.dataUserIds || [];
 
   const client = await pool.connect();
   try {
@@ -1302,9 +1329,9 @@ app.delete("/api/virtual-collections/:id", requireAuthedUser, async (req, res) =
     // 1) удаляем VC
     const del = await client.query(
       VC_HAS_USER_ID
-        ? `delete from ${T_VC} where id = $1 and user_id = $2 returning id`
+        ? `delete from ${T_VC} where id = $1 and user_id = any($2::text[]) returning id`
         : `delete from ${T_VC} where id = $1 returning id`,
-      VC_HAS_USER_ID ? [id, userId] : [id],
+      VC_HAS_USER_ID ? [id, dataUserIds] : [id],
     );
     if (!del.rowCount) {
       if (VC_HAS_USER_ID) {
@@ -1328,7 +1355,7 @@ app.delete("/api/virtual-collections/:id", requireAuthedUser, async (req, res) =
       update ${T_PRESETS}
          set virtual_collection_ids =
              array_remove(virtual_collection_ids, $1)
-       where $1 = any(virtual_collection_ids) and user_id = $2
+       where $1 = any(virtual_collection_ids) and user_id = any($2::text[])
       `
         : `
       update ${T_PRESETS}
@@ -1336,7 +1363,7 @@ app.delete("/api/virtual-collections/:id", requireAuthedUser, async (req, res) =
              array_remove(virtual_collection_ids, $1)
        where $1 = any(virtual_collection_ids)
       `,
-      PRESETS_HAS_USER_ID ? [id, userId] : [id],
+      PRESETS_HAS_USER_ID ? [id, dataUserIds] : [id],
     );
 
     await client.query("commit");
@@ -1476,17 +1503,17 @@ app.get("/api/health", async (req, res) => {
 app.get("/api/meta", async (req, res) => {
   try {
     const scope = await resolveUserScope(req);
-    const userId = scope?.userId || null;
+    const itemsUserId = scope?.ryotUserId || null;
     const media = await pool.query(
       `select distinct media_type from wheel_items where media_type is not null order by 1`,
     );
     let cols = { rows: [] };
-    if (!WHEEL_ITEMS_HAS_USER_ID || userId) {
+    if (!WHEEL_ITEMS_HAS_USER_ID || itemsUserId) {
       cols = await pool.query(
         WHEEL_ITEMS_HAS_USER_ID
           ? `select distinct category_name from wheel_items where user_id = $1 and category_name is not null order by 1`
           : `select distinct category_name from wheel_items where category_name is not null order by 1`,
-        WHEEL_ITEMS_HAS_USER_ID ? [userId] : [],
+        WHEEL_ITEMS_HAS_USER_ID ? [itemsUserId] : [],
       );
     }
 
@@ -1513,16 +1540,16 @@ app.get("/api/meta", async (req, res) => {
 app.get("/api/presets", async (req, res) => {
   try {
     const scope = await resolveUserScope(req);
-    const userId = scope?.userId || null;
-    if (PRESETS_HAS_USER_ID && !userId) {
+    const dataUserIds = scope?.dataUserIds || [];
+    if (PRESETS_HAS_USER_ID && !dataUserIds.length) {
       return res.json({ ok: true, presets: [] });
     }
 
     const { rows } = await pool.query(
       PRESETS_HAS_USER_ID
-        ? `select * from ${T_PRESETS} where user_id = $1 order by created_at asc nulls last, name asc`
+        ? `select * from ${T_PRESETS} where user_id = any($1::text[]) order by created_at asc nulls last, name asc`
         : `select * from ${T_PRESETS} order by created_at asc nulls last, name asc`,
-      PRESETS_HAS_USER_ID ? [userId] : [],
+      PRESETS_HAS_USER_ID ? [dataUserIds] : [],
     );
 
     const asTextArray = (v) => {
@@ -1599,7 +1626,8 @@ app.get("/api/presets", async (req, res) => {
  */
 app.post("/api/presets", requireAuthedUser, async (req, res) => {
   try {
-    const userId = req.userId;
+    const dataUserId = req.dataUserId;
+    const dataUserIds = req.dataUserIds || [];
     const body = req.body || {};
 
     const id = body.id ? String(body.id).trim() : null;
@@ -1649,7 +1677,7 @@ app.post("/api/presets", requireAuthedUser, async (req, res) => {
                ${colVC} = $5,
                weights = $6,
                updated_at = now()
-         where id = $1 and user_id = $7
+         where id = $1 and user_id = any($7::text[])
          returning *
         `
           : `
@@ -1671,7 +1699,7 @@ app.post("/api/presets", requireAuthedUser, async (req, res) => {
               collections,
               virtual_collection_ids,
               weights,
-              userId,
+              dataUserIds,
             ]
           : [id, name, media_types, collections, virtual_collection_ids, weights],
       );
@@ -1706,7 +1734,7 @@ app.post("/api/presets", requireAuthedUser, async (req, res) => {
         PRESETS_HAS_USER_ID
           ? [
               id,
-              userId,
+              dataUserId,
               name,
               media_types,
               collections,
@@ -1731,7 +1759,14 @@ app.post("/api/presets", requireAuthedUser, async (req, res) => {
       returning *
       `,
       PRESETS_HAS_USER_ID
-        ? [userId, name, media_types, collections, virtual_collection_ids, weights]
+        ? [
+            dataUserId,
+            name,
+            media_types,
+            collections,
+            virtual_collection_ids,
+            weights,
+          ]
         : [name, media_types, collections, virtual_collection_ids, weights],
     );
 
@@ -1762,12 +1797,12 @@ app.delete("/api/presets/:id", requireAuthedUser, async (req, res) => {
     const id = String(req.params.id || "").trim();
     if (!id) return res.status(400).json({ ok: false, error: "id required" });
 
-    const userId = req.userId;
+    const dataUserIds = req.dataUserIds || [];
     const result = await pool.query(
       PRESETS_HAS_USER_ID
-        ? `delete from ${T_PRESETS} where id = $1 and user_id = $2`
+        ? `delete from ${T_PRESETS} where id = $1 and user_id = any($2::text[])`
         : `delete from ${T_PRESETS} where id = $1`,
-      PRESETS_HAS_USER_ID ? [id, userId] : [id],
+      PRESETS_HAS_USER_ID ? [id, dataUserIds] : [id],
     );
     if (!result.rowCount && PRESETS_HAS_USER_ID) {
       const exists = await pool.query(
@@ -1803,8 +1838,8 @@ app.delete("/api/presets/:id", requireAuthedUser, async (req, res) => {
 app.get("/api/history", async (req, res) => {
   try {
     const scope = await resolveUserScope(req);
-    const userId = scope?.userId || null;
-    if (HISTORY_HAS_USER_ID && !userId) {
+    const dataUserIds = scope?.dataUserIds || [];
+    if (HISTORY_HAS_USER_ID && !dataUserIds.length) {
       return res.json({ ok: true, rows: [] });
     }
     const limit = clampInt(req.query.limit, 1, 200, 50);
@@ -1819,9 +1854,13 @@ app.get("/api/history", async (req, res) => {
       historyFilters.length > 0
         ? `where (${historyFilters.join(" or ")})`
         : "";
-    const whereUser = HISTORY_HAS_USER_ID ? (whereWinner ? " and user_id = $2" : "where user_id = $2") : "";
+    const whereUser = HISTORY_HAS_USER_ID
+      ? whereWinner
+        ? " and user_id = any($2::text[])"
+        : "where user_id = any($2::text[])"
+      : "";
     const sql = `select * from ${T_HISTORY} ${whereWinner}${whereUser} order by created_at desc limit $1`;
-    const params = HISTORY_HAS_USER_ID ? [limit, userId] : [limit];
+    const params = HISTORY_HAS_USER_ID ? [limit, dataUserIds] : [limit];
     const { rows } = await pool.query(sql, params);
 
     // обогащаем VC (можно параллельно)
@@ -1858,16 +1897,16 @@ app.get("/api/history/:id", async (req, res) => {
     if (!id) return res.status(400).json({ ok: false, error: "id required" });
 
     const scope = await resolveUserScope(req);
-    const userId = scope?.userId || null;
-    if (HISTORY_HAS_USER_ID && !userId) {
+    const dataUserIds = scope?.dataUserIds || [];
+    if (HISTORY_HAS_USER_ID && !dataUserIds.length) {
       return res.status(404).json({ ok: false, error: "not found" });
     }
 
     const { rows } = await pool.query(
       HISTORY_HAS_USER_ID
-        ? `select * from ${T_HISTORY} where id = $1 and user_id = $2 limit 1`
+        ? `select * from ${T_HISTORY} where id = $1 and user_id = any($2::text[]) limit 1`
         : `select * from ${T_HISTORY} where id = $1 limit 1`,
-      HISTORY_HAS_USER_ID ? [id, userId] : [id],
+      HISTORY_HAS_USER_ID ? [id, dataUserIds] : [id],
     );
     if (!rows[0])
       return res.status(404).json({ ok: false, error: "not found" });
@@ -1907,16 +1946,18 @@ app.post("/api/random/begin", async (req, res) => {
     const presetId = String(body.preset_id || body.presetId || "").trim();
     const size = clampInt(body.size, 3, 128, 18);
     const scope = await resolveUserScope(req);
-    const userId = scope?.userId || null;
+    const dataUserId = scope?.dataUserId || null;
+    const dataUserIds = scope?.dataUserIds || [];
+    const itemsUserId = scope?.ryotUserId || null;
 
     if (!presetId)
       return res.status(400).json({ ok: false, error: "preset_id required" });
 
     const { rows: pres } = await pool.query(
       PRESETS_HAS_USER_ID
-        ? `select * from ${T_PRESETS} where id = $1 and user_id = $2 limit 1`
+        ? `select * from ${T_PRESETS} where id = $1 and user_id = any($2::text[]) limit 1`
         : `select * from ${T_PRESETS} where id = $1 limit 1`,
-      PRESETS_HAS_USER_ID ? [presetId, userId] : [presetId],
+      PRESETS_HAS_USER_ID ? [presetId, dataUserIds] : [presetId],
     );
     const preset = pres[0];
     if (!preset)
@@ -1925,7 +1966,7 @@ app.post("/api/random/begin", async (req, res) => {
     const { wheelItems, poolTotal } = await buildWheelSnapshotFromPreset(
       preset,
       size,
-      userId,
+      { itemsUserId, dataUserIds },
     );
     if (!wheelItems.length) {
       return res.status(404).json({
@@ -1935,12 +1976,12 @@ app.post("/api/random/begin", async (req, res) => {
     }
 
     let snapshotId = null;
-    if (isAuthenticated(req) && userId) {
+    if (isAuthenticated(req) && dataUserId) {
       snapshotId = await insertHistorySnapshot({
         presetId,
         presetName: preset.name || "",
         wheelItems,
-        userId,
+        dataUserId,
       });
       if (!snapshotId) {
         return res.status(500).json({
@@ -2013,7 +2054,7 @@ app.post("/api/random/winner", async (req, res) => {
     ).trim();
     const lookupId = baseHistoryId || snapshotId;
     const scope = await resolveUserScope(req);
-    const userId = scope?.userId || null;
+    const dataUserIds = scope?.dataUserIds || [];
 
     if (!lookupId)
       return res.status(400).json({
@@ -2027,14 +2068,14 @@ app.post("/api/random/winner", async (req, res) => {
       if (!snap) return res.status(404).json({ ok: false, error: "not found" });
       wheelItems = Array.isArray(snap.wheelItems) ? snap.wheelItems : [];
     } else {
-      if (HISTORY_HAS_USER_ID && !userId) {
+      if (HISTORY_HAS_USER_ID && !dataUserIds.length) {
         return res.status(404).json({ ok: false, error: "not found" });
       }
       const { rows } = await pool.query(
         HISTORY_HAS_USER_ID
-          ? `select * from ${T_HISTORY} where id = $1 and user_id = $2 limit 1`
+          ? `select * from ${T_HISTORY} where id = $1 and user_id = any($2::text[]) limit 1`
           : `select * from ${T_HISTORY} where id = $1 limit 1`,
-        HISTORY_HAS_USER_ID ? [lookupId, userId] : [lookupId],
+        HISTORY_HAS_USER_ID ? [lookupId, dataUserIds] : [lookupId],
       );
       const row = rows[0];
       if (!row) return res.status(404).json({ ok: false, error: "not found" });
@@ -2118,7 +2159,8 @@ app.post("/api/random/commit", async (req, res) => {
     ).trim();
     const winnerIndex = Number(body.winner_index ?? body.winnerIndex ?? -1);
     const scope = await resolveUserScope(req);
-    const userId = scope?.userId || null;
+    const dataUserId = scope?.dataUserId || null;
+    const dataUserIds = scope?.dataUserIds || [];
 
     const lookupId = baseHistoryId || snapshotId;
     if (!lookupId)
@@ -2145,15 +2187,15 @@ app.post("/api/random/commit", async (req, res) => {
       return res.json({ ok: true, history_id: null });
     }
 
-    if (!isAuthenticated(req) || !userId) {
+    if (!isAuthenticated(req) || !dataUserId) {
       return res.json({ ok: true, history_id: null });
     }
 
     const { rows } = await pool.query(
       HISTORY_HAS_USER_ID
-        ? `select * from ${T_HISTORY} where id = $1 and user_id = $2 limit 1`
+        ? `select * from ${T_HISTORY} where id = $1 and user_id = any($2::text[]) limit 1`
         : `select * from ${T_HISTORY} where id = $1 limit 1`,
-      HISTORY_HAS_USER_ID ? [lookupId, userId] : [lookupId],
+      HISTORY_HAS_USER_ID ? [lookupId, dataUserIds] : [lookupId],
     );
     const row = rows[0];
     if (!row) return res.status(404).json({ ok: false, error: "not found" });
@@ -2177,14 +2219,14 @@ app.post("/api/random/commit", async (req, res) => {
         winnerItem,
         winnerId,
         baseHistoryId,
-        userId,
+        dataUserId,
       });
     } else {
       historyId = await updateHistoryWinner(
         snapshotId,
         winnerItem,
         winnerId,
-        userId,
+        dataUserIds,
       );
     }
 
@@ -2221,7 +2263,8 @@ app.post("/api/random/abort", async (req, res) => {
     const body = req.body || {};
     const snapshotId = String(body.snapshot_id || body.snapshotId || "").trim();
     const scope = await resolveUserScope(req);
-    const userId = scope?.userId || null;
+    const dataUserId = scope?.dataUserId || null;
+    const dataUserIds = scope?.dataUserIds || [];
     if (!snapshotId)
       return res
         .status(400)
@@ -2232,15 +2275,15 @@ app.post("/api/random/abort", async (req, res) => {
       return res.json({ ok: true, deleted });
     }
 
-    if (!isAuthenticated(req) || !userId) {
+    if (!isAuthenticated(req) || !dataUserId) {
       return res.status(401).json({ ok: false, error: "unauthorized" });
     }
 
     const { rows } = await pool.query(
       HISTORY_HAS_USER_ID
-        ? `select * from ${T_HISTORY} where id = $1 and user_id = $2 limit 1`
+        ? `select * from ${T_HISTORY} where id = $1 and user_id = any($2::text[]) limit 1`
         : `select * from ${T_HISTORY} where id = $1 limit 1`,
-      HISTORY_HAS_USER_ID ? [snapshotId, userId] : [snapshotId],
+      HISTORY_HAS_USER_ID ? [snapshotId, dataUserIds] : [snapshotId],
     );
     const row = rows[0];
     if (!row) return res.status(404).json({ ok: false, error: "not found" });
@@ -2263,9 +2306,9 @@ app.post("/api/random/abort", async (req, res) => {
 
     await pool.query(
       HISTORY_HAS_USER_ID
-        ? `delete from ${T_HISTORY} where id = $1 and user_id = $2`
+        ? `delete from ${T_HISTORY} where id = $1 and user_id = any($2::text[])`
         : `delete from ${T_HISTORY} where id = $1`,
-      HISTORY_HAS_USER_ID ? [snapshotId, userId] : [snapshotId],
+      HISTORY_HAS_USER_ID ? [snapshotId, dataUserIds] : [snapshotId],
     );
     res.json({ ok: true, deleted: true });
   } catch (e) {
@@ -2303,17 +2346,19 @@ app.post("/api/random", async (req, res) => {
     const size = clampInt(body.size, 3, 128, 18);
     const save = !!body.save;
     const scope = await resolveUserScope(req);
-    const userId = scope?.userId || null;
-    const shouldSave = save && isAuthenticated(req) && userId;
+    const dataUserId = scope?.dataUserId || null;
+    const dataUserIds = scope?.dataUserIds || [];
+    const itemsUserId = scope?.ryotUserId || null;
+    const shouldSave = save && isAuthenticated(req) && dataUserId;
 
     if (!presetId)
       return res.status(400).json({ ok: false, error: "preset_id required" });
 
     const { rows: pres } = await pool.query(
       PRESETS_HAS_USER_ID
-        ? `select * from ${T_PRESETS} where id = $1 and user_id = $2 limit 1`
+        ? `select * from ${T_PRESETS} where id = $1 and user_id = any($2::text[]) limit 1`
         : `select * from ${T_PRESETS} where id = $1 limit 1`,
-      PRESETS_HAS_USER_ID ? [presetId, userId] : [presetId],
+      PRESETS_HAS_USER_ID ? [presetId, dataUserIds] : [presetId],
     );
     const preset = pres[0];
     if (!preset)
@@ -2351,7 +2396,7 @@ app.post("/api/random", async (req, res) => {
      and category_name = any($2::text[])
   `,
       WHEEL_ITEMS_HAS_USER_ID
-        ? [media_types, collections, userId]
+        ? [media_types, collections, itemsUserId]
         : [media_types, collections],
     );
 
@@ -2363,7 +2408,7 @@ app.post("/api/random", async (req, res) => {
           ? `
 select id, name, media, poster, source_label, source_url, created_at, updated_at
   from ${T_VC}
- where id = any($1::text[]) and user_id = $2
+ where id = any($1::text[]) and user_id = any($2::text[])
 
     `
           : `
@@ -2372,7 +2417,7 @@ select id, name, media, poster, source_label, source_url, created_at, updated_at
  where id = any($1::text[])
 
     `,
-        VC_HAS_USER_ID ? [vcIds, userId] : [vcIds],
+        VC_HAS_USER_ID ? [vcIds, dataUserIds] : [vcIds],
       );
       vcRows = r.rows || [];
     }
@@ -2542,7 +2587,14 @@ select id, name, media, poster, source_label, source_url, created_at, updated_at
           returning id
           `,
           HISTORY_HAS_USER_ID
-            ? [presetId, presetName, winnerId, winnerJson, itemsJson, userId]
+            ? [
+                presetId,
+                presetName,
+                winnerId,
+                winnerJson,
+                itemsJson,
+                dataUserId,
+              ]
             : [presetId, presetName, winnerId, winnerJson, itemsJson],
         );
         historyId = rows[0]?.id ?? null;
@@ -2554,7 +2606,7 @@ select id, name, media, poster, source_label, source_url, created_at, updated_at
           returning id
           `,
           HISTORY_HAS_USER_ID
-            ? [presetId, presetName, winnerJson, itemsJson, userId]
+            ? [presetId, presetName, winnerJson, itemsJson, dataUserId]
             : [presetId, presetName, winnerJson, itemsJson],
         );
         historyId = rows[0]?.id ?? null;
@@ -2658,16 +2710,17 @@ app.get("/api/items", async (req, res) => {
       return res.status(400).json({ ok: false, error: "preset_id required" });
 
     const scope = await resolveUserScope(req);
-    const userId = scope?.userId || null;
-    if (PRESETS_HAS_USER_ID && !userId) {
+    const dataUserIds = scope?.dataUserIds || [];
+    const itemsUserId = scope?.ryotUserId || null;
+    if (PRESETS_HAS_USER_ID && !dataUserIds.length) {
       return res.status(404).json({ ok: false, error: "preset not found" });
     }
 
     const { rows: pres } = await pool.query(
       PRESETS_HAS_USER_ID
-        ? `select * from ${T_PRESETS} where id=$1 and user_id = $2 limit 1`
+        ? `select * from ${T_PRESETS} where id=$1 and user_id = any($2::text[]) limit 1`
         : `select * from ${T_PRESETS} where id=$1 limit 1`,
-      PRESETS_HAS_USER_ID ? [presetId, userId] : [presetId],
+      PRESETS_HAS_USER_ID ? [presetId, dataUserIds] : [presetId],
     );
     const preset = pres[0];
     if (!preset)
@@ -2704,7 +2757,7 @@ app.get("/api/items", async (req, res) => {
        order by title asc
       `,
       WHEEL_ITEMS_HAS_USER_ID
-        ? [media_types, collections, userId]
+        ? [media_types, collections, itemsUserId]
         : [media_types, collections],
     );
 
@@ -2716,7 +2769,7 @@ app.get("/api/items", async (req, res) => {
           ? `
         select id, name, media, poster, source_label, source_url, created_at, updated_at
           from ${T_VC}
-         where id = any($1::text[]) and user_id = $2
+         where id = any($1::text[]) and user_id = any($2::text[])
          order by name asc
         `
           : `
@@ -2725,7 +2778,7 @@ app.get("/api/items", async (req, res) => {
          where id = any($1::text[])
          order by name asc
         `,
-        VC_HAS_USER_ID ? [vcIds, userId] : [vcIds],
+        VC_HAS_USER_ID ? [vcIds, dataUserIds] : [vcIds],
       );
       vcRows = r.rows || [];
     }
