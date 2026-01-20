@@ -7,12 +7,36 @@ import {
   getState,
   setPresetDraft,
   setState,
+  setView,
   subscribe,
 } from "../shared/state.js";
 import { syncPresetEditorFromState } from "./initPresetDropdowns.js";
 import { toast } from "../shared/showToast.js";
+import { applyView } from "../initTopTabs.js";
 
 export async function initPresetCatalog() {
+  let forcedSettings = false;
+
+  function updatePresetOnboarding() {
+    const s = getState();
+    const authed = !!s.auth?.user;
+    const presets = Array.isArray(s.presets) ? s.presets : [];
+    const active = authed && presets.length === 0;
+
+    document.documentElement.classList.toggle("onboarding-presets", active);
+
+    if (active && !forcedSettings) {
+      forcedSettings = true;
+      setView("settings");
+      applyView();
+      toast("Создай первый пресет, чтобы продолжить");
+    }
+
+    if (!active) {
+      forcedSettings = false;
+    }
+  }
+
   // 1) загрузить пресеты из БД и положить в state
   try {
     const presets = await apiGetPresets();
@@ -27,6 +51,7 @@ export async function initPresetCatalog() {
   initCatalogClick();
   initUpsertDelete();
   initNameBinding();
+  updatePresetOnboarding();
 
   // ✅ по умолчанию — создаём новый (пустой) пресет
   startNewPresetDraft();
@@ -41,7 +66,10 @@ export async function initPresetCatalog() {
   }
 
   // 4) подписка на state: только UI валидации (каталог не перерисовываем на каждое изменение)
-  subscribe(() => applyPresetValidationUI());
+  subscribe(() => {
+    applyPresetValidationUI();
+    updatePresetOnboarding();
+  });
 }
 
 function validateDraft(d) {

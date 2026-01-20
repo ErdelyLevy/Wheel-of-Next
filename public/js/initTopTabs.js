@@ -33,7 +33,7 @@ function scheduleApplyRetry() {
   requestAnimationFrame(() => applyView());
 }
 
-function applyView() {
+export function applyView() {
   if (isWheelSpinning()) {
     showToast?.("Дождись окончания вращения", 1200);
     return;

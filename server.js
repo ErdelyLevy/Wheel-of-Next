@@ -87,6 +87,7 @@ const SESSION_COOKIE_NAME = "won.sid";
 const MEM_SNAPSHOT_PREFIX = "mem_";
 const MEM_SNAPSHOT_TTL_MS = 60 * 60 * 1000;
 const MEM_SNAPSHOT_MAX = 20;
+const USER_TABLE = "user";
 
 function requireEnv(name) {
   const value = String(process.env[name] || "").trim();
@@ -108,6 +109,9 @@ const REDIRECT_URI = `${APP_PUBLIC_ORIGIN}${APP_PUBLIC_PREFIX}/auth/callback`;
 const GOOGLE_CLIENT_ID = requireEnv("GOOGLE_CLIENT_ID");
 const GOOGLE_CLIENT_SECRET = requireEnv("GOOGLE_CLIENT_SECRET");
 const SESSION_SECRET = requireEnv("SESSION_SECRET");
+const GUEST_OWNER_OIDC_ID = requireEnv("GUEST_OWNER_OIDC_ID");
+
+const userIdByOidcId = new Map();
 
 function nowIso() {
   return new Date().toISOString();
@@ -225,6 +229,50 @@ function buildExternalCallbackUrl(req) {
 function requireAuth(req, res, next) {
   if (!req.session?.user)
     return res.status(401).json({ error: "unauthorized" });
+  return next();
+}
+
+async function lookupRyotUserIdByOidcId(oidcId) {
+  if (!oidcId) return null;
+  if (userIdByOidcId.has(oidcId)) return userIdByOidcId.get(oidcId);
+
+  try {
+    const { rows } = await pool.query(
+      `select id from "${USER_TABLE}" where oidc_issuer_id = $1 limit 1`,
+      [oidcId],
+    );
+    const id = rows[0]?.id ?? null;
+    userIdByOidcId.set(oidcId, id);
+    return id;
+  } catch (err) {
+    logLine("error", "lookup_user_failed", {
+      oidc_issuer_id: oidcId,
+      error: err?.message || String(err || ""),
+    });
+    return null;
+  }
+}
+
+async function resolveUserScope(req) {
+  if (req.userScope) return req.userScope;
+
+  const authOidcId = req.session?.user?.sub || null;
+  const isGuest = !authOidcId;
+  const oidcId = authOidcId || GUEST_OWNER_OIDC_ID;
+  const userId = await lookupRyotUserIdByOidcId(oidcId);
+
+  const scope = { oidcId, userId, isGuest };
+  req.userScope = scope;
+  return scope;
+}
+
+async function requireAuthedUser(req, res, next) {
+  if (!req.session?.user)
+    return res.status(401).json({ error: "unauthorized" });
+  const scope = await resolveUserScope(req);
+  if (!scope?.userId)
+    return res.status(403).json({ error: "user_not_registered" });
+  req.userId = scope.userId;
   return next();
 }
 
@@ -719,6 +767,7 @@ function normalizePosterParams(q) {
 // ---- dynamic DB names (wheel_* or won_*) ----
 let T_PRESETS = "wheel_presets";
 let T_HISTORY = "wheel_history";
+const T_VC = "won_virtual_collections";
 
 async function tableExists(name) {
   const { rows } = await pool.query(
@@ -745,6 +794,10 @@ async function getColumns(tableName) {
 let presetsCols = new Set();
 let historyCols = new Set();
 let PRESET_COL_COLLECTIONS = "categories"; // or "collections"
+let vcCols = new Set();
+let PRESETS_HAS_USER_ID = false;
+let HISTORY_HAS_USER_ID = false;
+let VC_HAS_USER_ID = false;
 
 async function resolveSchema() {
   // prefer won_* if exists
@@ -753,10 +806,19 @@ async function resolveSchema() {
 
   presetsCols = await getColumns(T_PRESETS);
   historyCols = await getColumns(T_HISTORY);
+  if (await tableExists(T_VC)) {
+    vcCols = await getColumns(T_VC);
+  } else {
+    vcCols = new Set();
+  }
 
   PRESET_COL_COLLECTIONS = presetsCols.has("collections")
     ? "collections"
     : "categories";
+
+  PRESETS_HAS_USER_ID = presetsCols.has("user_id");
+  HISTORY_HAS_USER_ID = historyCols.has("user_id");
+  VC_HAS_USER_ID = vcCols.has("user_id");
 
 }
 
@@ -798,13 +860,20 @@ async function enrichVcInHistoryRow(client, row) {
     return { ...row, winner, wheel_items };
   }
 
+  const userId = row.user_id ?? null;
   const { rows } = await client.query(
-    `
+    VC_HAS_USER_ID && userId
+      ? `
     select id, name, media, poster, source_label, source_url
-      from won_virtual_collections
+      from ${T_VC}
+     where id = any($1::text[]) and user_id = $2
+    `
+      : `
+    select id, name, media, poster, source_label, source_url
+      from ${T_VC}
      where id = any($1::text[])
     `,
-    [vcIds],
+    VC_HAS_USER_ID && userId ? [vcIds, userId] : [vcIds],
   );
 
   const map = new Map(rows.map((r) => [String(r.id), r]));
@@ -852,7 +921,7 @@ function parseWheelItems(value) {
   return [];
 }
 
-async function buildWheelSnapshotFromPreset(preset, size) {
+async function buildWheelSnapshotFromPreset(preset, size, userId = null) {
   const media_types = asTextArray(preset.media_types);
   const collections = asTextArray(preset[PRESET_COL_COLLECTIONS]);
   const weightsObj = normalizeWeightsObject(preset.weights || {});
@@ -875,12 +944,18 @@ async function buildWheelSnapshotFromPreset(preset, size) {
   let vcRows = [];
   if (vcIds.length) {
     const r = await pool.query(
-      `
+      VC_HAS_USER_ID
+        ? `
       select id, name, media, poster, source_label, source_url, created_at, updated_at
-        from won_virtual_collections
+        from ${T_VC}
+       where id = any($1::text[]) and user_id = $2
+      `
+        : `
+      select id, name, media, poster, source_label, source_url, created_at, updated_at
+        from ${T_VC}
        where id = any($1::text[])
       `,
-      [vcIds],
+      VC_HAS_USER_ID ? [vcIds, userId] : [vcIds],
     );
     vcRows = r.rows || [];
   }
@@ -931,6 +1006,7 @@ async function insertHistorySnapshot({
   winnerItem,
   winnerId,
   baseHistoryId = null,
+  userId = null,
 }) {
   const cols = [];
   const placeholders = [];
@@ -950,6 +1026,7 @@ async function insertHistorySnapshot({
 
   if (historyCols.has("preset_id")) add("preset_id", presetId);
   if (historyCols.has("preset_name")) add("preset_name", presetName);
+  if (HISTORY_HAS_USER_ID && userId) add("user_id", userId);
   if (historyCols.has("wheel_items"))
     add("wheel_items", JSON.stringify(wheelItems || []), "::jsonb");
   if (historyCols.has("winner"))
@@ -967,7 +1044,7 @@ async function insertHistorySnapshot({
   return rows[0]?.id ?? null;
 }
 
-async function updateHistoryWinner(snapshotId, winnerItem, winnerId) {
+async function updateHistoryWinner(snapshotId, winnerItem, winnerId, userId = null) {
   const sets = [];
   const vals = [];
   let i = 1;
@@ -989,9 +1066,15 @@ async function updateHistoryWinner(snapshotId, winnerItem, winnerId) {
   if (!sets.length) return null;
 
   vals.push(snapshotId);
+  let where = `id = $${i}`;
+  if (HISTORY_HAS_USER_ID && userId) {
+    i += 1;
+    vals.push(userId);
+    where += ` and user_id = $${i}`;
+  }
   const sql = `update ${T_HISTORY}
                  set ${sets.join(", ")}
-               where id = $${i}
+               where ${where}
                returning id`;
   const { rows } = await pool.query(sql, vals);
   return rows[0]?.id ?? null;
@@ -1047,12 +1130,24 @@ function buildSnapshotCategories(items) {
  */
 app.get("/api/virtual-collections", async (req, res) => {
   try {
+    const scope = await resolveUserScope(req);
+    const userId = scope?.userId || null;
+    if (VC_HAS_USER_ID && !userId) return res.json({ ok: true, rows: [] });
+
     const { rows } = await pool.query(
-      `
+      VC_HAS_USER_ID
+        ? `
   select id, name, media, poster, source_label, source_url, created_at, updated_at
-    from won_virtual_collections
+    from ${T_VC}
+   where user_id = $1
+   order by name asc
+  `
+        : `
+  select id, name, media, poster, source_label, source_url, created_at, updated_at
+    from ${T_VC}
    order by name asc
   `,
+      VC_HAS_USER_ID ? [userId] : [],
     );
 
     res.json({ ok: true, rows });
@@ -1084,8 +1179,9 @@ app.get("/api/virtual-collections", async (req, res) => {
  *       200: { description: OK }
  *       400: { description: Bad Request }
  */
-app.post("/api/virtual-collections", requireAuth, async (req, res) => {
+app.post("/api/virtual-collections", requireAuthedUser, async (req, res) => {
   try {
+    const userId = req.userId;
     const b = req.body || {};
     const id = toVcId(b.id);
     const name = normStr(b.name);
@@ -1101,8 +1197,22 @@ app.post("/api/virtual-collections", requireAuth, async (req, res) => {
       return res.status(400).json({ ok: false, error: "media required" });
 
     const { rows } = await pool.query(
-      `
-  insert into won_virtual_collections (id, name, media, poster, source_label, source_url)
+      VC_HAS_USER_ID
+        ? `
+  insert into ${T_VC} (id, user_id, name, media, poster, source_label, source_url)
+  values ($1, $2, $3, $4, nullif($5,''), nullif($6,''), nullif($7,''))
+  on conflict (id) do update
+    set name = excluded.name,
+        media = excluded.media,
+        poster = excluded.poster,
+        source_label = excluded.source_label,
+        source_url = excluded.source_url,
+        updated_at = now()
+  where ${T_VC}.user_id = $2
+  returning id, name, media, poster, source_label, source_url, created_at, updated_at
+  `
+        : `
+  insert into ${T_VC} (id, name, media, poster, source_label, source_url)
   values ($1, $2, $3, nullif($4,''), nullif($5,''), nullif($6,''))
   on conflict (id) do update
     set name = excluded.name,
@@ -1113,9 +1223,14 @@ app.post("/api/virtual-collections", requireAuth, async (req, res) => {
         updated_at = now()
   returning id, name, media, poster, source_label, source_url, created_at, updated_at
   `,
-      [id, name, media, poster, source_label, source_url],
+      VC_HAS_USER_ID
+        ? [id, userId, name, media, poster, source_label, source_url]
+        : [id, name, media, poster, source_label, source_url],
     );
 
+    if (!rows[0]) {
+      return res.status(409).json({ ok: false, error: "conflict" });
+    }
     res.json({ ok: true, row: rows[0] || null });
   } catch (e) {
     logError(req, "api_virtual_collections_post_failed", e);
@@ -1139,9 +1254,10 @@ app.post("/api/virtual-collections", requireAuth, async (req, res) => {
  *       400: { description: Bad Request }
  *       404: { description: Not Found }
  */
-app.delete("/api/virtual-collections/:id", requireAuth, async (req, res) => {
+app.delete("/api/virtual-collections/:id", requireAuthedUser, async (req, res) => {
   const id = toVcId(req.params.id);
   if (!id) return res.status(400).json({ ok: false, error: "id required" });
+  const userId = req.userId;
 
   const client = await pool.connect();
   try {
@@ -1149,23 +1265,42 @@ app.delete("/api/virtual-collections/:id", requireAuth, async (req, res) => {
 
     // 1) удаляем VC
     const del = await client.query(
-      `delete from won_virtual_collections where id = $1 returning id`,
-      [id],
+      VC_HAS_USER_ID
+        ? `delete from ${T_VC} where id = $1 and user_id = $2 returning id`
+        : `delete from ${T_VC} where id = $1 returning id`,
+      VC_HAS_USER_ID ? [id, userId] : [id],
     );
     if (!del.rowCount) {
+      if (VC_HAS_USER_ID) {
+        const check = await client.query(
+          `select id from ${T_VC} where id = $1 limit 1`,
+          [id],
+        );
+        if (check.rowCount) {
+          await client.query("rollback");
+          return res.status(403).json({ ok: false, error: "forbidden" });
+        }
+      }
       await client.query("rollback");
       return res.status(404).json({ ok: false, error: "not found" });
     }
 
     // 2) чистим все пресеты, которые ссылались на неё
     await client.query(
+      PRESETS_HAS_USER_ID
+        ? `
+      update ${T_PRESETS}
+         set virtual_collection_ids =
+             array_remove(virtual_collection_ids, $1)
+       where $1 = any(virtual_collection_ids) and user_id = $2
       `
-      update won_presets
+        : `
+      update ${T_PRESETS}
          set virtual_collection_ids =
              array_remove(virtual_collection_ids, $1)
        where $1 = any(virtual_collection_ids)
       `,
-      [id],
+      PRESETS_HAS_USER_ID ? [id, userId] : [id],
     );
 
     await client.query("commit");
@@ -1333,8 +1468,17 @@ app.get("/api/meta", async (req, res) => {
  */
 app.get("/api/presets", async (req, res) => {
   try {
+    const scope = await resolveUserScope(req);
+    const userId = scope?.userId || null;
+    if (PRESETS_HAS_USER_ID && !userId) {
+      return res.json({ ok: true, presets: [] });
+    }
+
     const { rows } = await pool.query(
-      `select * from ${T_PRESETS} order by created_at asc nulls last, name asc`,
+      PRESETS_HAS_USER_ID
+        ? `select * from ${T_PRESETS} where user_id = $1 order by created_at asc nulls last, name asc`
+        : `select * from ${T_PRESETS} order by created_at asc nulls last, name asc`,
+      PRESETS_HAS_USER_ID ? [userId] : [],
     );
 
     const asTextArray = (v) => {
@@ -1409,8 +1553,9 @@ app.get("/api/presets", async (req, res) => {
  *       200: { description: OK }
  *       400: { description: Bad Request }
  */
-app.post("/api/presets", requireAuth, async (req, res) => {
+app.post("/api/presets", requireAuthedUser, async (req, res) => {
   try {
+    const userId = req.userId;
     const body = req.body || {};
 
     const id = body.id ? String(body.id).trim() : null;
@@ -1451,7 +1596,19 @@ app.post("/api/presets", requireAuth, async (req, res) => {
     // upsert by id (если нет id — create)
     if (id) {
       const { rows } = await pool.query(
+        PRESETS_HAS_USER_ID
+          ? `
+        update ${T_PRESETS}
+           set name = $2,
+               media_types = $3,
+               ${colCollections} = $4,
+               ${colVC} = $5,
+               weights = $6,
+               updated_at = now()
+         where id = $1 and user_id = $7
+         returning *
         `
+          : `
         update ${T_PRESETS}
            set name = $2,
                media_types = $3,
@@ -1462,32 +1619,76 @@ app.post("/api/presets", requireAuth, async (req, res) => {
          where id = $1
          returning *
         `,
-        [id, name, media_types, collections, virtual_collection_ids, weights],
+        PRESETS_HAS_USER_ID
+          ? [
+              id,
+              name,
+              media_types,
+              collections,
+              virtual_collection_ids,
+              weights,
+              userId,
+            ]
+          : [id, name, media_types, collections, virtual_collection_ids, weights],
       );
 
       if (rows[0]) {
         return res.json({ ok: true, preset: rows[0] });
       }
 
-      // если id не найден — создаём с этим id
+      if (PRESETS_HAS_USER_ID) {
+        const exists = await pool.query(
+          `select id from ${T_PRESETS} where id = $1 limit 1`,
+          [id],
+        );
+        if (exists.rowCount) {
+          return res.status(403).json({ ok: false, error: "forbidden" });
+        }
+      }
+
+      // если id не найден - создаём с этим id
       const ins = await pool.query(
+        PRESETS_HAS_USER_ID
+          ? `
+        insert into ${T_PRESETS} (id, user_id, name, media_types, ${colCollections}, ${colVC}, weights, created_at, updated_at)
+        values ($1, $2, $3, $4, $5, $6, $7, now(), now())
+        returning *
         `
+          : `
         insert into ${T_PRESETS} (id, name, media_types, ${colCollections}, ${colVC}, weights, created_at, updated_at)
         values ($1, $2, $3, $4, $5, $6, now(), now())
         returning *
         `,
-        [id, name, media_types, collections, virtual_collection_ids, weights],
+        PRESETS_HAS_USER_ID
+          ? [
+              id,
+              userId,
+              name,
+              media_types,
+              collections,
+              virtual_collection_ids,
+              weights,
+            ]
+          : [id, name, media_types, collections, virtual_collection_ids, weights],
       );
       return res.json({ ok: true, preset: ins.rows[0] });
     }
 
     const { rows } = await pool.query(
+      PRESETS_HAS_USER_ID
+        ? `
+      insert into ${T_PRESETS} (user_id, name, media_types, ${colCollections}, virtual_collection_ids, weights, created_at, updated_at)
+      values ($1, $2, $3, $4, $5, $6, now(), now())
+      returning *
       `
+        : `
       insert into ${T_PRESETS} (name, media_types, ${colCollections}, virtual_collection_ids, weights, created_at, updated_at)
       values ($1, $2, $3, $4, $5, now(), now())
       returning *
       `,
-      [name, media_types, collections, virtual_collection_ids, weights],
+      PRESETS_HAS_USER_ID
+        ? [userId, name, media_types, collections, virtual_collection_ids, weights]
+        : [name, media_types, collections, virtual_collection_ids, weights],
     );
 
     res.json({ ok: true, preset: rows[0] });
@@ -1512,12 +1713,28 @@ app.post("/api/presets", requireAuth, async (req, res) => {
  *       200: { description: OK }
  *       400: { description: Bad Request }
  */
-app.delete("/api/presets/:id", requireAuth, async (req, res) => {
+app.delete("/api/presets/:id", requireAuthedUser, async (req, res) => {
   try {
     const id = String(req.params.id || "").trim();
     if (!id) return res.status(400).json({ ok: false, error: "id required" });
 
-    await pool.query(`delete from ${T_PRESETS} where id = $1`, [id]);
+    const userId = req.userId;
+    const result = await pool.query(
+      PRESETS_HAS_USER_ID
+        ? `delete from ${T_PRESETS} where id = $1 and user_id = $2`
+        : `delete from ${T_PRESETS} where id = $1`,
+      PRESETS_HAS_USER_ID ? [id, userId] : [id],
+    );
+    if (!result.rowCount && PRESETS_HAS_USER_ID) {
+      const exists = await pool.query(
+        `select id from ${T_PRESETS} where id = $1 limit 1`,
+        [id],
+      );
+      if (exists.rowCount) {
+        return res.status(403).json({ ok: false, error: "forbidden" });
+      }
+      return res.status(404).json({ ok: false, error: "not found" });
+    }
     res.json({ ok: true });
   } catch (e) {
     logError(req, "api_presets_delete_failed", e);
@@ -1541,6 +1758,11 @@ app.delete("/api/presets/:id", requireAuth, async (req, res) => {
  */
 app.get("/api/history", async (req, res) => {
   try {
+    const scope = await resolveUserScope(req);
+    const userId = scope?.userId || null;
+    if (HISTORY_HAS_USER_ID && !userId) {
+      return res.json({ ok: true, rows: [] });
+    }
     const limit = clampInt(req.query.limit, 1, 200, 50);
     const historyFilters = [];
     if (historyCols.has("winner_id")) {
@@ -1553,10 +1775,10 @@ app.get("/api/history", async (req, res) => {
       historyFilters.length > 0
         ? `where (${historyFilters.join(" or ")})`
         : "";
-    const { rows } = await pool.query(
-      `select * from ${T_HISTORY} ${whereWinner} order by created_at desc limit $1`,
-      [limit],
-    );
+    const whereUser = HISTORY_HAS_USER_ID ? (whereWinner ? " and user_id = $2" : "where user_id = $2") : "";
+    const sql = `select * from ${T_HISTORY} ${whereWinner}${whereUser} order by created_at desc limit $1`;
+    const params = HISTORY_HAS_USER_ID ? [limit, userId] : [limit];
+    const { rows } = await pool.query(sql, params);
 
     // обогащаем VC (можно параллельно)
     const out = await Promise.all(
@@ -1591,9 +1813,17 @@ app.get("/api/history/:id", async (req, res) => {
     const id = String(req.params.id || "").trim();
     if (!id) return res.status(400).json({ ok: false, error: "id required" });
 
+    const scope = await resolveUserScope(req);
+    const userId = scope?.userId || null;
+    if (HISTORY_HAS_USER_ID && !userId) {
+      return res.status(404).json({ ok: false, error: "not found" });
+    }
+
     const { rows } = await pool.query(
-      `select * from ${T_HISTORY} where id = $1 limit 1`,
-      [id],
+      HISTORY_HAS_USER_ID
+        ? `select * from ${T_HISTORY} where id = $1 and user_id = $2 limit 1`
+        : `select * from ${T_HISTORY} where id = $1 limit 1`,
+      HISTORY_HAS_USER_ID ? [id, userId] : [id],
     );
     if (!rows[0])
       return res.status(404).json({ ok: false, error: "not found" });
@@ -1632,13 +1862,17 @@ app.post("/api/random/begin", async (req, res) => {
     const body = req.body || {};
     const presetId = String(body.preset_id || body.presetId || "").trim();
     const size = clampInt(body.size, 3, 128, 18);
+    const scope = await resolveUserScope(req);
+    const userId = scope?.userId || null;
 
     if (!presetId)
       return res.status(400).json({ ok: false, error: "preset_id required" });
 
     const { rows: pres } = await pool.query(
-      `select * from ${T_PRESETS} where id = $1 limit 1`,
-      [presetId],
+      PRESETS_HAS_USER_ID
+        ? `select * from ${T_PRESETS} where id = $1 and user_id = $2 limit 1`
+        : `select * from ${T_PRESETS} where id = $1 limit 1`,
+      PRESETS_HAS_USER_ID ? [presetId, userId] : [presetId],
     );
     const preset = pres[0];
     if (!preset)
@@ -1647,6 +1881,7 @@ app.post("/api/random/begin", async (req, res) => {
     const { wheelItems, poolTotal } = await buildWheelSnapshotFromPreset(
       preset,
       size,
+      userId,
     );
     if (!wheelItems.length) {
       return res.status(404).json({
@@ -1656,11 +1891,12 @@ app.post("/api/random/begin", async (req, res) => {
     }
 
     let snapshotId = null;
-    if (isAuthenticated(req)) {
+    if (isAuthenticated(req) && userId) {
       snapshotId = await insertHistorySnapshot({
         presetId,
         presetName: preset.name || "",
         wheelItems,
+        userId,
       });
       if (!snapshotId) {
         return res.status(500).json({
@@ -1732,6 +1968,8 @@ app.post("/api/random/winner", async (req, res) => {
       body.base_history_id || body.baseHistoryId || "",
     ).trim();
     const lookupId = baseHistoryId || snapshotId;
+    const scope = await resolveUserScope(req);
+    const userId = scope?.userId || null;
 
     if (!lookupId)
       return res.status(400).json({
@@ -1745,9 +1983,14 @@ app.post("/api/random/winner", async (req, res) => {
       if (!snap) return res.status(404).json({ ok: false, error: "not found" });
       wheelItems = Array.isArray(snap.wheelItems) ? snap.wheelItems : [];
     } else {
+      if (HISTORY_HAS_USER_ID && !userId) {
+        return res.status(404).json({ ok: false, error: "not found" });
+      }
       const { rows } = await pool.query(
-        `select * from ${T_HISTORY} where id = $1 limit 1`,
-        [lookupId],
+        HISTORY_HAS_USER_ID
+          ? `select * from ${T_HISTORY} where id = $1 and user_id = $2 limit 1`
+          : `select * from ${T_HISTORY} where id = $1 limit 1`,
+        HISTORY_HAS_USER_ID ? [lookupId, userId] : [lookupId],
       );
       const row = rows[0];
       if (!row) return res.status(404).json({ ok: false, error: "not found" });
@@ -1830,6 +2073,8 @@ app.post("/api/random/commit", async (req, res) => {
       body.base_history_id || body.baseHistoryId || "",
     ).trim();
     const winnerIndex = Number(body.winner_index ?? body.winnerIndex ?? -1);
+    const scope = await resolveUserScope(req);
+    const userId = scope?.userId || null;
 
     const lookupId = baseHistoryId || snapshotId;
     if (!lookupId)
@@ -1856,13 +2101,15 @@ app.post("/api/random/commit", async (req, res) => {
       return res.json({ ok: true, history_id: null });
     }
 
-    if (!isAuthenticated(req)) {
+    if (!isAuthenticated(req) || !userId) {
       return res.json({ ok: true, history_id: null });
     }
 
     const { rows } = await pool.query(
-      `select * from ${T_HISTORY} where id = $1 limit 1`,
-      [lookupId],
+      HISTORY_HAS_USER_ID
+        ? `select * from ${T_HISTORY} where id = $1 and user_id = $2 limit 1`
+        : `select * from ${T_HISTORY} where id = $1 limit 1`,
+      HISTORY_HAS_USER_ID ? [lookupId, userId] : [lookupId],
     );
     const row = rows[0];
     if (!row) return res.status(404).json({ ok: false, error: "not found" });
@@ -1886,9 +2133,15 @@ app.post("/api/random/commit", async (req, res) => {
         winnerItem,
         winnerId,
         baseHistoryId,
+        userId,
       });
     } else {
-      historyId = await updateHistoryWinner(snapshotId, winnerItem, winnerId);
+      historyId = await updateHistoryWinner(
+        snapshotId,
+        winnerItem,
+        winnerId,
+        userId,
+      );
     }
 
     res.json({ ok: true, history_id: historyId });
@@ -1923,6 +2176,8 @@ app.post("/api/random/abort", async (req, res) => {
   try {
     const body = req.body || {};
     const snapshotId = String(body.snapshot_id || body.snapshotId || "").trim();
+    const scope = await resolveUserScope(req);
+    const userId = scope?.userId || null;
     if (!snapshotId)
       return res
         .status(400)
@@ -1933,13 +2188,15 @@ app.post("/api/random/abort", async (req, res) => {
       return res.json({ ok: true, deleted });
     }
 
-    if (!isAuthenticated(req)) {
+    if (!isAuthenticated(req) || !userId) {
       return res.status(401).json({ ok: false, error: "unauthorized" });
     }
 
     const { rows } = await pool.query(
-      `select * from ${T_HISTORY} where id = $1 limit 1`,
-      [snapshotId],
+      HISTORY_HAS_USER_ID
+        ? `select * from ${T_HISTORY} where id = $1 and user_id = $2 limit 1`
+        : `select * from ${T_HISTORY} where id = $1 limit 1`,
+      HISTORY_HAS_USER_ID ? [snapshotId, userId] : [snapshotId],
     );
     const row = rows[0];
     if (!row) return res.status(404).json({ ok: false, error: "not found" });
@@ -1960,7 +2217,12 @@ app.post("/api/random/abort", async (req, res) => {
         .json({ ok: false, error: "snapshot has winner" });
     }
 
-    await pool.query(`delete from ${T_HISTORY} where id = $1`, [snapshotId]);
+    await pool.query(
+      HISTORY_HAS_USER_ID
+        ? `delete from ${T_HISTORY} where id = $1 and user_id = $2`
+        : `delete from ${T_HISTORY} where id = $1`,
+      HISTORY_HAS_USER_ID ? [snapshotId, userId] : [snapshotId],
+    );
     res.json({ ok: true, deleted: true });
   } catch (e) {
     logError(req, "api_random_abort_failed", e);
@@ -1996,14 +2258,18 @@ app.post("/api/random", async (req, res) => {
     const presetId = String(body.preset_id || body.presetId || "").trim();
     const size = clampInt(body.size, 3, 128, 18);
     const save = !!body.save;
-    const shouldSave = save && isAuthenticated(req);
+    const scope = await resolveUserScope(req);
+    const userId = scope?.userId || null;
+    const shouldSave = save && isAuthenticated(req) && userId;
 
     if (!presetId)
       return res.status(400).json({ ok: false, error: "preset_id required" });
 
     const { rows: pres } = await pool.query(
-      `select * from ${T_PRESETS} where id = $1 limit 1`,
-      [presetId],
+      PRESETS_HAS_USER_ID
+        ? `select * from ${T_PRESETS} where id = $1 and user_id = $2 limit 1`
+        : `select * from ${T_PRESETS} where id = $1 limit 1`,
+      PRESETS_HAS_USER_ID ? [presetId, userId] : [presetId],
     );
     const preset = pres[0];
     if (!preset)
@@ -2039,13 +2305,20 @@ app.post("/api/random", async (req, res) => {
     let vcRows = [];
     if (vcIds.length) {
       const r = await pool.query(
-        `
+        VC_HAS_USER_ID
+          ? `
 select id, name, media, poster, source_label, source_url, created_at, updated_at
-  from won_virtual_collections
+  from ${T_VC}
+ where id = any($1::text[]) and user_id = $2
+
+    `
+          : `
+select id, name, media, poster, source_label, source_url, created_at, updated_at
+  from ${T_VC}
  where id = any($1::text[])
 
     `,
-        [vcIds],
+        VC_HAS_USER_ID ? [vcIds, userId] : [vcIds],
       );
       vcRows = r.rows || [];
     }
@@ -2210,21 +2483,25 @@ select id, name, media, poster, source_label, source_url, created_at, updated_at
       if (historyCols.has("winner_id")) {
         const { rows } = await pool.query(
           `
-          insert into ${T_HISTORY} (preset_id, preset_name, winner_id, winner, wheel_items, created_at)
-          values ($1, $2, $3, $4::jsonb, $5::jsonb, now())
+          insert into ${T_HISTORY} (${HISTORY_HAS_USER_ID ? "user_id, " : ""}preset_id, preset_name, winner_id, winner, wheel_items, created_at)
+          values (${HISTORY_HAS_USER_ID ? "$6, " : ""}$1, $2, $3, $4::jsonb, $5::jsonb, now())
           returning id
           `,
-          [presetId, presetName, winnerId, winnerJson, itemsJson],
+          HISTORY_HAS_USER_ID
+            ? [presetId, presetName, winnerId, winnerJson, itemsJson, userId]
+            : [presetId, presetName, winnerId, winnerJson, itemsJson],
         );
         historyId = rows[0]?.id ?? null;
       } else {
         const { rows } = await pool.query(
           `
-          insert into ${T_HISTORY} (preset_id, preset_name, winner, wheel_items, created_at)
-          values ($1, $2, $3::jsonb, $4::jsonb, now())
+          insert into ${T_HISTORY} (${HISTORY_HAS_USER_ID ? "user_id, " : ""}preset_id, preset_name, winner, wheel_items, created_at)
+          values (${HISTORY_HAS_USER_ID ? "$5, " : ""}$1, $2, $3::jsonb, $4::jsonb, now())
           returning id
           `,
-          [presetId, presetName, winnerJson, itemsJson],
+          HISTORY_HAS_USER_ID
+            ? [presetId, presetName, winnerJson, itemsJson, userId]
+            : [presetId, presetName, winnerJson, itemsJson],
         );
         historyId = rows[0]?.id ?? null;
       }
@@ -2326,9 +2603,17 @@ app.get("/api/items", async (req, res) => {
     if (!presetId)
       return res.status(400).json({ ok: false, error: "preset_id required" });
 
+    const scope = await resolveUserScope(req);
+    const userId = scope?.userId || null;
+    if (PRESETS_HAS_USER_ID && !userId) {
+      return res.status(404).json({ ok: false, error: "preset not found" });
+    }
+
     const { rows: pres } = await pool.query(
-      `select * from ${T_PRESETS} where id=$1 limit 1`,
-      [presetId],
+      PRESETS_HAS_USER_ID
+        ? `select * from ${T_PRESETS} where id=$1 and user_id = $2 limit 1`
+        : `select * from ${T_PRESETS} where id=$1 limit 1`,
+      PRESETS_HAS_USER_ID ? [presetId, userId] : [presetId],
     );
     const preset = pres[0];
     if (!preset)
@@ -2362,13 +2647,20 @@ app.get("/api/items", async (req, res) => {
     let vcRows = [];
     if (vcIds.length) {
       const r = await pool.query(
-        `
+        VC_HAS_USER_ID
+          ? `
         select id, name, media, poster, source_label, source_url, created_at, updated_at
-          from won_virtual_collections
+          from ${T_VC}
+         where id = any($1::text[]) and user_id = $2
+         order by name asc
+        `
+          : `
+        select id, name, media, poster, source_label, source_url, created_at, updated_at
+          from ${T_VC}
          where id = any($1::text[])
          order by name asc
         `,
-        [vcIds],
+        VC_HAS_USER_ID ? [vcIds, userId] : [vcIds],
       );
       vcRows = r.rows || [];
     }

@@ -61,8 +61,8 @@
   }
 
   .top-tabs {
-    width: 100%;
-    justify-content: flex-start;
+    width: max-content;
+    justify-content: flex-end;
   }
 
   .topbar-inner {
@@ -71,9 +71,10 @@
   }
 
   .topbar-actions {
-    width: 100%;
-    justify-content: flex-start;
-    flex-wrap: wrap;
+    display: flex;
+    gap: 8px;
+    flex-direction: column;
+    align-items: normal;
   }
 
   .top-tabs .tab {
@@ -84,6 +85,10 @@
   .auth-btn {
     font-size: 13px;
     padding: 8px 12px;
+  }
+
+  .wheel-area {
+    padding-block: 10px;
   }
 
   .result-title {
@@ -508,7 +513,15 @@
     flex-shrink: 0;
     min-width: 0;
     justify-self: end;
+    width: auto;
     overflow: hidden;
+  }
+
+  .topbar-actions {
+    display: flex;
+    gap: 8px;
+    flex-direction: column;
+    align-items: normal;
   }
 
   #top-tabs button,

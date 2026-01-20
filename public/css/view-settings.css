@@ -100,6 +100,18 @@
   margin-top: 8px;
 }
 
+html.onboarding-presets #view-settings .settings-grid > :not(#preset-card) {
+  opacity: 0.35;
+  filter: grayscale(0.2);
+  pointer-events: none;
+}
+
+html.onboarding-presets #view-settings #preset-card {
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 0 0 1px rgb(255 60 172 / 35%);
+}
+
 .is-invalid {
   border-color: rgb(255 120 120 / 55%) !important;
   box-shadow: 0 0 0 3px rgb(255 120 120 / 14%) !important;

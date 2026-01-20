@@ -1,4 +1,5 @@
 import { apiGetMe, WHEEL_BASE } from "./shared/api.js";
+import { setState } from "./shared/state.js";
 
 function formatUserLabel(user) {
   const name = String(user?.name || "").trim();
@@ -30,8 +31,10 @@ export async function initAuthButton() {
   try {
     const user = await apiGetMe();
     applyAuthState(btn, user);
+    setState({ auth: { user } });
   } catch {
     applyAuthState(btn, null);
+    setState({ auth: { user: null } });
   }
 }
 

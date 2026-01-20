@@ -4,6 +4,9 @@ const initial = {
   view: localStorage.getItem("won:view") || "wheel",
   rightPanel: localStorage.getItem("won:rightPanel") || "list",
   spin: loadSpinFromLS(),
+  auth: {
+    user: null,
+  },
   presetDraft: {
     name: "",
     media: [],
