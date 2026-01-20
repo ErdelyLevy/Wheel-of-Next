@@ -1,4 +1,4 @@
-import pg from "pg";
+﻿import pg from "pg";
 import fs from "fs/promises";
 import path from "path";
 
@@ -39,9 +39,6 @@ if (hasPgConfig()) {
 } else {
   // Fallback: если PG не настроен (локальная разработка), предоставим простую
   // заглушку pool.query, которая умеет возвращать данные из data/items.json.
-  console.warn(
-    "[DB] PG env vars not set — using file-based fallback (data/items.json)"
-  );
 
   pool = {
     query: async (sql) => {
@@ -63,3 +60,4 @@ if (hasPgConfig()) {
 }
 
 export { pool };
+

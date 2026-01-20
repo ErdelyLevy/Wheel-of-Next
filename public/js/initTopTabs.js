@@ -62,8 +62,6 @@ function applyView() {
   if (topTabs) {
     try {
       setActiveTabs(topTabs, (b) => b.dataset.view === s.view);
-    } catch (e) {
-      console.error("[initTopTabs] setActiveTabs FAILED:", e);
-    }
+    } catch {}
   }
 }

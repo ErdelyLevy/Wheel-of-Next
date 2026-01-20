@@ -28,8 +28,7 @@ export async function applyPresetToWheelPage(presetId) {
   let snap;
   try {
     snap = await pBegin;
-  } catch (e) {
-    console.error("roll failed", e);
+  } catch {
     snap = null;
   }
 
@@ -51,8 +50,7 @@ export async function applyPresetToWheelPage(presetId) {
   let items = [];
   try {
     items = await pItems;
-  } catch (e) {
-    console.error("items failed", e);
+  } catch {
     items = [];
   }
 

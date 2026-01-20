@@ -2,7 +2,7 @@ import { getFallbackPosterSrc } from "../../shared/posters/getFallbackPosterSrc.
 import { getPosterSrc } from "../../shared/posters/getPosterSrc.js";
 import { getState, subscribe, $ } from "../../shared/state.js";
 
-const __log = (...a) => console.log("[initResultUI]", ...a);
+const __log = () => {};
 
 let __renderRetry = 0;
 const __maxRenderRetries = 90; // ~1.5с при rAF, можно поднять при необходимости

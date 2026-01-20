@@ -1,4 +1,4 @@
-import { toast } from "../shared/showToast.js";
+﻿import { toast } from "../shared/showToast.js";
 import { buildMultiSelect } from "./initPresetDropdowns.js";
 import { escapeHtml } from "../shared/utils.js";
 import {
@@ -17,7 +17,6 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
   try {
     meta = await apiGetMeta();
   } catch (e) {
-    console.error("[vc] meta failed:", e);
     meta = { media_types: [] };
   }
   const mediaTypes = Array.isArray(meta?.media_types) ? meta.media_types : [];
@@ -173,16 +172,13 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
 
   // save/delete (делегирование)
   listEl.addEventListener("click", async (e) => {
-    console.log("[vc] click target=", e.target);
     const saveBtn = e.target?.closest?.(".vc-save");
     const delBtn = e.target?.closest?.(".vc-del");
     const row = e.target?.closest?.(".vc-row");
-    console.log("[vc] saveBtn?", !!saveBtn, "delBtn?", !!delBtn, "row?", !!row);
     if (!row) return;
 
     // SAVE
     if (saveBtn) {
-      console.log("[vc] SAVE clicked");
       const name = String(row.querySelector(".vc-name")?.value || "").trim();
       const media = String(row.querySelector(".vc-media")?.value || "").trim();
       const poster = String(
@@ -195,15 +191,6 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
       const source_url = String(
         row.querySelector(".vc-source-url")?.value || "",
       ).trim();
-
-      console.log("[vc] payload fields:", {
-        name,
-        media,
-        poster,
-        source_label,
-        source_url,
-      });
-
       if (!name) return toast("VC: имя обязательно");
       if (!media) return toast("VC: media обязательно");
 
@@ -214,7 +201,6 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
         row.dataset.id = id;
       }
 
-      console.log("[vc] calling apiUpsertVirtualCollection...", id);
 
       saveBtn.disabled = true;
       try {
@@ -227,14 +213,12 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
           source_url,
         });
 
-        console.log("[vc] saved=", saved);
 
         // на всякий случай синхронизируем из ответа
         if (saved?.id) row.dataset.id = String(saved.id);
         clearDirty(row);
         toast("Сохранено");
       } catch (err) {
-        console.error("[vc] upsert failed:", err);
         saveBtn.disabled = false;
         toast(String(err?.message || err));
       }
@@ -243,7 +227,6 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
 
     // DELETE
     if (delBtn) {
-      console.log("[vc] DELETE clicked");
       const id = String(row.dataset.id || "").trim();
 
       // если в БД ещё нет — просто удаляем из DOM
@@ -311,3 +294,4 @@ function buildSingleSelect(msRoot, options, getValue, setValue) {
     },
   );
 }
+

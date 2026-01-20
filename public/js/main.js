@@ -52,7 +52,6 @@ async function boot() {
     try {
       await applyPresetToWheelPage(presetId);
     } catch (e) {
-      console.error(e);
       alert(e.message || e);
     }
   });
@@ -69,7 +68,7 @@ async function boot() {
   setState({ spin });
   requestAnimationFrame(syncSpinInputsFromState);
 }
-boot().catch((e) => console.error("[boot] failed:", e));
+boot().catch((e) => alert(e.message || e));
 
 window.addEventListener("resize", () =>
   requestAnimationFrame(syncHeaderHeightVar),
