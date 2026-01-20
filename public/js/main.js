@@ -16,7 +16,11 @@ import {
 } from "./wheelView/center/tabs.js";
 import { initRightListClicks } from "./wheelView/rightPanel/initRightListClicks.js";
 import { initRightListSearch } from "./wheelView/rightPanel/initRightListSearch.js";
-import { initRollButton, initWheelRefreshButton } from "./wheelView/center/roll.js";
+import {
+  initRollButton,
+  initWheelRefreshButton,
+  initSoundToggleButton,
+} from "./wheelView/center/roll.js";
 import { initWheelCanvas } from "./wheelView/center/initWheelCanvas.js";
 import { initSettingsSliders } from "./settingsView/initSettingsSliders.js";
 import { initTopTabs } from "./initTopTabs.js";
@@ -39,6 +43,7 @@ async function boot() {
   initResultUI();
   initRollButton();
   initWheelRefreshButton();
+  initSoundToggleButton();
   initWheelCanvas();
 
   await refreshPresetTabsFromDB();

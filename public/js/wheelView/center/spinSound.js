@@ -2,8 +2,46 @@ import { WHEEL_BASE } from "../../shared/api.js";
 
 let dingAudio = null;
 let spinAudio = null;
+const MUTE_KEY = "won:muteSound";
+
+export function isSoundMuted() {
+  try {
+    return localStorage.getItem(MUTE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function setSoundMuted(muted) {
+  const next = muted ? "1" : "0";
+  try {
+    localStorage.setItem(MUTE_KEY, next);
+  } catch {
+    // ignore storage errors
+  }
+
+  if (muted) {
+    try {
+      if (dingAudio) {
+        dingAudio.pause();
+        dingAudio.currentTime = 0;
+      }
+    } catch {
+      // intentionally ignored
+    }
+
+    stopSpinSound({ fadeMs: 0 });
+  }
+}
+
+export function toggleSoundMuted() {
+  const next = !isSoundMuted();
+  setSoundMuted(next);
+  return next;
+}
 
 export function ensureDingAudio(src = `${WHEEL_BASE}/sounds/ding.mp3`) {
+  if (isSoundMuted()) return null;
   if (dingAudio) return dingAudio;
   dingAudio = new Audio(src);
   dingAudio.loop = false;
@@ -13,6 +51,7 @@ export function ensureDingAudio(src = `${WHEEL_BASE}/sounds/ding.mp3`) {
 }
 
 export function ensureSpinAudio(src = `${WHEEL_BASE}/sounds/spin.mp3`) {
+  if (isSoundMuted()) return null;
   if (spinAudio) return spinAudio;
   spinAudio = new Audio(src);
   spinAudio.loop = true;
@@ -26,7 +65,9 @@ export async function playDing({
   volume = 0.9,
   rate = 1,
 } = {}) {
+  if (isSoundMuted()) return;
   const a = ensureDingAudio(src);
+  if (!a) return;
   a.volume = Math.max(0, Math.min(1, Number(volume)));
   a.playbackRate = Math.max(0.25, Math.min(4, Number(rate)));
 
@@ -59,7 +100,9 @@ export async function playDing({
 }
 
 export async function startSpinSound({ src, volume = 0.35, rate = 1 } = {}) {
+  if (isSoundMuted()) return;
   const a = ensureSpinAudio(src);
+  if (!a) return;
   const v = Math.max(0, Math.min(1, Number(volume)));
   a.volume = v;
   a.__baseVolume = v;

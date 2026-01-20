@@ -196,6 +196,35 @@
 .center-actions {
   display: flex;
   justify-content: center;
+  gap: 8px;
+}
+
+.mute-button {
+  padding: 8px;
+  width: 40px;
+}
+
+.mute-button .icon {
+  width: 18px;
+  height: 18px;
+  display: none;
+}
+
+.mute-button .icon-sound-on {
+  display: block;
+}
+
+.mute-button.is-muted {
+  background: rgb(255 60 172 / 18%);
+  border-color: rgb(255 60 172 / 35%);
+}
+
+.mute-button.is-muted .icon-sound-on {
+  display: none;
+}
+
+.mute-button.is-muted .icon-sound-off {
+  display: block;
 }
 
 .tabs-wrap {
