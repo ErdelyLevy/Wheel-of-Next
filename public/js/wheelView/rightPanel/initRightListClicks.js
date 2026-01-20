@@ -10,7 +10,7 @@ export function initRightListClicks() {
     if (!btn) return;
 
     const id = String(btn.dataset.id || "");
-    const it = getRightListById(id);
+    const it = getRightListById()?.get?.(id) || null;
 
     if (!it) return;
     openResult(it);
