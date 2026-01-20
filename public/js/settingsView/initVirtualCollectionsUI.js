@@ -8,6 +8,14 @@ import {
   apiUpsertVirtualCollection,
 } from "../shared/api.js";
 
+function toastAuthError(err, fallback) {
+  if (err?.status === 401) {
+    toast("Необходимо авторизоваться");
+    return;
+  }
+  toast(fallback ?? String(err?.message || err));
+}
+
 export async function initVirtualCollectionsUI({ initial = null } = {}) {
   const listEl = document.getElementById("vc-list");
   const addBtn = document.getElementById("vc-add");
@@ -163,7 +171,7 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
       listEl.innerHTML = "";
       rows.forEach((x) => addRow(x));
     } catch (e) {
-      toast(String(e?.message || e));
+      toastAuthError(e);
     }
   }
 
@@ -220,7 +228,7 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
         toast("Сохранено");
       } catch (err) {
         saveBtn.disabled = false;
-        toast(String(err?.message || err));
+        toastAuthError(err);
       }
       return;
     }
@@ -241,7 +249,7 @@ export async function initVirtualCollectionsUI({ initial = null } = {}) {
         row.remove();
         toast("Удалено");
       } catch (err) {
-        toast(String(err?.message || err));
+        toastAuthError(err);
       }
     }
   });

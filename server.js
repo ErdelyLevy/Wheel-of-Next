@@ -84,6 +84,9 @@ app.use(express.json({ limit: "2mb" }));
 const TRACE_HEADER = "x-trace-id";
 const DEBUG_POSTER_LOGS = process.env.DEBUG_POSTER_LOGS === "true";
 const SESSION_COOKIE_NAME = "won.sid";
+const MEM_SNAPSHOT_PREFIX = "mem_";
+const MEM_SNAPSHOT_TTL_MS = 60 * 60 * 1000;
+const MEM_SNAPSHOT_MAX = 20;
 
 function requireEnv(name) {
   const value = String(process.env[name] || "").trim();
@@ -223,6 +226,79 @@ function requireAuth(req, res, next) {
   if (!req.session?.user)
     return res.status(401).json({ error: "unauthorized" });
   return next();
+}
+
+function isAuthenticated(req) {
+  return !!req.session?.user;
+}
+
+function isMemSnapshotId(id) {
+  return typeof id === "string" && id.startsWith(MEM_SNAPSHOT_PREFIX);
+}
+
+function getMemSnapshotStore(req, { create = false } = {}) {
+  if (!req.session) return null;
+  if (!req.session.memSnapshots) {
+    if (!create) return null;
+    req.session.memSnapshots = {};
+  }
+  return req.session.memSnapshots;
+}
+
+function pruneMemSnapshots(store) {
+  const now = Date.now();
+  for (const [id, snap] of Object.entries(store)) {
+    const createdAt = Number(snap?.createdAt || 0);
+    if (!createdAt || now - createdAt > MEM_SNAPSHOT_TTL_MS) {
+      delete store[id];
+    }
+  }
+
+  const ids = Object.keys(store);
+  if (ids.length <= MEM_SNAPSHOT_MAX) return;
+  ids.sort(
+    (a, b) => Number(store[a]?.createdAt || 0) - Number(store[b]?.createdAt || 0),
+  );
+  for (let i = 0; i < ids.length - MEM_SNAPSHOT_MAX; i++) {
+    delete store[ids[i]];
+  }
+}
+
+function createMemSnapshotId() {
+  if (typeof crypto.randomUUID === "function")
+    return `${MEM_SNAPSHOT_PREFIX}${crypto.randomUUID()}`;
+  return `${MEM_SNAPSHOT_PREFIX}${crypto.randomBytes(8).toString("hex")}`;
+}
+
+function storeMemSnapshot(req, data) {
+  const store = getMemSnapshotStore(req, { create: true });
+  if (!store) return null;
+  pruneMemSnapshots(store);
+  const id = createMemSnapshotId();
+  store[id] = { ...data, createdAt: Date.now() };
+  return id;
+}
+
+function getMemSnapshot(req, id) {
+  if (!isMemSnapshotId(id)) return null;
+  const store = getMemSnapshotStore(req);
+  if (!store) return null;
+  const snap = store[id];
+  if (!snap) return null;
+  const createdAt = Number(snap?.createdAt || 0);
+  if (!createdAt || Date.now() - createdAt > MEM_SNAPSHOT_TTL_MS) {
+    delete store[id];
+    return null;
+  }
+  return snap;
+}
+
+function deleteMemSnapshot(req, id) {
+  if (!isMemSnapshotId(id)) return false;
+  const store = getMemSnapshotStore(req);
+  if (!store || !store[id]) return false;
+  delete store[id];
+  return true;
 }
 
 function clearSession(req, res) {
@@ -1008,7 +1084,7 @@ app.get("/api/virtual-collections", async (req, res) => {
  *       200: { description: OK }
  *       400: { description: Bad Request }
  */
-app.post("/api/virtual-collections", async (req, res) => {
+app.post("/api/virtual-collections", requireAuth, async (req, res) => {
   try {
     const b = req.body || {};
     const id = toVcId(b.id);
@@ -1063,7 +1139,7 @@ app.post("/api/virtual-collections", async (req, res) => {
  *       400: { description: Bad Request }
  *       404: { description: Not Found }
  */
-app.delete("/api/virtual-collections/:id", async (req, res) => {
+app.delete("/api/virtual-collections/:id", requireAuth, async (req, res) => {
   const id = toVcId(req.params.id);
   if (!id) return res.status(400).json({ ok: false, error: "id required" });
 
@@ -1333,7 +1409,7 @@ app.get("/api/presets", async (req, res) => {
  *       200: { description: OK }
  *       400: { description: Bad Request }
  */
-app.post("/api/presets", async (req, res) => {
+app.post("/api/presets", requireAuth, async (req, res) => {
   try {
     const body = req.body || {};
 
@@ -1436,7 +1512,7 @@ app.post("/api/presets", async (req, res) => {
  *       200: { description: OK }
  *       400: { description: Bad Request }
  */
-app.delete("/api/presets/:id", async (req, res) => {
+app.delete("/api/presets/:id", requireAuth, async (req, res) => {
   try {
     const id = String(req.params.id || "").trim();
     if (!id) return res.status(400).json({ ok: false, error: "id required" });
@@ -1579,16 +1655,31 @@ app.post("/api/random/begin", async (req, res) => {
       });
     }
 
-    const historyId = await insertHistorySnapshot({
-      presetId,
-      presetName: preset.name || "",
-      wheelItems,
-    });
-    if (!historyId) {
-      return res.status(500).json({
-        ok: false,
-        error: "snapshot create failed",
+    let snapshotId = null;
+    if (isAuthenticated(req)) {
+      snapshotId = await insertHistorySnapshot({
+        presetId,
+        presetName: preset.name || "",
+        wheelItems,
       });
+      if (!snapshotId) {
+        return res.status(500).json({
+          ok: false,
+          error: "snapshot create failed",
+        });
+      }
+    } else {
+      snapshotId = storeMemSnapshot(req, {
+        presetId,
+        presetName: preset.name || "",
+        wheelItems,
+      });
+      if (!snapshotId) {
+        return res.status(500).json({
+          ok: false,
+          error: "snapshot create failed",
+        });
+      }
     }
 
     const wheelItemsOut = wheelItems.map((it) => ({
@@ -1600,7 +1691,7 @@ app.post("/api/random/begin", async (req, res) => {
 
     res.json({
       ok: true,
-      snapshot_id: historyId,
+      snapshot_id: snapshotId,
       preset_id: presetId,
       preset_name: preset.name || null,
       wheel_items: wheelItemsOut,
@@ -1648,14 +1739,20 @@ app.post("/api/random/winner", async (req, res) => {
         error: "snapshot_id or base_history_id required",
       });
 
-    const { rows } = await pool.query(
-      `select * from ${T_HISTORY} where id = $1 limit 1`,
-      [lookupId],
-    );
-    const row = rows[0];
-    if (!row) return res.status(404).json({ ok: false, error: "not found" });
-
-    const wheelItems = parseWheelItems(row.wheel_items);
+    let wheelItems = [];
+    if (isMemSnapshotId(lookupId)) {
+      const snap = getMemSnapshot(req, lookupId);
+      if (!snap) return res.status(404).json({ ok: false, error: "not found" });
+      wheelItems = Array.isArray(snap.wheelItems) ? snap.wheelItems : [];
+    } else {
+      const { rows } = await pool.query(
+        `select * from ${T_HISTORY} where id = $1 limit 1`,
+        [lookupId],
+      );
+      const row = rows[0];
+      if (!row) return res.status(404).json({ ok: false, error: "not found" });
+      wheelItems = parseWheelItems(row.wheel_items);
+    }
     if (!wheelItems.length) {
       return res.status(404).json({
         ok: false,
@@ -1746,6 +1843,23 @@ app.post("/api/random/commit", async (req, res) => {
         .json({ ok: false, error: "winner_index required" });
     }
 
+    if (isMemSnapshotId(lookupId)) {
+      const snap = getMemSnapshot(req, lookupId);
+      if (!snap) return res.status(404).json({ ok: false, error: "not found" });
+      const wheelItems = Array.isArray(snap.wheelItems) ? snap.wheelItems : [];
+      const winnerItem = wheelItems[winnerIndex] || null;
+      if (!winnerItem) {
+        return res
+          .status(404)
+          .json({ ok: false, error: "winner item not found" });
+      }
+      return res.json({ ok: true, history_id: null });
+    }
+
+    if (!isAuthenticated(req)) {
+      return res.json({ ok: true, history_id: null });
+    }
+
     const { rows } = await pool.query(
       `select * from ${T_HISTORY} where id = $1 limit 1`,
       [lookupId],
@@ -1814,6 +1928,15 @@ app.post("/api/random/abort", async (req, res) => {
         .status(400)
         .json({ ok: false, error: "snapshot_id required" });
 
+    if (isMemSnapshotId(snapshotId)) {
+      const deleted = deleteMemSnapshot(req, snapshotId);
+      return res.json({ ok: true, deleted });
+    }
+
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ ok: false, error: "unauthorized" });
+    }
+
     const { rows } = await pool.query(
       `select * from ${T_HISTORY} where id = $1 limit 1`,
       [snapshotId],
@@ -1873,6 +1996,7 @@ app.post("/api/random", async (req, res) => {
     const presetId = String(body.preset_id || body.presetId || "").trim();
     const size = clampInt(body.size, 3, 128, 18);
     const save = !!body.save;
+    const shouldSave = save && isAuthenticated(req);
 
     if (!presetId)
       return res.status(400).json({ ok: false, error: "preset_id required" });
@@ -2077,7 +2201,7 @@ select id, name, media, poster, source_label, source_url, created_at, updated_at
     const winnerWithW = winner ? { ...winner, w: weightFn(winner) } : null;
 
     let historyId = null;
-    if (save) {
+    if (shouldSave) {
       const presetName = preset.name || "";
       const winnerJson = JSON.stringify(winnerWithW);
       const itemsJson = JSON.stringify(wheelItemsWithW);

@@ -153,6 +153,12 @@ button:hover,
   gap: 8px;
 }
 
+.topbar-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .topbar {
   backdrop-filter: blur(10px);
   background: rgb(0 0 0 / 35%);
@@ -174,6 +180,33 @@ button:hover,
 .top-tabs .tab {
   font-size: 14px;
   padding: 8px 14px;
+}
+
+.auth-btn {
+  background: rgb(255 70 70 / 18%);
+  border-color: rgb(255 70 70 / 45%);
+  color: rgb(255 235 235 / 95%);
+  border-radius: var(--r-hard);
+  font-size: 14px;
+  padding: 8px 14px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-btn:hover {
+  background: rgb(255 70 70 / 28%);
+}
+
+.auth-btn.is-authed {
+  background: rgb(46 204 113 / 18%);
+  border-color: rgb(46 204 113 / 45%);
+  color: rgb(232 255 244 / 95%);
+}
+
+.auth-btn.is-authed:hover {
+  background: rgb(46 204 113 / 28%);
 }
 
 body::before {
