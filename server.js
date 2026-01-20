@@ -1199,22 +1199,28 @@ app.post("/api/virtual-collections", requireAuthedUser, async (req, res) => {
   try {
     const userId = req.userId;
     const b = req.body || {};
-    const id = toVcId(b.id);
+    let id = toVcId(b.id);
     const name = normStr(b.name);
     const media = normStr(b.media);
     const poster = normStr(b.poster);
     const source_label = normStr(b.source_label ?? b.sourceLabel);
     const source_url = normStr(b.source_url ?? b.sourceUrl);
 
-    if (!id) return res.status(400).json({ ok: false, error: "id required" });
     if (!name)
       return res.status(400).json({ ok: false, error: "name required" });
     if (!media)
       return res.status(400).json({ ok: false, error: "media required" });
+    if (!id && VC_HAS_USER_ID) {
+      id = `vc_${String(userId).replace(/[^a-z0-9]+/gi, "")}_${Date.now().toString(36)}_${crypto
+        .randomBytes(4)
+        .toString("hex")}`;
+    }
+    if (!id) return res.status(400).json({ ok: false, error: "id required" });
 
-    const { rows } = await pool.query(
-      VC_HAS_USER_ID
-        ? `
+    const upsert = async (vcId) =>
+      await pool.query(
+        VC_HAS_USER_ID
+          ? `
   insert into ${T_VC} (id, user_id, name, media, poster, source_label, source_url)
   values ($1, $2, $3, $4, nullif($5,''), nullif($6,''), nullif($7,''))
   on conflict (id) do update
@@ -1227,7 +1233,7 @@ app.post("/api/virtual-collections", requireAuthedUser, async (req, res) => {
   where ${T_VC}.user_id = $2
   returning id, name, media, poster, source_label, source_url, created_at, updated_at
   `
-        : `
+          : `
   insert into ${T_VC} (id, name, media, poster, source_label, source_url)
   values ($1, $2, $3, nullif($4,''), nullif($5,''), nullif($6,''))
   on conflict (id) do update
@@ -1239,15 +1245,29 @@ app.post("/api/virtual-collections", requireAuthedUser, async (req, res) => {
         updated_at = now()
   returning id, name, media, poster, source_label, source_url, created_at, updated_at
   `,
-      VC_HAS_USER_ID
-        ? [id, userId, name, media, poster, source_label, source_url]
-        : [id, name, media, poster, source_label, source_url],
-    );
+        VC_HAS_USER_ID
+          ? [vcId, userId, name, media, poster, source_label, source_url]
+          : [vcId, name, media, poster, source_label, source_url],
+      );
 
-    if (!rows[0]) {
+    let result = await upsert(id);
+    if (!result.rows[0] && VC_HAS_USER_ID) {
+      const exists = await pool.query(
+        `select id from ${T_VC} where id = $1 limit 1`,
+        [id],
+      );
+      if (exists.rowCount) {
+        const newId = `vc_${String(userId).replace(/[^a-z0-9]+/gi, "")}_${Date.now().toString(36)}_${crypto
+          .randomBytes(4)
+          .toString("hex")}`;
+        result = await upsert(newId);
+      }
+    }
+
+    if (!result.rows[0]) {
       return res.status(409).json({ ok: false, error: "conflict" });
     }
-    res.json({ ok: true, row: rows[0] || null });
+    res.json({ ok: true, row: result.rows[0] || null });
   } catch (e) {
     logError(req, "api_virtual_collections_post_failed", e);
     res.status(500).json({ ok: false, error: String(e.message || e) });
