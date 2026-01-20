@@ -20,6 +20,8 @@ import {
   startSpinSound,
   setSpinSoundVolume,
   stopSpinSound,
+  isSoundMuted,
+  setSoundMuted,
 } from "./spinSound.js";
 
 const BASE_OMEGA = 2.8; // rad/s at speed=1
@@ -218,6 +220,26 @@ export function initWheelRefreshButton() {
     } finally {
       btn.disabled = false;
     }
+  });
+}
+
+export function initSoundToggleButton() {
+  const btn = document.getElementById("mute-sound");
+  if (!btn) return;
+
+  const applyState = (muted) => {
+    btn.classList.toggle("is-muted", muted);
+    btn.setAttribute("aria-pressed", muted ? "true" : "false");
+    btn.setAttribute("aria-label", muted ? "Включить звук" : "Выключить звук");
+    btn.title = muted ? "Включить звук" : "Выключить звук";
+  };
+
+  applyState(isSoundMuted());
+
+  btn.addEventListener("click", () => {
+    const next = !isSoundMuted();
+    setSoundMuted(next);
+    applyState(next);
   });
 }
 
