@@ -207,7 +207,7 @@ function render(item) {
   // Ryot
   const ryotId = item.meta_id || item.id || "";
   if (ryotId) {
-    const url = `http://erdely.ru/media/item/${encodeURIComponent(ryotId)}`;
+    const url = `${window.location.origin}/media/item/${encodeURIComponent(ryotId)}`;
     addActionLink(actionsEl, "Ryot", url);
   }
 
