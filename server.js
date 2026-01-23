@@ -953,7 +953,7 @@ async function buildWheelSnapshotFromPreset(
 
   let poolRows = [];
   if (collections.length && media_types.length) {
-    const pool = await pool.query(
+    const poolRes = await pool.query(
       WHEEL_ITEMS_HAS_USER_ID
         ? `
     select *
@@ -972,7 +972,7 @@ async function buildWheelSnapshotFromPreset(
         ? [media_types, collections, itemsUserId]
         : [media_types, collections],
     );
-    poolRows = pool.rows || [];
+    poolRows = poolRes.rows || [];
   }
 
   let vcRows = [];
