@@ -1,104 +1,130 @@
-# 🎡 Wheel of Next
+# Wheel of Next
 
-**Wheel of Next** is a web-based decision wheel inspired by the mechanics of *Game Gauntlets*, but powered by real user data from **Ryot**.
+Wheel of Next is a web app with a decision wheel that uses real Ryot data. It lets you build presets and virtual collections to pick the next movie, series, or game.
 
-The project helps users fairly and visually decide what to watch, play, or choose next using their own media collections.
+## Features
 
----
+- Interactive canvas wheel
+- Weighted random selection
+- Presets with media, collections, and weights
+- Virtual collections (VC)
+- Spin history (for authenticated users)
+- Guest mode: rolls work without login, but no history save
 
-## ✨ Project Idea
+## Quick start
 
-Many media tracking services face a common problem:
+1) Install dependencies:
 
-> “I have a lot of content — what should I pick next?”
+```bash
+npm install
+```
 
-**Wheel of Next** solves this by combining:
-- a visual spinning wheel,
-- weighted randomness,
-- presets and collections,
-- and real user-owned data.
+2) Create `.env`:
 
----
+```env
+# Public origin/prefix
+APP_PUBLIC_ORIGIN=http://localhost:3000
+APP_PUBLIC_PREFIX=
 
-## 🔗 Data Source
+# Google OIDC
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+SESSION_SECRET=change_me
 
-This project integrates with **Ryot**, an open-source media tracking platform:
+# OIDC sub for the guest data owner (your Google sub)
+GUEST_OWNER_OIDC_ID=...
 
-https://github.com/IgnisDa/ryot
+# Postgres (Ryot DB)
+PGHOST=localhost
+PGPORT=5432
+PGUSER=postgres
+PGPASSWORD=postgres
+PGDATABASE=postgres
+PGSSL=false
+PGSSL_REJECT_UNAUTHORIZED=true
+```
 
-Used data includes:
-- collection items (movies, series, games, etc.),
-- posters and metadata,
-- user-defined lists / presets.
+3) Run:
 
----
+```bash
+npm start
+```
 
-## ⚙️ Features
+Open `http://localhost:3000`.
 
-- 🎯 **Interactive decision wheel**  
-  Smooth, animated canvas-based wheel.
+## Auth
 
-- ⚖️ **Weighted random selection**  
-  Each item can influence its probability via configurable weights.
+Google OpenID Connect (Authorization Code). Internal routes:
+- `GET /auth/login`
+- `GET /auth/callback`
+- `GET|POST /auth/logout`
+- `GET /api/me`
 
-- 🗂 **Presets**  
-  Switch between different item sets (e.g. *Movies for Tonight*, *Games to Finish*).
+Sessions are stored in HttpOnly cookies. The external callback URL is built as:
 
-- 🕒 **Spin history**  
-  Store and display previous results.
+```
+${APP_PUBLIC_ORIGIN}${APP_PUBLIC_PREFIX}/auth/callback
+```
 
-- 🖼 **Poster handling with fallbacks**  
-  Robust image loading with intelligent fallback logic.
+## Reverse proxy (/wheel)
 
-- 🧩 **Modular frontend architecture**  
-  Design principle: *one file — one logical responsibility / entry function*.
+If the app is served under `/wheel`, set:
 
----
+```
+APP_PUBLIC_PREFIX=/wheel
+```
 
-## 🧱 Architecture Overview
+External URLs are `/wheel/auth/*`, while Express routes remain `/auth/*`.
 
-### Frontend
-- Vanilla JavaScript (no frameworks)
-- Canvas-based rendering
-- Feature- and view-oriented structure
+## Database
 
-### Backend
-- Node.js
-- API layer for presets, spins, and history
-- Integration with Ryot data sources
+The app uses the Ryot database:
+- `user` table contains `oidc_issuer_id` to map OIDC sub -> ryot user id
+- media items come from `wheel_items` view (must include `user_id` for filtering)
+- presets/history use `won_presets` / `won_history` if they exist, otherwise `wheel_presets` / `wheel_history`
+- virtual collections are stored in `won_virtual_collections`
 
----
+Example `wheel_items` view (note `c.user_id AS user_id`):
 
-## 🎮 Comparison with Game Gauntlets
+```sql
+CREATE OR REPLACE VIEW public.wheel_items AS
+SELECT
+  m.id,
+  m.id AS meta_id,
+  m.title,
+  lower(m.lot) AS media_type,
+  c.name AS category_name,
+  m.description,
+  m.publish_year,
+  m.provider_rating,
+  m.production_status,
+  m.source,
+  m.source_url,
+  (m.assets -> 'remote_images') ->> 0 AS poster,
+  NULLIF((m.show_specifics ->> 'total_seasons')::integer, 0) AS total_seasons,
+  NULLIF((m.show_specifics ->> 'total_episodes')::integer, 0) AS total_episodes,
+  NULLIF((m.anime_specifics ->> 'episodes')::integer, 0) AS anime_episodes,
+  NULLIF((m.book_specifics ->> 'pages')::integer, 0) AS pages,
+  (
+    SELECT COALESCE(array_agg(DISTINCT pr.value ->> 'name'), ARRAY[]::text[])
+    FROM jsonb_array_elements(COALESCE(m.video_game_specifics -> 'platform_releases', '[]'::jsonb)) pr(value)
+    WHERE pr.value ? 'name'
+  ) AS platforms,
+  c.user_id AS user_id
+FROM metadata m
+JOIN collection_to_entity cte ON cte.metadata_id = m.id
+JOIN collection c ON c.id = cte.collection_id;
+```
 
-| Game Gauntlets | Wheel of Next |
-|----------------|---------------|
-| Static item sets | Real user collections |
-| Limited customization | Configurable weights & presets |
-| Game-focused | Decision-making focused |
+If PG* variables are not set, the server uses `data/items.json` as a read-only source for `wheel_items`.
 
----
+## API docs
 
-## 🚧 Project Status
+Swagger UI is available at `/docs`.
 
-The project is under active development.
+## Development
 
-Core architecture is in place; UI/UX and features are continuously evolving.
-
----
-
-## 🧠 Who This Project Is For
-
-- Movie, series, and game enthusiasts
-- Ryot users
-- Anyone struggling with choice paralysis
-- Developers interested in:
-  - canvas animations,
-  - framework-free frontend architecture,
-  - clean, modular JavaScript
-
----
-
-## 📄 License
-
-MIT
+- Node.js (ESM, no TypeScript)
+- Scripts:
+  - `npm start`
+  - `npm run lint`
