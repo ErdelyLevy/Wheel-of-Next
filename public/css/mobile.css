@@ -60,6 +60,19 @@
     display: block;
   }
 
+  #view-wheel .wheel-wrap {
+    --wheel-size: min(92vw, 92svh, 520px);
+    width: var(--wheel-size) !important;
+    height: var(--wheel-size) !important;
+    max-width: var(--wheel-size) !important;
+    max-height: var(--wheel-size) !important;
+  }
+
+  #view-wheel #wheel {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
   .top-tabs {
     width: max-content;
     justify-content: flex-end;

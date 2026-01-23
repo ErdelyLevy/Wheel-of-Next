@@ -944,29 +944,36 @@ async function buildWheelSnapshotFromPreset(
   const weightsObj = normalizeWeightsObject(preset.weights || {});
   const vcIds = asTextArray(preset.virtual_collection_ids);
 
-  if (!media_types.length || !collections.length) {
+  if (!collections.length && !vcIds.length) {
+    return { wheelItems: [], poolTotal: 0 };
+  }
+  if (collections.length && !media_types.length) {
     return { wheelItems: [], poolTotal: 0 };
   }
 
-  const { rows: poolRows } = await pool.query(
-    WHEEL_ITEMS_HAS_USER_ID
-      ? `
+  let poolRows = [];
+  if (collections.length && media_types.length) {
+    const pool = await pool.query(
+      WHEEL_ITEMS_HAS_USER_ID
+        ? `
     select *
       from wheel_items
      where user_id = $3
        and media_type = any($1::text[])
        and category_name = any($2::text[])
     `
-      : `
+        : `
     select *
       from wheel_items
      where media_type = any($1::text[])
        and category_name = any($2::text[])
     `,
-    WHEEL_ITEMS_HAS_USER_ID
-      ? [media_types, collections, itemsUserId]
-      : [media_types, collections],
-  );
+      WHEEL_ITEMS_HAS_USER_ID
+        ? [media_types, collections, itemsUserId]
+        : [media_types, collections],
+    );
+    poolRows = pool.rows || [];
+  }
 
   let vcRows = [];
   if (vcIds.length) {
@@ -1635,17 +1642,17 @@ app.post("/api/presets", requireAuthedUser, async (req, res) => {
 
     const media_types = asTextArray(body.media_types ?? body.media);
 
-    const collections = asTextArray(
-      body.collections ?? body.categories ?? body.category_names,
-    );
+  const collections = asTextArray(
+    body.collections ?? body.categories ?? body.category_names,
+  );
 
     // ✅ NEW: virtual collections ids (optional)
-    const virtual_collection_ids = asTextArray(
-      body.virtual_collection_ids ??
-        body.virtualCollections ??
-        body.virtual_collections ??
-        body.vc_ids,
-    );
+  const virtual_collection_ids = asTextArray(
+    body.virtual_collection_ids ??
+      body.virtualCollections ??
+      body.virtual_collections ??
+      body.vc_ids,
+  );
 
     const weights = normalizeWeightsObject(body.weights);
 
@@ -1655,10 +1662,11 @@ app.post("/api/presets", requireAuthedUser, async (req, res) => {
       return res
         .status(400)
         .json({ ok: false, error: "media_types is required" });
-    if (!collections.length)
-      return res
-        .status(400)
-        .json({ ok: false, error: "collections is required" });
+  if (!collections.length && !virtual_collection_ids.length)
+    return res.status(400).json({
+      ok: false,
+      error: "collections or virtual_collection_ids is required",
+    });
 
     const colCollections = PRESET_COL_COLLECTIONS;
 
@@ -2368,16 +2376,22 @@ app.post("/api/random", async (req, res) => {
     const collections = asTextArray(preset[PRESET_COL_COLLECTIONS]);
     const weights = normalizeWeightsObject(preset.weights || {});
 
-    if (!media_types.length || !collections.length) {
-      return res.status(400).json({
-        ok: false,
-        error: "preset has empty media_types or collections",
-      });
-    }
-
     // Pool from view
     // берём ещё vcIds из пресета
     const vcIds = asTextArray(preset.virtual_collection_ids);
+
+    if (!media_types.length && collections.length) {
+      return res.status(400).json({
+        ok: false,
+        error: "preset has empty media_types",
+      });
+    }
+    if (!collections.length && !vcIds.length) {
+      return res.status(400).json({
+        ok: false,
+        error: "preset has empty collections and vc",
+      });
+    }
 
     // Pool from view (обычные Items)
     const { rows: poolRows } = await pool.query(

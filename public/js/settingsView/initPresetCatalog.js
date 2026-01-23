@@ -82,7 +82,11 @@ function validateDraft(d) {
   if (media.length < 1) errors.push("Выбери хотя бы 1 вид медиа");
 
   const cats = Array.isArray(d?.categories) ? d.categories : [];
-  if (cats.length < 1) errors.push("Выбери хотя бы 1 коллекцию");
+  const vcs = Array.isArray(d?.virtual_collection_ids)
+    ? d.virtual_collection_ids
+    : [];
+  if (cats.length + vcs.length < 1)
+    errors.push("Выбери хотя бы 1 коллекцию или VC");
 
   const weights = d?.weights && typeof d.weights === "object" ? d.weights : {};
   for (const c of cats) {
@@ -110,6 +114,7 @@ function applyPresetValidationUI() {
   const msCollection = document
     .getElementById("ms-collection")
     ?.querySelector(".ms-btn");
+  const msVc = document.getElementById("ms-vc")?.querySelector(".ms-btn");
 
   const s = getState();
   const d = s.presetDraft;
@@ -133,10 +138,12 @@ function applyPresetValidationUI() {
   // подсветка полей (мягко)
   setInvalid(nameEl, !String(d?.name || "").trim());
   setInvalid(msMedia, !(Array.isArray(d?.media) && d.media.length));
-  setInvalid(
-    msCollection,
-    !(Array.isArray(d?.categories) && d.categories.length),
-  );
+  const hasCats = Array.isArray(d?.categories) && d.categories.length;
+  const hasVcs =
+    Array.isArray(d?.virtual_collection_ids) && d.virtual_collection_ids.length;
+  const missingGroup = !(hasCats || hasVcs);
+  setInvalid(msCollection, missingGroup);
+  setInvalid(msVc, missingGroup);
 
   return v;
 }
