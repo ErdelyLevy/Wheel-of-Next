@@ -1,4 +1,3 @@
-code_fences=52
 # Wheel of Next
 
 Wheel of Next is a self-hosted decision wheel for choosing what to watch, play, or read next. It uses media and collection data from an existing [Ryot](https://github.com/IgnisDa/ryot) PostgreSQL database, then adds weighted presets, virtual collections, an animated wheel, and spin history.
