@@ -10,7 +10,7 @@ import fsp from "fs/promises";
 import crypto from "crypto";
 import dns from "node:dns";
 import * as oidc from "openid-client";
-import { Agent, setGlobalDispatcher } from "undici";
+import { Agent, ProxyAgent, setGlobalDispatcher } from "undici";
 import swaggerUi from "swagger-ui-express";
 import swaggerJsdoc from "swagger-jsdoc";
 
@@ -83,6 +83,10 @@ app.use(express.json({ limit: "2mb" }));
 
 const TRACE_HEADER = "x-trace-id";
 const DEBUG_POSTER_LOGS = process.env.DEBUG_POSTER_LOGS === "true";
+const POSTER_PROXY_URL = String(process.env.POSTER_PROXY_URL || "").trim();
+const posterDispatcher = POSTER_PROXY_URL
+  ? new ProxyAgent(POSTER_PROXY_URL)
+  : undefined;
 const SESSION_COOKIE_NAME = "won.sid";
 const MEM_SNAPSHOT_PREFIX = "mem_";
 const MEM_SNAPSHOT_TTL_MS = 60 * 60 * 1000;
@@ -719,6 +723,7 @@ async function fetchPosterToCache({ url, key, filePath }) {
     const r = await fetch(url, {
       redirect: "follow",
       signal: AbortSignal.timeout(12_000),
+      dispatcher: posterDispatcher,
       headers: {
         "User-Agent": "WheelOfNext/1.0",
         Accept: "image/*,*/*;q=0.8",
